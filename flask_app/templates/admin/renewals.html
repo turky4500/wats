@@ -1,0 +1,156 @@
+{% extends "admin/base.html" %}
+{% block title %}طلبات التجديد - راصد حراج{% endblock %}
+{% block page_title %}طلبات التجديد{% endblock %}
+
+{% block extra_css %}
+<style>
+  .proof-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid var(--border); transition: transform 0.2s; }
+  .proof-img:hover { transform: scale(1.1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="fas fa-sync-alt text-warning me-2"></i> طلبات التجديد</h2>
+  <div class="breadcrumb mt-1">
+    <a href="{{ url_for('admin_home') }}">الرئيسية</a> &rsaquo; <span class="text-primary">طلبات التجديد</span>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="mb-4">
+  <div class="d-flex gap-2 flex-wrap">
+    {% for s, label, color in [('all', 'الكل', 'secondary'), ('pending', 'قيد المراجعة', 'warning'), ('approved', 'مقبولة', 'success'), ('rejected', 'مرفوضة', 'danger')] %}
+    <a href="{{ url_for('admin_renewals', status=s, page=1) }}"
+      class="btn btn-{{ color if status_f == s else 'outline-' + color }} {{ '' if s != 'pending' or status_f == 'pending' else '' }}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-sync-alt me-2"></i> طلبات التجديد ({{ pagination.total }})</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>المستخدم</th>
+            <th>الأسابيع</th>
+            <th>المبلغ</th>
+            <th>الحالة</th>
+            <th>الإيصال</th>
+            <th>تاريخ الطلب</th>
+            <th>تاريخ المعالجة</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in renewals %}
+          <tr>
+            <td class="text-muted small">{{ r.id }}</td>
+            <td class="fw-700">
+              {% if r.user %}{{ r.user.username }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td>
+              <span class="badge bg-primary">{{ r.weeks }} أسبوع</span>
+            </td>
+            <td class="fw-700 text-success">{{ r.amount }} ر.س</td>
+            <td>
+              {% if r.status == 'pending' %}
+                <span class="badge bg-warning text-dark">⏳ قيد المراجعة</span>
+              {% elif r.status == 'approved' %}
+                <span class="badge bg-success">✅ مقبول</span>
+              {% else %}
+                <span class="badge bg-danger">❌ مرفوض</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if r.proof_filename %}
+                {% if r.proof_filename.lower().endswith('.pdf') %}
+                  <a href="{{ url_for('view_proof', filename=r.proof_filename) }}" target="_blank"
+                    class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-pdf me-1"></i> عرض
+                  </a>
+                {% else %}
+                  <a href="{{ url_for('view_proof', filename=r.proof_filename) }}" target="_blank">
+                    <img src="{{ url_for('view_proof', filename=r.proof_filename) }}"
+                      class="proof-img" alt="إيصال" onerror="this.src=''"/>
+                  </a>
+                {% endif %}
+              {% else %}
+                <span class="text-muted small">بدون إيصال</span>
+              {% endif %}
+            </td>
+            <td class="small">{{ format_time_ksa(r.created_at, 'full') }}</td>
+            <td class="small text-muted">
+              {{ format_time_ksa(r.processed_at, 'full') if r.processed_at else '—' }}
+            </td>
+            <td>
+              {% if r.status == 'pending' %}
+              <div class="d-flex gap-2">
+                <form method="POST" action="{{ url_for('approve_renewal', rid=r.id) }}">
+                  <button type="submit" class="btn btn-sm btn-success" title="قبول">
+                    <i class="fas fa-check"></i> قبول
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('reject_renewal', rid=r.id) }}">
+                  <button type="submit" class="btn btn-sm btn-danger" title="رفض">
+                    <i class="fas fa-times"></i> رفض
+                  </button>
+                </form>
+              </div>
+              {% else %}
+                <span class="text-muted small">تمت المعالجة</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-5">
+              <i class="fas fa-inbox fa-2x mb-2 opacity-25 d-block"></i>
+              لا توجد طلبات تجديد
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center flex-wrap">
+    {% if pagination.has_prev %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('admin_renewals', page=pagination.prev_num, status=status_f) }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+      {% if p %}
+      <li class="page-item {{ 'active' if p == pagination.page }}">
+        <a class="page-link" href="{{ url_for('admin_renewals', page=p, status=status_f) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('admin_renewals', page=pagination.next_num, status=status_f) }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

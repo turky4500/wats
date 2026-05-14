@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}لوحة الإدارة - راصد حراج{% endblock %}</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --primary: #1a6b3a;
+      --primary-light: #22c55e;
+      --primary-dark: #0f4c2a;
+      --accent: #f59e0b;
+      --sidebar-w: 270px;
+      --topbar-h: 64px;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+
+      /* Dark Mode */
+      --dark-bg: #0f172a;
+      --dark-card: #1e293b;
+      --dark-border: #334155;
+      --dark-text: #f1f5f9;
+      --dark-muted: #94a3b8;
+      --dark-sidebar: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body.dark {
+      background: var(--dark-bg);
+      color: var(--dark-text);
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: var(--sidebar-w);
+      background: linear-gradient(180deg, #0f4c2a 0%, #1a6b3a 60%, #1f7a44 100%);
+      z-index: 1040;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease, transform 0.3s ease;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+    }
+
+    .sidebar.collapsed { width: 72px; }
+    .sidebar.mobile-closed { transform: translateX(100%); }
+
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .sidebar-logo .logo-text {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .sidebar-logo .logo-text span { color: #fcd34d; }
+    .sidebar.collapsed .logo-text { display: none; }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+    .nav-section-title {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 20px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .sidebar.collapsed .nav-section-title { opacity: 0; }
+
+    .nav-item { position: relative; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      color: rgba(255,255,255,0.75);
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      border-radius: 0;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      padding-right: 28px;
+    }
+
+    .nav-link.active {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border-right: 3px solid #fcd34d;
+    }
+
+    .nav-link i {
+      width: 20px;
+      text-align: center;
+      font-size: 1rem;
+      min-width: 20px;
+    }
+
+    .nav-link .badge {
+      margin-right: auto;
+      font-size: 0.7rem;
+      padding: 3px 7px;
+    }
+
+    .sidebar.collapsed .nav-link span,
+    .sidebar.collapsed .nav-link .badge { display: none; }
+
+    .sidebar.collapsed .nav-link { padding: 14px; justify-content: center; }
+    .sidebar.collapsed .nav-link:hover { padding-right: 14px; }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar.collapsed .sidebar-footer-text { display: none; }
+
+    /* ─── MAIN ─── */
+    .main-wrapper {
+      margin-right: var(--sidebar-w);
+      transition: margin-right 0.3s ease;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-wrapper.collapsed { margin-right: 72px; }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    body.dark .topbar { background: var(--dark-card); border-color: var(--dark-border); }
+
+    .topbar-toggle {
+      background: none;
+      border: none;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      transition: background 0.2s;
+    }
+
+    .topbar-toggle:hover { background: var(--bg); color: var(--primary); }
+
+    .topbar-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      flex: 1;
+    }
+
+    body.dark .topbar-title { color: var(--dark-text); }
+
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+    .dark-toggle {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+      color: var(--text);
+    }
+
+    .dark-toggle:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    body.dark .dark-toggle { border-color: var(--dark-border); color: var(--dark-text); }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    body.dark .user-badge { background: var(--dark-bg); color: var(--dark-text); }
+
+    /* ─── CONTENT ─── */
+    .main-content {
+      flex: 1;
+      padding: 24px;
+    }
+
+    .page-header {
+      margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+      font-weight: 800;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-header .breadcrumb { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--card-bg);
+      border: none;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    body.dark .card { background: var(--dark-card); border-color: var(--dark-border); }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border-radius: 16px 16px 0 0 !important;
+      padding: 16px 24px;
+      font-weight: 700;
+      border: none;
+    }
+
+    /* ─── STAT CARDS ─── */
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-right: 4px solid;
+      transition: transform 0.2s;
+    }
+
+    body.dark .stat-card { background: var(--dark-card); }
+
+    .stat-card:hover { transform: translateY(-3px); }
+
+    .stat-card .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .stat-card .stat-value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+    .stat-card .stat-label { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ─── TABLE ─── */
+    .table {
+      --bs-table-bg: transparent;
+      font-size: 0.88rem;
+    }
+
+    body.dark .table { color: var(--dark-text); }
+
+    .table th {
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      padding: 12px 16px;
+      white-space: nowrap;
+    }
+
+    .table td { padding: 12px 16px; vertical-align: middle; }
+
+    .table-hover tbody tr:hover { background: rgba(26,107,58,0.03); }
+    body.dark .table-hover tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    /* ─── BUTTONS ─── */
+    .btn { border-radius: 10px; font-family: 'Cairo', sans-serif; font-weight: 600; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); border: none; }
+    .btn-primary:hover { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%); }
+
+    /* ─── FORM ─── */
+    .form-control, .form-select {
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-family: 'Cairo', sans-serif;
+      padding: 9px 14px;
+    }
+
+    body.dark .form-control, body.dark .form-select {
+      background: var(--dark-bg);
+      border-color: var(--dark-border);
+      color: var(--dark-text);
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(26,107,58,0.1);
+    }
+
+    /* ─── PAGINATION ─── */
+    .pagination .page-link {
+      border-radius: 8px !important;
+      margin: 0 2px;
+      border: 1.5px solid var(--border);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .pagination .page-item.active .page-link { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* ─── BADGES ─── */
+    .badge { font-family: 'Cairo', sans-serif; font-weight: 600; }
+
+    /* ─── MOBILE ─── */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1030;
+    }
+
+    @media (max-width: 991px) {
+      .sidebar { transform: translateX(100%); width: var(--sidebar-w) !important; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .main-wrapper { margin-right: 0 !important; }
+      .sidebar-overlay.active { display: block; }
+    }
+
+    .alert { border-radius: 12px; }
+
+    /* Dark mode text */
+    body.dark .text-muted { color: var(--dark-muted) !important; }
+    body.dark h1, body.dark h2, body.dark h3, body.dark h4, body.dark h5, body.dark h6 { color: var(--dark-text); }
+    body.dark .form-label { color: var(--dark-text); }
+    body.dark .table th { color: var(--dark-muted); }
+    body.dark .bg-light { background: var(--dark-bg) !important; }
+    body.dark .border { border-color: var(--dark-border) !important; }
+
+    .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar Overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">📡</div>
+    <div class="logo-text">راصد <span>حراج</span></div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">الرئيسية</div>
+
+    <a href="{{ url_for('admin_home') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_home' }}">
+      <i class="fas fa-tachometer-alt"></i>
+      <span>لوحة التحكم</span>
+    </a>
+
+    <div class="nav-section-title">الإدارة</div>
+
+    <a href="{{ url_for('admin_users') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_users' }}">
+      <i class="fas fa-users"></i>
+      <span>المستخدمون</span>
+      {% set total_u = total_users_count %}
+      {% if total_u %}<span class="badge bg-primary">{{ total_u }}</span>{% endif %}
+    </a>
+
+    <a href="{{ url_for('admin_renewals') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_renewals' }}">
+      <i class="fas fa-sync-alt"></i>
+      <span>طلبات التجديد</span>
+      {% if pending_count %}<span class="badge bg-warning text-dark">{{ pending_count }}</span>{% endif %}
+    </a>
+
+    <div class="nav-section-title">السجلات</div>
+
+    <a href="{{ url_for('admin_ad_log') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_ad_log' }}">
+      <i class="fas fa-list-alt"></i>
+      <span>سجل الإعلانات</span>
+    </a>
+
+    <a href="{{ url_for('admin_audit_log') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_audit_log' }}">
+      <i class="fas fa-shield-alt"></i>
+      <span>سجل الأحداث</span>
+    </a>
+
+    <a href="{{ url_for('admin_whatsapp_logs') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_whatsapp_logs' }}">
+      <i class="fab fa-whatsapp"></i>
+      <span>سجل واتساب</span>
+    </a>
+
+    <div class="nav-section-title">التحليلات</div>
+
+    <a href="{{ url_for('admin_statistics') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_statistics' }}">
+      <i class="fas fa-chart-bar"></i>
+      <span>الإحصائيات</span>
+    </a>
+
+    <div class="nav-section-title">الإعدادات</div>
+
+    <a href="{{ url_for('admin_settings') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_settings' }}">
+      <i class="fas fa-cog"></i>
+      <span>الإعدادات</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="d-flex align-items-center gap-2">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">👤</div>
+      <div class="sidebar-footer-text">
+        <div class="text-white fw-600 small">{{ current_user.username }}</div>
+        <div style="color:rgba(255,255,255,0.5);font-size:0.75rem;">مدير النظام</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MAIN WRAPPER ─── -->
+<div class="main-wrapper" id="mainWrapper">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="topbar-toggle" onclick="toggleSidebar()" title="تبديل القائمة">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="topbar-title">{% block page_title %}لوحة الإدارة{% endblock %}</div>
+
+    <div class="topbar-actions">
+      <!-- Live Stats -->
+      <div class="d-none d-md-flex align-items-center gap-2 text-muted small me-2">
+        <span class="pulse"></span>
+        <span id="liveThreads">--</span> رادار نشط
+      </div>
+
+      <button class="dark-toggle" onclick="toggleDark()" title="الوضع الداكن">
+        <span id="darkIcon">🌙</span>
+      </button>
+
+      <div class="user-badge d-none d-md-flex">
+        <i class="fas fa-user-shield text-success"></i>
+        {{ current_user.username }}
+      </div>
+
+      <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
+        <i class="fas fa-sign-out-alt"></i>
+        <span class="d-none d-md-inline ms-1">خروج</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} alert-dismissible fade show mb-4">
+          <i class="fas {{ 'fa-check-circle' if cat == 'success' else 'fa-exclamation-circle' }} me-2"></i>
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer class="text-center py-3 text-muted small border-top">
+    &copy; 2024 راصد حراج - لوحة الإدارة | جميع الحقوق محفوظة
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Sidebar Toggle ──
+const sidebar = document.getElementById('sidebar');
+const mainWrapper = document.getElementById('mainWrapper');
+const overlay = document.getElementById('sidebarOverlay');
+
+let isMobile = window.innerWidth < 992;
+
+function toggleSidebar() {
+  if (isMobile) {
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+  } else {
+    const collapsed = sidebar.classList.toggle('collapsed');
+    mainWrapper.classList.toggle('collapsed', collapsed);
+    localStorage.setItem('sidebarCollapsed', collapsed);
+  }
+}
+
+window.addEventListener('resize', () => {
+  isMobile = window.innerWidth < 992;
+  if (!isMobile) {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    const shouldCollapse = localStorage.getItem('sidebarCollapsed') === 'true';
+    sidebar.classList.toggle('collapsed', shouldCollapse);
+    mainWrapper.classList.toggle('collapsed', shouldCollapse);
+  }
+});
+
+// Restore sidebar state
+if (!isMobile && localStorage.getItem('sidebarCollapsed') === 'true') {
+  sidebar.classList.add('collapsed');
+  mainWrapper.classList.add('collapsed');
+}
+
+// ── Dark Mode ──
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('darkMode', isDark);
+  document.getElementById('darkIcon').textContent = isDark ? '☀️' : '🌙';
+}
+
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark');
+  document.getElementById('darkIcon').textContent = '☀️';
+}
+
+// ── Live Stats ──
+function fetchLiveStats() {
+  fetch('/api/admin/stats')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('liveThreads');
+      if (el) el.textContent = d.live_threads || 0;
+    }).catch(() => {});
+}
+fetchLiveStats();
+setInterval(fetchLiveStats, 30000);
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

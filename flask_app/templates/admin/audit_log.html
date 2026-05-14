@@ -1,0 +1,156 @@
+{% extends "admin/base.html" %}
+{% block title %}سجل الأحداث - راصد حراج{% endblock %}
+{% block page_title %}سجل الأحداث{% endblock %}
+
+{% block extra_css %}
+<style>
+  .detail-cell { font-size: 0.8rem; max-width: 320px; }
+  .detail-badge { display: inline-block; background: rgba(26,107,58,0.08); color: #1a6b3a; border-radius: 6px; padding: 2px 8px; margin: 2px; font-size: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="fas fa-shield-alt me-2" style="color:#8b5cf6;"></i> سجل الأحداث</h2>
+  <div class="breadcrumb mt-1">
+    <a href="{{ url_for('admin_home') }}">الرئيسية</a> &rsaquo; <span class="text-primary">سجل الأحداث</span>
+  </div>
+</div>
+
+<div class="card p-3 mb-4">
+  <form method="GET" class="row g-3 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label fw-600 small">بحث</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-search"></i></span>
+        <input type="text" name="search" class="form-control" placeholder="الإجراء أو التفاصيل..." value="{{ search }}"/>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label fw-600 small">المستخدم</label>
+      <select name="user_id" class="form-select">
+        <option value="">الكل</option>
+        {% for u in users_list %}
+        <option value="{{ u.id }}" {{ 'selected' if user_filter == u.id|string }}>{{ u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">فلتر</button>
+    </div>
+    <div class="col-md-2">
+      <a href="{{ url_for('admin_audit_log') }}" class="btn btn-outline-secondary w-100">مسح</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-shield-alt me-2"></i> سجل الأحداث ({{ pagination.total }})</span>
+    <small class="text-white-50">يُحتفظ بالسجلات 90 يوماً</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:0.87rem;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>المستخدم</th>
+            <th>الإجراء</th>
+            <th>التفاصيل</th>
+            <th>IP</th>
+            <th>التوقيت (KSA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="text-muted small">{{ log.id }}</td>
+            <td>
+              {% if log.user %}<span class="badge bg-primary">{{ log.user.username }}</span>
+              {% elif log.user_id %}<span class="text-muted small">#{{ log.user_id }}</span>
+              {% else %}<span class="badge bg-secondary">النظام</span>{% endif %}
+            </td>
+            <td class="fw-600">{{ log.action }}</td>
+            <td class="detail-cell">
+              <span class="raw-details" style="display:none;">{{ log.details }}</span>
+              <div class="parsed-details"></div>
+            </td>
+            <td class="small text-muted" dir="ltr">{{ log.ip_address or '—' }}</td>
+            <td class="small text-muted">{{ format_time_ksa(log.timestamp, 'full') }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-5">
+              <i class="fas fa-shield-alt fa-2x mb-2 opacity-25 d-block"></i>
+              لا توجد أحداث
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center flex-wrap">
+    {% if pagination.has_prev %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('admin_audit_log', page=pagination.prev_num, search=search, user_id=user_filter) }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+      {% if p %}
+      <li class="page-item {{ 'active' if p == pagination.page }}">
+        <a class="page-link" href="{{ url_for('admin_audit_log', page=p, search=search, user_id=user_filter) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">...</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('admin_audit_log', page=pagination.next_num, search=search, user_id=user_filter) }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.raw-details').forEach(el => {
+  const raw = el.textContent.trim();
+  const target = el.nextElementSibling;
+  try {
+    const data = JSON.parse(raw);
+    if (typeof data === 'object' && data !== null && Object.keys(data).length > 0) {
+      let html = '';
+      for (const [k, v] of Object.entries(data)) {
+        if (typeof v === 'object' && v !== null) {
+          html += '<div class="mb-1"><span class="text-muted fw-600">' + k + ':</span> ';
+          for (const [k2, v2] of Object.entries(v)) {
+            html += '<span class="detail-badge">' + k2 + ': ' + v2 + '</span>';
+          }
+          html += '</div>';
+        } else {
+          html += '<span class="detail-badge">' + k + ': ' + v + '</span>';
+        }
+      }
+      target.innerHTML = html;
+    } else {
+      target.innerHTML = '<span class="text-muted">—</span>';
+    }
+  } catch(e) {
+    target.textContent = raw || '—';
+  }
+});
+</script>
+{% endblock %}

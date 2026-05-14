@@ -1,0 +1,296 @@
+{% extends "admin/base.html" %}
+{% block title %}لوحة التحكم - راصد حراج{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stat-card.green { border-color: #22c55e; }
+  .stat-card.blue { border-color: #3b82f6; }
+  .stat-card.orange { border-color: #f59e0b; }
+  .stat-card.red { border-color: #ef4444; }
+  .stat-card.purple { border-color: #8b5cf6; }
+
+  .stat-card.green .stat-icon { background: rgba(34,197,94,0.1); color: #22c55e; }
+  .stat-card.blue .stat-icon { background: rgba(59,130,246,0.1); color: #3b82f6; }
+  .stat-card.orange .stat-icon { background: rgba(245,158,11,0.1); color: #f59e0b; }
+  .stat-card.red .stat-icon { background: rgba(239,68,68,0.1); color: #ef4444; }
+  .stat-card.purple .stat-icon { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+
+  .stat-card.green .stat-value { color: #22c55e; }
+  .stat-card.blue .stat-value { color: #3b82f6; }
+  .stat-card.orange .stat-value { color: #f59e0b; }
+  .stat-card.red .stat-value { color: #ef4444; }
+  .stat-card.purple .stat-value { color: #8b5cf6; }
+
+  .chart-card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
+  body.dark .chart-card { background: var(--dark-card); }
+  .quick-action { background: white; border-radius: 14px; padding: 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); transition: transform 0.2s; cursor: pointer; border: 1.5px solid transparent; }
+  .quick-action:hover { transform: translateY(-2px); border-color: var(--primary); }
+  body.dark .quick-action { background: var(--dark-card); }
+  .quick-action-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="fas fa-tachometer-alt text-success me-2"></i> لوحة التحكم</h2>
+  <div class="breadcrumb mt-1">
+    <span>الرئيسية</span> &rsaquo; <span class="text-primary">لوحة التحكم</span>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card green">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="stat-value" id="statUsers">{{ total_users }}</div>
+        <div class="stat-label">إجمالي المستخدمين</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card blue">
+      <div class="stat-icon"><i class="fas fa-satellite-dish"></i></div>
+      <div>
+        <div class="stat-value" id="statActive">{{ active_subs }}</div>
+        <div class="stat-label">رادار نشط</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card orange">
+      <div class="stat-icon"><i class="fas fa-sync-alt"></i></div>
+      <div>
+        <div class="stat-value" id="statPending">{{ pending_renewals }}</div>
+        <div class="stat-label">طلبات التجديد المعلقة</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card red">
+      <div class="stat-icon"><i class="fas fa-list-alt"></i></div>
+      <div>
+        <div class="stat-value" id="statAds">{{ total_ads }}</div>
+        <div class="stat-label">إجمالي الإعلانات المُرصَدة</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Second row -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card purple">
+      <div class="stat-icon"><i class="fas fa-user-times"></i></div>
+      <div>
+        <div class="stat-value">{{ expired_users }}</div>
+        <div class="stat-label">اشتراكات منتهية</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart + Quick Actions -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h6 class="fw-800 mb-0">
+          <i class="fas fa-chart-line text-primary me-2"></i>
+          الإعلانات المُرصَدة (آخر 7 أيام)
+        </h6>
+      </div>
+      <canvas id="adsChart" height="100"></canvas>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="chart-card h-100">
+      <h6 class="fw-800 mb-4">
+        <i class="fas fa-bolt text-warning me-2"></i> إجراءات سريعة
+      </h6>
+      <div class="d-flex flex-column gap-3">
+        <a href="{{ url_for('admin_users') }}" class="quick-action text-decoration-none">
+          <div class="quick-action-icon" style="background:rgba(34,197,94,0.1);">👥</div>
+          <div>
+            <div class="fw-700 small">إدارة المستخدمين</div>
+            <div class="text-muted" style="font-size:0.75rem;">{{ total_users }} مستخدم مسجّل</div>
+          </div>
+          <i class="fas fa-chevron-left ms-auto text-muted"></i>
+        </a>
+        <a href="{{ url_for('admin_renewals') }}" class="quick-action text-decoration-none">
+          <div class="quick-action-icon" style="background:rgba(245,158,11,0.1);">🔄</div>
+          <div>
+            <div class="fw-700 small">طلبات التجديد</div>
+            <div class="text-muted" style="font-size:0.75rem;">{{ pending_renewals }} طلب معلق</div>
+          </div>
+          <i class="fas fa-chevron-left ms-auto text-muted"></i>
+        </a>
+        <a href="{{ url_for('admin_settings') }}" class="quick-action text-decoration-none">
+          <div class="quick-action-icon" style="background:rgba(59,130,246,0.1);">⚙️</div>
+          <div>
+            <div class="fw-700 small">إعدادات النظام</div>
+            <div class="text-muted" style="font-size:0.75rem;">واتساب، تيليجرام، الأسعار</div>
+          </div>
+          <i class="fas fa-chevron-left ms-auto text-muted"></i>
+        </a>
+        <a href="{{ url_for('admin_audit_log') }}" class="quick-action text-decoration-none">
+          <div class="quick-action-icon" style="background:rgba(139,92,246,0.1);">📋</div>
+          <div>
+            <div class="fw-700 small">سجل الأحداث</div>
+            <div class="text-muted" style="font-size:0.75rem;">تتبع جميع الإجراءات</div>
+          </div>
+          <i class="fas fa-chevron-left ms-auto text-muted"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Users + Recent Renewals -->
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-users me-2"></i> أحدث المستخدمين</span>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-light">عرض الكل</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>المستخدم</th>
+                <th>الجوال</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in recent_users %}
+              <tr>
+                <td class="fw-600">{{ u.username }}</td>
+                <td class="text-muted small">{{ u.phone }}</td>
+                <td>
+                  {% if u.is_expired() %}
+                  <span class="badge bg-danger">منتهي</span>
+                  {% elif u.account_expiration %}
+                  <span class="badge bg-success">نشط</span>
+                  {% else %}
+                  <span class="badge bg-warning text-dark">تجريبي</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">لا يوجد مستخدمون</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-sync-alt me-2"></i> آخر طلبات التجديد</span>
+        <a href="{{ url_for('admin_renewals') }}" class="btn btn-sm btn-light">عرض الكل</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>المستخدم</th>
+                <th>الأسابيع</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in recent_renewals %}
+              <tr>
+                <td class="fw-600">
+                  {% if r.user %}{{ r.user.username }}{% else %}—{% endif %}
+                </td>
+                <td>{{ r.weeks }}</td>
+                <td>{{ r.amount }} ر.س</td>
+                <td>
+                  {% if r.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">قيد المراجعة</span>
+                  {% elif r.status == 'approved' %}
+                  <span class="badge bg-success">مقبول</span>
+                  {% else %}
+                  <span class="badge bg-danger">مرفوض</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-3">لا توجد طلبات</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const isDark = document.body.classList.contains('dark');
+const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+const textColor = isDark ? '#94a3b8' : '#64748b';
+
+const ctx = document.getElementById('adsChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: {{ chart_labels|safe }},
+    datasets: [{
+      label: 'الإعلانات المُرصَدة',
+      data: {{ chart_data|safe }},
+      borderColor: '#22c55e',
+      backgroundColor: 'rgba(34,197,94,0.1)',
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#1a6b3a',
+      pointRadius: 5,
+      pointHoverRadius: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: gridColor },
+        ticks: { color: textColor, font: { family: 'Cairo' } },
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: textColor, font: { family: 'Cairo' } },
+      }
+    }
+  }
+});
+
+// Refresh stats
+setInterval(() => {
+  fetch('/api/admin/stats').then(r => r.json()).then(d => {
+    document.getElementById('statUsers').textContent = d.total_users;
+    document.getElementById('statActive').textContent = d.active_subs;
+    document.getElementById('statPending').textContent = d.pending_renewals;
+    document.getElementById('statAds').textContent = d.total_ads;
+  }).catch(() => {});
+}, 30000);
+</script>
+{% endblock %}

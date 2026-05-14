@@ -1,0 +1,229 @@
+{% extends "admin/base.html" %}
+{% block title %}الإعدادات - راصد حراج{% endblock %}
+{% block page_title %}إعدادات النظام{% endblock %}
+
+{% block extra_css %}
+<style>
+  .settings-section { background: var(--card-bg); border-radius: 16px; padding: 28px; box-shadow: var(--shadow); margin-bottom: 24px; }
+  body.dark .settings-section { background: var(--dark-card); }
+  .settings-section-title { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid rgba(26,107,58,0.1); display: flex; align-items: center; gap: 8px; }
+  body.dark .settings-section-title { color: var(--dark-text); }
+  .settings-section-title i { color: #1a6b3a; width: 24px; }
+  .token-input { font-family: monospace; font-size: 0.9rem; }
+  .method-card { border: 2px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+  .method-card:hover { border-color: #1a6b3a; }
+  .method-card.selected { border-color: #1a6b3a; background: rgba(26,107,58,0.05); }
+  .method-card .method-icon { font-size: 2rem; margin-bottom: 8px; }
+  body.dark .method-card { border-color: var(--dark-border); }
+  body.dark .method-card.selected { background: rgba(26,107,58,0.1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="fas fa-cog text-primary me-2"></i> إعدادات النظام</h2>
+  <div class="breadcrumb mt-1">
+    <a href="{{ url_for('admin_home') }}">الرئيسية</a> &rsaquo; <span class="text-primary">الإعدادات</span>
+  </div>
+</div>
+
+<form method="POST">
+
+  <!-- WhatsApp Settings -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fab fa-whatsapp"></i> إعدادات واتساب
+    </div>
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label fw-600">رمز API واتساب (Token)</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-key"></i></span>
+          <input type="text" name="whatsapp_token" class="form-control token-input"
+            value="{{ settings.whatsapp_token or '' }}" placeholder="Bearer Token..."/>
+          <button type="button" class="btn btn-outline-secondary" onclick="testWhatsApp()">
+            <i class="fas fa-vial me-1"></i> اختبار
+          </button>
+        </div>
+        <div class="form-text">رمز المصادقة لـ API: https://whatsapp.tkwin.com.sa</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Telegram Settings -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fab fa-telegram"></i> إعدادات تيليجرام
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-600">Bot Token</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fab fa-telegram text-info"></i></span>
+          <input type="text" name="telegram_bot_token" class="form-control token-input"
+            value="{{ settings.telegram_bot_token or '' }}" placeholder="123456:ABC-DEF..."/>
+        </div>
+        <div class="form-text">احصل عليه من @BotFather على تيليجرام</div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-600">Chat ID الافتراضي</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-hashtag"></i></span>
+          <input type="text" name="telegram_chat_id" class="form-control"
+            value="{{ settings.telegram_chat_id or '' }}" placeholder="مثال: 123456789 أو @channel"/>
+        </div>
+        <div class="form-text">يُستخدم عند عدم توفر Chat ID للمستخدم</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messaging Method -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fas fa-paper-plane"></i> طريقة الإرسال
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="method-card text-center {{ 'selected' if settings.messaging_method == 'whatsapp' }}"
+          onclick="selectMethod('whatsapp')">
+          <div class="method-icon">📱</div>
+          <div class="fw-700">واتساب</div>
+          <div class="text-muted small">WhatsApp API</div>
+          <input type="radio" name="messaging_method" value="whatsapp" style="display:none"
+            id="method_wa" {{ 'checked' if settings.messaging_method == 'whatsapp' }}/>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="method-card text-center {{ 'selected' if settings.messaging_method == 'telegram' }}"
+          onclick="selectMethod('telegram')">
+          <div class="method-icon">✈️</div>
+          <div class="fw-700">تيليجرام</div>
+          <div class="text-muted small">Telegram Bot API</div>
+          <input type="radio" name="messaging_method" value="telegram" style="display:none"
+            id="method_tg" {{ 'checked' if settings.messaging_method == 'telegram' }}/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Settings -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fas fa-dollar-sign"></i> إعدادات الاشتراك
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-600">أيام التجربة المجانية</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-gift"></i></span>
+          <input type="number" name="trial_days" class="form-control"
+            value="{{ settings.trial_days or 2 }}" min="0" max="30"/>
+          <span class="input-group-text">يوم</span>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-600">سعر الأسبوع</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-tag"></i></span>
+          <input type="number" name="subscription_week_price" class="form-control"
+            value="{{ settings.subscription_week_price or 5 }}" min="0" step="0.5"/>
+          <span class="input-group-text">ريال</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bank Details -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fas fa-university"></i> بيانات التحويل البنكي
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-600">رقم الحساب / IBAN</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
+          <input type="text" name="bank_account_number" class="form-control"
+            value="{{ settings.bank_account_number or '' }}" placeholder="SA..."/>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-600">اسم الحساب</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-user"></i></span>
+          <input type="text" name="bank_account_name" class="form-control"
+            value="{{ settings.bank_account_name or '' }}" placeholder="اسم صاحب الحساب"/>
+        </div>
+      </div>
+      <div class="col-12">
+        <label class="form-label fw-600">نص QR / رابط الدفع</label>
+        <textarea name="bank_qr_text" class="form-control" rows="3"
+          placeholder="رابط أو نص لصفحة الدفع...">{{ settings.bank_qr_text or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Notifications -->
+  <div class="settings-section">
+    <div class="settings-section-title">
+      <i class="fas fa-bell"></i> إشعارات المدير
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-600">رقم جوال المدير (للتقارير)</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-phone"></i></span>
+          <input type="text" name="admin_phone" class="form-control"
+            value="{{ notify.admin_phone or '' }}" placeholder="966XXXXXXXXX"/>
+        </div>
+        <div class="form-text">يتلقى تقارير يومية عند الساعة 11 مساءً بتوقيت الرياض</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-3">
+    <button type="submit" class="btn btn-primary px-5 py-3">
+      <i class="fas fa-save me-2"></i> حفظ جميع الإعدادات
+    </button>
+    <a href="{{ url_for('admin_home') }}" class="btn btn-outline-secondary py-3 px-4">
+      إلغاء
+    </a>
+  </div>
+</form>
+
+<!-- Test Result Modal -->
+<div class="modal fade" id="testModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-700">نتيجة الاختبار</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="testResult">
+        جاري الإرسال...
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectMethod(method) {
+  document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('method_' + (method === 'whatsapp' ? 'wa' : 'tg')).checked = true;
+}
+
+function testWhatsApp() {
+  const modal = new bootstrap.Modal(document.getElementById('testModal'));
+  modal.show();
+  document.getElementById('testResult').innerHTML = '<div class="text-center"><div class="spinner-border text-success"></div><p class="mt-2">جاري إرسال رسالة اختبار...</p></div>';
+
+  setTimeout(() => {
+    document.getElementById('testResult').innerHTML =
+      '<div class="alert alert-info">لإرسال رسالة اختبار، احفظ الإعدادات أولاً ثم أرسل رسالة يدوياً من لوحة تحكم API.</div>';
+  }, 1500);
+}
+</script>
+{% endblock %}
