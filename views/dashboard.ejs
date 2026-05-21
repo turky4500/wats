@@ -5,7 +5,7 @@
     <title>لوحة المستخدم</title>
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
         .btn-warning { background: #f57c00; }
         .grid { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -26,7 +26,7 @@
     <div class="header">
         <h2>مرحباً، <%= user.username %> 👋</h2>
         <div>
-            <% if (user.role === 'admin') { %><a href="/admin" class="btn" style="background:#075e54;">إدارة النظام</a><% } %>
+            <a href="/logs" class="btn" style="background:#f57c00;">سجل الرسائل 📜</a>
             <a href="/logout" class="btn" style="background:#d32f2f;">تسجيل خروج</a>
         </div>
     </div>
@@ -104,6 +104,10 @@ curl -X POST <%= host %>/api/send-message \
             document.getElementById('chat-card').classList.remove('hidden');
         });
 
+        socket.on('status-update', (msg) => {
+            document.getElementById('status-title').innerText = msg;
+        });
+
         socket.on('message-sent', (data) => {
             const el = document.createElement('div');
             el.className = 'message';
@@ -111,15 +115,19 @@ curl -X POST <%= host %>/api/send-message \
             const msgs = document.getElementById('messages');
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
+            document.getElementById('msg').value = '';
         });
 
-        socket.on('error', (err) => alert('خطأ: ' + err));
+        socket.on('error', (err) => {
+            console.error('خطأ:', err);
+        });
 
         document.getElementById('send-btn').onclick = () => {
             const to = document.getElementById('phone').value;
             const body = document.getElementById('msg').value;
             if (!to || !body) return alert("الرجاء إدخال البيانات");
             socket.emit('send-message', { to, body });
+            document.getElementById('msg').value = '';
         };
 
         function copyToken() {
