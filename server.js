@@ -12,7 +12,6 @@ const { startWhatsAppSession, getSession } = require('./whatsappManager');
 const app = express();
 const server = http.createServer(app);
 
-// السر هنا: رفع الحد الأقصى للمقاس إلى 50 ميجابايت للسماح بمرور الصور والملفات
 const io = socketIo(server, {
     maxHttpBufferSize: 50 * 1024 * 1024 // 50 MB
 });
@@ -204,11 +203,18 @@ io.on('connection', (socket) => {
             if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected');
         });
         
-        socket.on('send-message', async ({ to, body, media }) => {
+        // استخدام callback للتأكد من وصول الرسالة
+        socket.on('send-message', async ({ to, body, media }, callback) => {
             const sock = getSession(sessionUserId);
-            if (!sock || !sock.user) return socket.emit('error', 'واتساب قيد الاتصال، انتظر ثواني قليلة...');
+            if (!sock || !sock.user) {
+                if(callback) callback({ error: 'واتساب قيد الاتصال، انتظر ثواني قليلة...' });
+                return;
+            }
             
             const numbers = to.split(',').map(n => n.trim()).filter(n => n);
+            let errors = [];
+            let successes = 0;
+
             for (const num of numbers) {
                 const jid = `${num}@s.whatsapp.net`;
                 try {
@@ -219,13 +225,19 @@ io.on('connection', (socket) => {
 
                     await sendWhatsAppMessage(sock, jid, body, media);
 
-                    socket.emit('message-sent', { to: num, body: body || '(رسالة وسائط تم إرسالها)' });
+                    socket.emit('message-sent', { to: num, body: body || '(تم إرسال مرفق)' });
                     await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'success' });
+                    successes++;
                     await new Promise(r => setTimeout(r, 3000));
                 } catch (e) {
-                    socket.emit('error', `خطأ في إرسال رسالة لـ ${num} (${e.message})`);
+                    errors.push(`خطأ للرقم ${num}: ${e.message}`);
                     await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
                 }
+            }
+
+            if(callback) {
+                if (errors.length > 0) callback({ error: errors.join('\n') });
+                else callback({ success: true });
             }
         });
     }
