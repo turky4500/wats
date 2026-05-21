@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { initAuthCreds } = require('@whiskeysockets/baileys');
 
 const sessionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -37,7 +38,13 @@ async function useMongoDBAuthState(userId) {
 
     const removeData = async (key) => { await AuthSession.deleteOne({ userId, key }); };
 
-    const creds = await readData('creds') || {};
+    // جلب المفاتيح أو إنشاء مفاتيح جديدة إذا كان المستخدم جديداً
+    let creds = await readData('creds');
+    if (!creds || !creds.noiseKey) {
+        creds = initAuthCreds();
+        await writeData(creds, 'creds');
+    }
+
     return {
         state: {
             creds,
@@ -71,4 +78,5 @@ async function useMongoDBAuthState(userId) {
         saveCreds: () => writeData(creds, 'creds')
     };
 }
+
 module.exports = { AuthSession, useMongoDBAuthState };
