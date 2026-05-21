@@ -6,132 +6,123 @@
     <title>واتس اب تكوين - لوحة التحكم</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
-
-        :root {
-            --primary: #25d366;
-            --primary-hover: #22c35e;
-            --secondary: #3b82f6;
-            --dark: #1e293b;
-            --text-main: #334155;
-            --text-muted: #94a3b8;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-        }
-
+        :root { --primary: #25d366; --primary-hover: #22c35e; --secondary: #3b82f6; --dark: #1e293b; --text-main: #334155; --text-muted: #94a3b8; --bg-color: #f8fafc; --card-bg: #ffffff; --danger: #ef4444; --warning: #f59e0b; }
         body { font-family: 'Tajawal', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; }
         .container { max-width: 1300px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-bottom: 25px; border-top: 4px solid var(--primary); flex-wrap: wrap; gap:10px;}
+        .header h2 { margin: 0; font-weight: 800; color: var(--dark); display:flex; align-items:center; gap:15px; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-bottom: 25px; border-top: 4px solid var(--primary); }
-        .header h2 { margin: 0; font-weight: 800; color: var(--dark); }
-        
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 25px; border: none; border-radius: 6px; font-family: 'Tajawal', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
+        .subscription-badge { font-size: 14px; padding: 5px 12px; border-radius: 20px; color: white; font-weight: bold; }
+        .active-sub { background: var(--primary); }
+        .expired-sub { background: var(--danger); }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; border: none; border-radius: 6px; font-family: 'Tajawal', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: 0.2s; white-space: nowrap; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3); }
-        .btn-secondary { background: var(--warning); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-secondary { background: var(--secondary); color: white; }
         .btn-dark { background: #475569; color: white; }
-        
+        .btn-warning { background: var(--warning); color: white; }
+
         .grid-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; align-items: start; }
+        @media (max-width: 800px) { .grid-layout { grid-template-columns: 1fr; } }
         
         .card { background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
-        .section-title { font-weight: 800; margin-top: 0; margin-bottom: 20px; font-size: 20px; color: var(--dark); display: flex; justify-content: space-between; align-items: center; }
+        .section-title { font-weight: 800; margin-top: 0; margin-bottom: 20px; font-size: 20px; color: var(--dark); }
         
-        /* Step 1: Recipients CSS */
         .form-step { display: none; animation: fadeIn 0.4s ease; }
         .form-step.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         label { display: block; font-weight: 700; margin-bottom: 8px; color: #475569; font-size: 14px; }
         .input-group { display: flex; margin-bottom: 20px; }
-        .input-group input, .input-group textarea { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 15px; outline: none; }
-        .input-group button { background: white; color: var(--primary); border: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; border-radius: 0 6px 6px 0; padding: 0 20px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .input-group input { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 15px; outline: none; }
+        .input-group button { background: white; color: var(--primary); border: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; border-radius: 0 6px 6px 0; padding: 0 20px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; }
         .input-group button:hover { background: #f0fdf4; color: #16a34a; }
         
         .file-upload-styled { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; background: #f8fafc; }
-        
-        .recipients-list { width: 100%; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; background: #f8fafc; font-family: monospace; font-size: 15px; direction: ltr; text-align: left; resize: vertical; box-sizing: border-box; outline: none; }
+        .recipients-list { width: 100%; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; background: #f8fafc; font-family: monospace; font-size: 15px; direction: ltr; text-align: left; resize: vertical; outline: none; box-sizing: border-box; }
         .counter-badge { background: var(--primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; }
 
-        /* Step 2: Message CSS */
         .preview-box { background: #e5ddd5; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px; }
-        .preview-bubble { background: #dcf8c5; padding: 12px 15px; border-radius: 10px; border-top-right-radius: 0; max-width: 80%; align-self: flex-start; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); font-size: 15px; white-space: pre-wrap; word-wrap: break-word; color: #111; }
+        .preview-bubble { background: #dcf8c5; padding: 12px 15px; border-radius: 10px; border-top-right-radius: 0; max-width: 80%; align-self: flex-start; position: relative; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; color: #111; }
         .preview-bubble::after { content: ''; position: absolute; top: 0; right: -8px; border-width: 0 8px 8px 0; border-style: solid; border-color: transparent #dcf8c5 transparent transparent; }
         
         .editor-toolbar { border: 1px solid #cbd5e1; border-bottom: none; border-radius: 6px 6px 0 0; background: #f8fafc; padding: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
         .toolbar-btn { background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 14px; font-weight: bold; color: #475569; font-family: inherit; }
-        .toolbar-btn:hover { background: #f1f5f9; color: var(--primary); }
         .message-textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 0 0 6px 6px; padding: 15px; min-height: 150px; resize: vertical; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; }
-        .message-textarea:focus { border-color: var(--primary); }
-        
         .drag-drop-zone { border: 2px dashed #3b82f6; background: #eff6ff; padding: 40px 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .drag-drop-zone:hover { background: #dbeafe; border-color: #2563eb; }
         .drag-drop-zone h4 { color: #1e3a8a; margin: 15px 0 5px; font-weight: 800; font-size: 18px; }
         .drag-drop-zone p { color: #60a5fa; font-size: 13px; margin: 0; }
 
-        /* Toasts and Sidebar Elements */
         #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); font-weight: 600; border-right: 4px solid var(--primary); animation: slideIn 0.3s forwards; }
         .toast.error { border-right-color: var(--danger); }
         @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
-        .chat-sidebar-box { height: 250px; overflow-y: auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; font-size: 13px; }
+        .chat-sidebar-box { height: 250px; overflow-y: auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; }
         .log-msg { background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
-        
-        .token-box { display: flex; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
-        .token-box input { border: none; background: transparent; padding: 12px; flex: 1; font-family: monospace; font-size: 12px; outline: none; }
-        .token-box button { background: var(--primary); color: white; border: none; padding: 0 15px; cursor: pointer; font-weight: bold; }
-        pre { background: #1e293b; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; direction: ltr; text-align: left; font-size: 12px; }
         
         .hidden { display: none !important; }
         #qr-container img { width: 100%; max-width: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; margin-top: 15px; }
+        .alert-box { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
     <div id="toast-container"></div>
 
+    <% 
+        let daysRemaining = 0;
+        let isExpired = false;
+        if (user.subscriptionEndsAt) {
+            const diffTime = user.subscriptionEndsAt - new Date();
+            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 0) { daysRemaining = 0; isExpired = true; }
+        }
+    %>
+
     <div class="container">
         <div class="header">
-            <h2>مرحباً، <%= user.username %> 👋</h2>
-            <div style="display: flex; gap: 10px;">
+            <h2>مرحباً، <%= user.username %> 👋 
+                <span class="subscription-badge <%= isExpired ? 'expired-sub' : 'active-sub' %>">
+                    <%= isExpired ? 'اشتراك منتهي' : `متبقي ${daysRemaining} أيام` %>
+                </span>
+            </h2>
+            <div style="display: flex; gap: 10px; flex-wrap:wrap;">
+                <% if (isImpersonating) { %>
+                    <a href="/return-to-admin" class="btn btn-warning">👑 العودة للإدارة</a>
+                <% } %>
+                <a href="/api-guide" class="btn" style="background: #8b5cf6; color:white;">🔌 دليل الـ API</a>
                 <a href="/logs" class="btn btn-secondary">سجل الرسائل 📜</a>
                 <a href="/logout" class="btn btn-dark">تسجيل خروج</a>
             </div>
         </div>
         
+        <% if (isExpired) { %>
+            <div class="alert-box">
+                ⚠️ اشتراكك منتهي، لا يمكنك الإرسال. الرجاء التواصل مع الدعم الفني: 966598686902
+            </div>
+        <% } %>
+
         <div class="grid-layout">
-            <!-- Sidebar: Connection & Logs -->
             <div class="card" style="padding: 20px;">
                 <h3 class="section-title" id="status-title" style="font-size: 16px;">حالة الاتصال ⏳</h3>
-                
                 <div id="qr-container" class="hidden">
                     <p style="font-size: 13px; color: var(--text-muted); margin:0;">امسح رمز QR لربط الجلسة:</p>
                     <div id="qr-img" style="text-align: center;"></div>
                 </div>
-                
                 <div id="connected-container" class="hidden">
                     <p style="color: var(--primary); font-size: 15px; font-weight: 700; text-align:center;">✅ واتساب متصل وجاهز</p>
-                    
                     <h4 style="font-size: 14px; margin-top: 25px;">إشعارات الإرسال المباشرة:</h4>
                     <div class="chat-sidebar-box" id="messages">
                         <div style="color: #94a3b8; text-align: center; margin-top: 20px;">لا يوجد إرسال حالياً...</div>
                     </div>
-
-                    <h4 style="font-size: 14px; margin-top: 20px;">الربط الخارجي (API) 🔗</h4>
-                    <div class="token-box">
-                        <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
-                        <button onclick="copyToken()">نسخ</button>
-                    </div>
                 </div>
             </div>
 
-            <!-- Main Content: Steps -->
             <div>
-                <!-- الخطوة الأولى: المستلمين -->
                 <div id="step-1" class="form-step active">
                     <div class="card">
                         <h3 class="section-title">إضافة المستلمين</h3>
-                        
                         <label>أدخل رقم الهاتف (مع رمز البلد)</label>
                         <div class="input-group">
                             <button onclick="addManualNumber()">+ أضف</button>
@@ -147,7 +138,7 @@
 
                         <label style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px;">
                             <span>قائمة المستلمين <span class="counter-badge" id="recipientsCount">0</span></span>
-                            <span style="font-size: 13px; color: var(--danger); cursor: pointer; text-decoration: underline;" onclick="clearRecipients()">مسح القائمة</span>
+                            <span style="font-size: 13px; color: var(--danger); cursor: pointer;" onclick="clearRecipients()">مسح القائمة</span>
                         </label>
                         <textarea id="recipientsList" class="recipients-list" placeholder="الأرقام المضافة ستظهر هنا..." readonly></textarea>
                         
@@ -157,27 +148,23 @@
                     </div>
                 </div>
 
-                <!-- الخطوة الثانية: الرسالة والمرفقات -->
                 <div id="step-2" class="form-step">
                     <div class="card">
                         <h3 class="section-title">الرسالة والمرفقات</h3>
-                        
                         <label>معاينة الرسائل</label>
-                        <div class="preview-box">
-                            <div class="preview-bubble" id="livePreview">ستظهر رسالتك هنا...</div>
-                        </div>
+                        <div class="preview-box"><div class="preview-bubble" id="livePreview">ستظهر رسالتك هنا...</div></div>
 
                         <label>محتوى الرسالة</label>
                         <div>
                             <div class="editor-toolbar">
-                                <button class="toolbar-btn" onclick="insertFormat('*')" title="غامق"><b>B</b></button>
-                                <button class="toolbar-btn" onclick="insertFormat('_')" title="مائل"><i>I</i></button>
-                                <button class="toolbar-btn" onclick="insertFormat('~')" title="مشطوب"><s>S</s></button>
+                                <button class="toolbar-btn" onclick="insertFormat('*')"><b>B</b></button>
+                                <button class="toolbar-btn" onclick="insertFormat('_')"><i>I</i></button>
+                                <button class="toolbar-btn" onclick="insertFormat('~')"><s>S</s></button>
                                 <button class="toolbar-btn" onclick="insertText('😊')">😀</button>
                                 <div style="flex:1;"></div>
                                 <button class="toolbar-btn" onclick="insertDate('اليوم')">اليوم</button>
-                                <button class="toolbar-btn" onclick="insertDate('ميلادي')">التاريخ الميلادي</button>
-                                <button class="toolbar-btn" onclick="insertDate('هجري')">التاريخ الهجري</button>
+                                <button class="toolbar-btn" onclick="insertDate('ميلادي')">ميلادي</button>
+                                <button class="toolbar-btn" onclick="insertDate('هجري')">هجري</button>
                             </div>
                             <textarea id="msg" class="message-textarea" placeholder="اكتب رسالتك هنا..." onkeyup="updatePreview()"></textarea>
                         </div>
@@ -191,9 +178,12 @@
                         </div>
                         <input type="file" id="mediaFiles" multiple style="display:none;" onchange="handleMediaSelect()">
 
+                        <!-- حفظ التوكن للرفع الخفي -->
+                        <input type="hidden" id="apiToken" value="<%= user.apiToken %>">
+
                         <div style="display: flex; justify-content: space-between; margin-top: 30px;">
                             <button class="btn btn-dark" onclick="goToStep(1)">→ عودة</button>
-                            <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة (للطابور)</button>
+                            <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة</button>
                         </div>
                     </div>
                 </div>
@@ -211,7 +201,7 @@
             toast.className = `toast ${type}`;
             toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
             container.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 5000);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 8000);
         }
 
         socket.on('qr', (imgData) => {
@@ -226,10 +216,9 @@
             document.getElementById('connected-container').classList.remove('hidden');
         });
 
-        // استلام إشعارات الطابور المباشرة
         socket.on('message-sent', (data) => {
             const msgs = document.getElementById('messages');
-            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = ''; // إزالة النص الافتراضي
+            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = '';
             const el = document.createElement('div');
             el.className = 'log-msg';
             el.innerText = `✅ أُرسلت لـ ${data.to}`;
@@ -249,21 +238,12 @@
             msgs.scrollTop = msgs.scrollHeight;
         });
 
-        // =============== Step 1 Logic ===============
         let recipientsSet = new Set();
-
         function addManualNumber() {
             const val = document.getElementById('manualPhone').value.trim();
-            if(val) {
-                recipientsSet.add(val);
-                document.getElementById('manualPhone').value = '';
-                updateRecipientsUI();
-            }
+            if(val) { recipientsSet.add(val); document.getElementById('manualPhone').value = ''; updateRecipientsUI(); }
         }
-
-        document.getElementById('manualPhone').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') addManualNumber();
-        });
+        document.getElementById('manualPhone').addEventListener('keypress', function (e) { if (e.key === 'Enter') addManualNumber(); });
 
         function handleTxtUpload(e) {
             const file = e.target.files[0];
@@ -271,9 +251,7 @@
             document.getElementById('txtFileLabel').innerText = file.name;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const text = evt.target.result;
-                const lines = text.split(/\r?\n/);
-                lines.forEach(line => {
+                evt.target.result.split(/\r?\n/).forEach(line => {
                     const num = line.trim();
                     if(num) recipientsSet.add(num);
                 });
@@ -289,8 +267,7 @@
         }
 
         function clearRecipients() {
-            recipientsSet.clear();
-            updateRecipientsUI();
+            recipientsSet.clear(); updateRecipientsUI();
             document.getElementById('txtFileLabel').innerText = 'لم يتم اختيار أي ملف';
             document.getElementById('txtFileInput').value = '';
         }
@@ -301,16 +278,12 @@
             document.getElementById(`step-${step}`).classList.add('active');
         }
 
-        // =============== Step 2 Logic ===============
         function insertFormat(char) {
             const txtArea = document.getElementById('msg');
-            const start = txtArea.selectionStart;
-            const end = txtArea.selectionEnd;
-            const text = txtArea.value;
-            let selectedText = text.substring(start, end);
-            if (!selectedText) selectedText = "نص";
-            const replacement = `${char}${selectedText}${char}`;
-            txtArea.value = text.substring(0, start) + replacement + text.substring(end);
+            const start = txtArea.selectionStart, end = txtArea.selectionEnd, text = txtArea.value;
+            let sel = text.substring(start, end);
+            if (!sel) sel = "نص";
+            txtArea.value = text.substring(0, start) + `${char}${sel}${char}` + text.substring(end);
             updatePreview();
         }
 
@@ -324,37 +297,22 @@
         function insertDate(type) {
             const now = new Date();
             let str = '';
-            if(type === 'اليوم') {
-                const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-                str = days[now.getDay()];
-            } else if(type === 'ميلادي') {
-                str = now.toLocaleDateString('en-GB');
-            } else if(type === 'هجري') {
-                str = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {day: 'numeric', month: 'long', year : 'numeric'}).format(now);
-            }
+            if(type === 'اليوم') str = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][now.getDay()];
+            else if(type === 'ميلادي') str = now.toLocaleDateString('en-GB');
+            else if(type === 'هجري') str = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {day: 'numeric', month: 'long', year : 'numeric'}).format(now);
             insertText(str);
         }
 
         function updatePreview() {
-            let text = document.getElementById('msg').value;
-            if(!text) text = "ستظهر رسالتك هنا...";
-            text = text.replace(/\*(.*?)\*/g, '<b>$1</b>');
-            text = text.replace(/_(.*?)_/g, '<i>$1</i>');
-            text = text.replace(/~(.*?)~/g, '<s>$1</s>');
+            let text = document.getElementById('msg').value || "ستظهر رسالتك هنا...";
+            text = text.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<i>$1</i>').replace(/~(.*?)~/g, '<s>$1</s>');
             document.getElementById('livePreview').innerHTML = text;
         }
 
-        // Drag & Drop
         const dropZone = document.getElementById('dropZone');
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = '#2563eb'; dropZone.style.background = '#dbeafe'; });
         dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#3b82f6'; dropZone.style.background = '#eff6ff'; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = '#3b82f6'; 
-            dropZone.style.background = '#eff6ff';
-            document.getElementById('mediaFiles').files = e.dataTransfer.files;
-            handleMediaSelect();
-        });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = '#3b82f6'; dropZone.style.background = '#eff6ff'; document.getElementById('mediaFiles').files = e.dataTransfer.files; handleMediaSelect(); });
 
         function handleMediaSelect() {
             const files = document.getElementById('mediaFiles').files;
@@ -363,10 +321,10 @@
                 for(let f of files) size += f.size;
                 const mb = (size/(1024*1024)).toFixed(2);
                 if (mb > 15) {
-                    document.getElementById('mediaFilesNames').innerHTML = `<span style="color:red;">❌ حجم المرفقات (${mb} MB) يتجاوز الحد المسموح (15 MB)</span>`;
+                    document.getElementById('mediaFilesNames').innerHTML = `<span style="color:red;">❌ الحجم (${mb} MB) يتجاوز الحد (15 MB)</span>`;
                     document.getElementById('mediaFiles').value = '';
                 } else {
-                    document.getElementById('mediaFilesNames').innerText = `تم تحديد ${files.length} مرفقات (${mb} MB) جاهزة.`;
+                    document.getElementById('mediaFilesNames').innerText = `تم تحديد ${files.length} مرفقات (${mb} MB).`;
                 }
             }
         }
@@ -387,7 +345,7 @@
             const token = document.getElementById('apiToken').value;
             
             if (!body && fileInput.files.length === 0) return showToast("الرجاء كتابة رسالة أو إضافة مرفق!", "error");
-
+            
             const btn = document.getElementById('send-btn');
             btn.innerText = 'جاري الإرسال للطابور... ⏳';
             btn.disabled = true;
@@ -396,7 +354,6 @@
                 const mediaArray = [];
                 for(let i=0; i<fileInput.files.length; i++) mediaArray.push(await fileToBase64(fileInput.files[i]));
 
-                // إرسال البيانات للـ API (الذي سيضعها في الطابور ويرد فوراً)
                 const response = await fetch('/api/send-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -404,8 +361,7 @@
                 });
 
                 const result = await response.json();
-                
-                btn.innerText = '🚀 إرسال الحملة (للطابور)';
+                btn.innerText = '🚀 إرسال الحملة';
                 btn.disabled = false;
 
                 if (result.success) {
@@ -415,22 +371,15 @@
                     fileInput.value = '';
                     document.getElementById('mediaFilesNames').innerText = '';
                     updatePreview();
-                    goToStep(1); // العودة للخطوة الأولى
+                    goToStep(1);
                 } else {
                     showToast(result.error || "خطأ", "error");
                 }
             } catch(e) {
                 showToast("حدث خطأ أثناء التواصل مع السيرفر!", "error");
-                btn.innerText = '🚀 إرسال الحملة (للطابور)';
+                btn.innerText = '🚀 إرسال الحملة';
                 btn.disabled = false;
             }
-        }
-
-        function copyToken() {
-            const tokenInput = document.getElementById('apiToken');
-            tokenInput.select();
-            document.execCommand('copy');
-            showToast('تم نسخ رمز الـ API بنجاح!');
         }
     </script>
 </body>
