@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة الإدارة</title>
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
+        .card { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; }
+        .btn { background: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
+        th { background: #f8f9fa; }
+        input { padding: 10px; margin-left: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>إدارة المستخدمين ⚙️</h2>
+        <a href="/" class="btn">رجوع للوحة الخاصة بي</a>
+    </div>
+    <div class="card">
+        <h3>إضافة مستخدم جديد</h3>
+        <form method="POST" action="/admin/add-user">
+            <input type="text" name="username" placeholder="اسم المستخدم" required>
+            <input type="password" name="password" placeholder="كلمة المرور" required>
+            <button type="submit" class="btn">إضافة</button>
+        </form>
+    </div>
+    <div class="card">
+        <h3>المستخدمون</h3>
+        <table>
+            <tr><th>الاسم</th><th>النوع</th><th>الحالة</th><th>API Token</th></tr>
+            <% users.forEach(u => { %>
+            <tr>
+                <td><%= u.username %></td>
+                <td><%= u.role %></td>
+                <td><%= u.isActive ? 'نشط ✅' : 'موقوف ❌' %></td>
+                <td><code><%= u.apiToken %></code></td>
+            </tr>
+            <% }) %>
+        </table>
+    </div>
+</body>
+</html>
