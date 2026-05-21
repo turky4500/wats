@@ -73,7 +73,7 @@
 
     <% 
         let daysRemaining = 0;
-        let isExpired = true; // الافتراضي للعملاء القدامى أنه منتهي حتى يثبت العكس بالتاريخ
+        let isExpired = true; 
         
         if (user.subscriptionEndsAt) {
             const diffTime = new Date(user.subscriptionEndsAt) - new Date();
@@ -82,7 +82,6 @@
             else daysRemaining = 0;
         }
 
-        // الآدمن اشتراكه لا ينتهي أبداً
         if (user.role === 'admin') {
             isExpired = false;
             daysRemaining = '∞';
@@ -223,6 +222,8 @@
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
             document.getElementById('qr-container').classList.remove('hidden');
             document.getElementById('connected-container').classList.add('hidden');
+            // السطر الذي تمت إضافته لطباعة الصورة:
+            document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`; 
         });
 
         socket.on('ready', () => {
