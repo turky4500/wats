@@ -6,14 +6,19 @@
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
-        .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; }
-        .grid { display: flex; gap: 20px; }
-        .card { background: white; padding: 25px; border-radius: 8px; flex: 1; }
+        .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-warning { background: #f57c00; }
+        .grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .card { background: white; padding: 25px; border-radius: 8px; flex: 1; min-width: 300px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         #qr-container { text-align: center; }
         #qr-container img { width: 250px; border: 10px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 10px; margin: 20px 0; }
         .chat-box { height: 250px; overflow-y: auto; background: #e5ddd5; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
         .message { background: #dcf8c5; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: inline-block; }
         input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .token-box { display: flex; align-items: center; background: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
+        .token-box input { border: none; background: transparent; padding: 15px; margin: 0; font-family: monospace; font-size: 16px; outline: none; }
+        .token-box button { background: #128C7E; margin: 0; border-radius: 0; height: 100%; }
+        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; direction: ltr; text-align: left; }
         .hidden { display: none; }
     </style>
 </head>
@@ -25,31 +30,65 @@
             <a href="/logout" class="btn" style="background:#d32f2f;">تسجيل خروج</a>
         </div>
     </div>
+    
     <div class="grid">
+        <!-- قسم الاتصال والـ API -->
         <div class="card" id="connection-card">
             <h3 id="status-title">حالة الاتصال ⏳</h3>
+            
             <div id="qr-container" class="hidden">
-                <p>امسح رمز QR باستخدام واتساب:</p>
+                <p>امسح رمز QR باستخدام واتساب في هاتفك:</p>
                 <div id="qr-img"></div>
             </div>
+            
             <div id="connected-container" class="hidden">
-                <p style="color: #25D366; font-size: 18px; font-weight: bold;">✅ واتساب متصل بنجاح!</p>
-                <hr>
-                <h4>الربط الخارجي (API Token)</h4>
-                <code style="background:#eee;padding:10px;display:block;"><%= user.apiToken %></code>
+                <p style="color: #25D366; font-size: 18px; font-weight: bold;">✅ واتساب متصل وجاهز للإرسال!</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <h4>الربط الخارجي (API Token) 🔗</h4>
+                <p>استخدم هذا الرمز السري لربط أنظمتك الخارجية لإرسال الرسائل عن بعد.</p>
+                
+                <div class="token-box">
+                    <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
+                    <button class="btn" onclick="copyToken()">نسخ</button>
+                </div>
+                
+                <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟ الأنظمة المرتبطة بالتوكن القديم ستتوقف عن العمل.')">
+                    <button type="submit" class="btn btn-warning" style="width:100%;">توليد توكن جديد 🔄</button>
+                </form>
+
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <h4>طريقة استخدام الـ API 💻</h4>
+                <p>قم بإرسال طلب من نوع <b>POST</b> إلى هذا الرابط:</p>
+                <code style="background:#eee; padding:5px; border-radius:4px; font-family:monospace;"><%= host %>/api/send-message</code>
+                
+                <p><b>مثال باستخدام cURL:</b></p>
+                <pre>
+curl -X POST <%= host %>/api/send-message \
+-H "Authorization: Bearer <%= user.apiToken %>" \
+-H "Content-Type: application/json" \
+-d '{
+  "to": ["966511111111", "966522222222"],
+  "body": "مرحباً! هذه رسالة مجدولة عبر الـ API 🚀"
+}'</pre>
             </div>
         </div>
+
+        <!-- قسم الإرسال اليدوي -->
         <div class="card hidden" id="chat-card">
-            <h3>إرسال الرسائل</h3>
+            <h3>الإرسال اليدوي من المنصة 💬</h3>
             <div class="chat-box" id="messages"></div>
-            <input type="text" id="phone" placeholder="الأرقام (مثال: 9665.., 9665..)" dir="ltr">
-            <textarea id="msg" placeholder="اكتب رسالتك..." rows="3"></textarea>
+            <input type="text" id="phone" placeholder="الأرقام (افصل بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
+            <textarea id="msg" placeholder="اكتب رسالتك هنا..." rows="3"></textarea>
             <button class="btn" id="send-btn" style="width: 100%;">إرسال</button>
         </div>
     </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ query: { userId: "<%= user._id %>" } });
+
         socket.on('qr', (imgData) => {
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
             document.getElementById('qr-container').classList.remove('hidden');
@@ -57,25 +96,38 @@
             document.getElementById('chat-card').classList.add('hidden');
             document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`;
         });
+
         socket.on('ready', () => {
             document.getElementById('status-title').innerText = "متصل ✅";
             document.getElementById('qr-container').classList.add('hidden');
             document.getElementById('connected-container').classList.remove('hidden');
             document.getElementById('chat-card').classList.remove('hidden');
         });
+
         socket.on('message-sent', (data) => {
             const el = document.createElement('div');
             el.className = 'message';
             el.innerText = `أنت -> ${data.to}: ${data.body}`;
-            document.getElementById('messages').appendChild(el);
+            const msgs = document.getElementById('messages');
+            msgs.appendChild(el);
+            msgs.scrollTop = msgs.scrollHeight;
         });
+
         socket.on('error', (err) => alert('خطأ: ' + err));
+
         document.getElementById('send-btn').onclick = () => {
             const to = document.getElementById('phone').value;
             const body = document.getElementById('msg').value;
             if (!to || !body) return alert("الرجاء إدخال البيانات");
             socket.emit('send-message', { to, body });
         };
+
+        function copyToken() {
+            const tokenInput = document.getElementById('apiToken');
+            tokenInput.select();
+            document.execCommand('copy');
+            alert('تم نسخ الـ Token بنجاح!');
+        }
     </script>
 </body>
 </html>
