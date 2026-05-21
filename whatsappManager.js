@@ -48,5 +48,8 @@ async function startWhatsAppSession(userId, io) {
     return sock;
 }
 
-function getSession(userId) { return sessions.get(userId); }
+function getSession(userId) {
+    return sessions.get(userId);
+}
+
 module.exports = { startWhatsAppSession, getSession };
