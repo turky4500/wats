@@ -29,7 +29,7 @@ async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
     if (!admin) {
         await User.create({ username: 'admin', password: 'password', role: 'admin' });
-        console.log('✅ تم إنشاء حساب الأدمن الافتراضي (admin / password)');
+        console.log('✅ تم إنشاء حساب الأدمن الافتراضي');
     }
 }
 createDefaultAdmin();
@@ -48,7 +48,9 @@ const requireAdmin = async (req, res, next) => {
 
 app.get('/', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    res.render('dashboard', { user });
+    // جلب رابط الموقع الحالي ليكون جاهزاً في الشرح
+    const host = req.protocol + '://' + req.get('host');
+    res.render('dashboard', { user, host });
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
@@ -66,6 +68,14 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/login');
+});
+
+// ميزة تغيير التوكن (Refresh Token)
+app.post('/refresh-token', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    user.apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
+    await user.save();
+    res.redirect('/');
 });
 
 app.get('/admin', requireAdmin, async (req, res) => {
@@ -119,11 +129,17 @@ io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
     if (sessionUserId) {
         socket.join(sessionUserId);
-        startWhatsAppSession(sessionUserId, io);
+        
+        startWhatsAppSession(sessionUserId, io).then(sock => {
+            // حل مشكلة دخول المتصفح الثاني: إذا كان متصلاً مسبقاً نرسل له فوراً أنه متصل
+            if (sock && sock.user) {
+                socket.emit('ready', 'WhatsApp is connected');
+            }
+        });
         
         socket.on('send-message', async ({ to, body }) => {
             const sock = getSession(sessionUserId);
-            if (!sock) return socket.emit('error', 'واتساب غير متصل');
+            if (!sock || !sock.user) return socket.emit('error', 'واتساب غير متصل');
             
             const numbers = to.split(',').map(n => n.trim()).filter(n => n);
             for (const num of numbers) {
