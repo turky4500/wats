@@ -1,173 +1,144 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const qrcode = require('qrcode');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
-const Pino = require('pino');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const User = require('./models/User');
+const { startWhatsAppSession, getSession } = require('./whatsappManager');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ متصل بقاعدة بيانات MongoDB'))
+    .catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
+
+app.set('view engine', 'ejs');
+app.use(express.static('public'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'wats_secret_123',
+    resave: false,
+    saveUninitialized: false
+}));
 
-// API Key للربط الخارجي
-const API_TOKEN = process.env.API_TOKEN || 'my-secret-token-123';
-
-// واجهة الـ API للإرسال عن بعد (محمية بالتوكن)
-app.post('/api/send-message', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || authHeader !== `Bearer ${API_TOKEN}`) {
-        return res.status(401).json({ error: 'Unauthorized. Invalid API Token.' });
+async function createDefaultAdmin() {
+    const admin = await User.findOne({ username: 'admin' });
+    if (!admin) {
+        await User.create({ username: 'admin', password: 'password', role: 'admin' });
+        console.log('✅ تم إنشاء حساب الأدمن الافتراضي (admin / password)');
     }
+}
+createDefaultAdmin();
 
-    const { to, body } = req.body;
-    if (!to || !body) {
-        return res.status(400).json({ error: 'Missing "to" or "body" parameters.' });
+const requireAuth = (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/login');
+    next();
+};
+
+const requireAdmin = async (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/login');
+    const user = await User.findById(req.session.userId);
+    if (user && user.role === 'admin') return next();
+    res.status(403).send('غير مصرح لك بالدخول');
+};
+
+app.get('/', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    res.render('dashboard', { user });
+});
+
+app.get('/login', (req, res) => res.render('login', { error: null }));
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (user && user.isActive && await user.comparePassword(password)) {
+        req.session.userId = user._id;
+        return res.redirect('/');
     }
+    res.render('login', { error: 'اسم المستخدم أو كلمة المرور غير صحيحة.' });
+});
 
-    if (!isClientReady) {
-        return res.status(503).json({ error: 'WhatsApp client is not ready yet.' });
-    }
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
 
+app.get('/admin', requireAdmin, async (req, res) => {
+    const users = await User.find();
+    res.render('admin', { users });
+});
+
+app.post('/admin/add-user', requireAdmin, async (req, res) => {
     try {
-        // يدعم إرسال رقم واحد أو مصفوفة أرقام
-        const numbers = Array.isArray(to) ? to : [to];
-        const results = [];
-
-        for (const num of numbers) {
-            const jid = `${num}@s.whatsapp.net`;
-            try {
-                await sock.sendMessage(jid, { text: body });
-                results.push({ number: num, status: 'success' });
-                // انتظار 3 ثوانٍ بين كل رسالة والأخرى لتجنب الحظر
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            } catch (err) {
-                results.push({ number: num, status: 'failed', error: err.message });
-            }
-        }
-        return res.status(200).json({ success: true, results });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+        const { username, password } = req.body;
+        const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
+        await User.create({ username, password, apiToken });
+        res.redirect('/admin');
+    } catch (e) {
+        res.status(400).send('حدث خطأ، ربما اسم المستخدم موجود بالفعل.');
     }
 });
 
-// مسار Ping لحل مشكلة سكون Render
+app.post('/api/send-message', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Missing token' });
+    
+    const token = authHeader.split(' ')[1];
+    const user = await User.findOne({ apiToken: token, isActive: true });
+    
+    if (!user) return res.status(401).json({ error: 'Invalid or inactive token' });
+
+    const sock = getSession(user._id.toString());
+    if (!sock) return res.status(503).json({ error: 'WhatsApp not connected. Please login and scan QR.' });
+
+    const { to, body } = req.body;
+    const numbers = Array.isArray(to) ? to : [to];
+    const results = [];
+
+    for (const num of numbers) {
+        const jid = `${num}@s.whatsapp.net`;
+        try {
+            await sock.sendMessage(jid, { text: body });
+            results.push({ number: num, status: 'success' });
+            await new Promise(r => setTimeout(r, 3000));
+        } catch (e) {
+            results.push({ number: num, status: 'error', error: e.message });
+        }
+    }
+    res.json({ success: true, results });
+});
+
 app.get('/ping', (req, res) => res.send('pong'));
 
-// نظام حماية صفحة الويب بكلمة مرور
-function basicAuth(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="WhatsApp Panel"');
-        return res.status(401).send('يرجى تسجيل الدخول');
-    }
-    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const user = auth[0];
-    const pass = auth[1];
-    
-    // اسم المستخدم وكلمة المرور للوحة التحكم
-    const USERNAME = process.env.ADMIN_USER || 'admin';
-    const PASSWORD = process.env.ADMIN_PASS || '123456';
-    
-    if (user === USERNAME && pass === PASSWORD) {
-        next();
-    } else {
-        res.setHeader('WWW-Authenticate', 'Basic realm="WhatsApp Panel"');
-        return res.status(401).send('بيانات الدخول خاطئة');
-    }
-}
-
-app.use(basicAuth);
-app.use(express.static('public'));
-
-let sock;
-let isClientReady = false;
-let currentQR = null;
-
-async function connectToWhatsApp() {
-    console.log("🚀 جاري تشغيل Baileys...");
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true,
-        logger: Pino({ level: 'silent' }),
-        browser: Browsers.macOS('Desktop')
-    });
-
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        if (qr) {
-            console.log("📱 QR Code generated");
-            currentQR = qr;
-            try {
-                const qrImage = await qrcode.toDataURL(qr);
-                io.emit('qr', qrImage);
-            } catch (err) {
-                console.error("QR変換エラー:", err);
-            }
-        }
-        if (connection === 'open') {
-            isClientReady = true;
-            currentQR = null;
-            console.log("🎉 واتساب متصل!");
-            io.emit('ready', 'WhatsApp ready');
-        }
-        if (connection === 'close') {
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            isClientReady = false;
-            console.log("⚠️ قطع الاتصال، إعادة محاولة...");
-            if (statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(connectToWhatsApp, 5000);
-            }
-        }
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.key.fromMe && msg.message) {
-            const from = msg.key.remoteJid;
-            const body = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-            io.emit('message', { from, body, timestamp: msg.messageTimestamp });
-        }
-    });
-}
-
-connectToWhatsApp();
-
 io.on('connection', (socket) => {
-    console.log("🌐 متصفح متصل");
-    if (isClientReady) {
-        socket.emit('ready', 'WhatsApp ready');
-    } else if (currentQR) {
-        (async () => {
-            const qrImage = await qrcode.toDataURL(currentQR);
-            socket.emit('qr', qrImage);
-        })();
-    }
-
-    socket.on('send-message', async ({ to, body }) => {
-        if (!isClientReady) return socket.emit('error', 'ليس جاهزاً');
-        try {
-            // دعم الأرقام المفصولة بفاصلة
+    const sessionUserId = socket.handshake.query.userId;
+    if (sessionUserId) {
+        socket.join(sessionUserId);
+        startWhatsAppSession(sessionUserId, io);
+        
+        socket.on('send-message', async ({ to, body }) => {
+            const sock = getSession(sessionUserId);
+            if (!sock) return socket.emit('error', 'واتساب غير متصل');
+            
             const numbers = to.split(',').map(n => n.trim()).filter(n => n);
             for (const num of numbers) {
                 const jid = `${num}@s.whatsapp.net`;
                 try {
                     await sock.sendMessage(jid, { text: body });
                     socket.emit('message-sent', { to: num, body });
-                    // تأخير 3 ثوانٍ بين كل رسالة
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    await new Promise(r => setTimeout(r, 3000));
                 } catch (e) {
-                    socket.emit('error', `فشل الإرسال إلى ${num}: ${e.message}`);
+                    socket.emit('error', `خطأ في إرسال رسالة لـ ${num}`);
                 }
             }
-        } catch (err) {
-            socket.emit('error', err.message);
-        }
-    });
+        });
+    }
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`✅ خادم على المنفذ ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
