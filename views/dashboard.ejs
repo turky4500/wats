@@ -8,225 +8,83 @@
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
         :root {
-            --primary: #10b981;
-            --primary-hover: #059669;
+            --primary: #25d366;
+            --primary-hover: #22c35e;
             --secondary: #3b82f6;
-            --dark: #0f172a;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
+            --dark: #1e293b;
+            --text-main: #334155;
+            --text-muted: #94a3b8;
             --bg-color: #f8fafc;
             --card-bg: #ffffff;
             --danger: #ef4444;
             --warning: #f59e0b;
         }
 
-        body {
-            font-family: 'Tajawal', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            padding: 20px 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-            margin-bottom: 25px;
-        }
-
-        .header h2 {
-            margin: 0;
-            font-weight: 800;
-            color: var(--dark);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-family: 'Tajawal', sans-serif;
-            font-weight: 700;
-            font-size: 15px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
+        body { font-family: 'Tajawal', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-bottom: 25px; border-top: 4px solid var(--primary); }
+        .header h2 { margin: 0; font-weight: 800; color: var(--dark); }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 25px; border: none; border-radius: 6px; font-family: 'Tajawal', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; text-decoration: none; transition: all 0.2s ease; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(37, 211, 102, 0.3); }
         .btn-secondary { background: var(--warning); color: white; }
-        .btn-danger { background: #fee2e2; color: var(--danger); }
-        .btn-danger:hover { background: #fecaca; }
+        .btn-dark { background: #475569; color: white; }
+        
+        .grid-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; align-items: start; }
+        
+        .card { background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        .section-title { font-weight: 800; margin-top: 0; margin-bottom: 20px; font-size: 20px; color: var(--dark); display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Step 1: Recipients CSS */
+        .form-step { display: none; animation: fadeIn 0.4s ease; }
+        .form-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 25px;
-        }
+        label { display: block; font-weight: 700; margin-bottom: 8px; color: #475569; font-size: 14px; }
+        .input-group { display: flex; margin-bottom: 20px; }
+        .input-group input, .input-group textarea { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 15px; outline: none; }
+        .input-group button { background: white; color: var(--primary); border: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; border-radius: 0 6px 6px 0; padding: 0 20px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .input-group button:hover { background: #f0fdf4; color: #16a34a; }
+        
+        .file-upload-styled { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; background: #f8fafc; }
+        
+        .recipients-list { width: 100%; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; background: #f8fafc; font-family: monospace; font-size: 15px; direction: ltr; text-align: left; resize: vertical; box-sizing: border-box; outline: none; }
+        .counter-badge { background: var(--primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; }
 
-        .card {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-            border: 1px solid #e2e8f0;
-        }
+        /* Step 2: Message CSS */
+        .preview-box { background: #e5ddd5; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px; }
+        .preview-bubble { background: #dcf8c5; padding: 12px 15px; border-radius: 10px; border-top-right-radius: 0; max-width: 80%; align-self: flex-start; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); font-size: 15px; white-space: pre-wrap; word-wrap: break-word; color: #111; }
+        .preview-bubble::after { content: ''; position: absolute; top: 0; right: -8px; border-width: 0 8px 8px 0; border-style: solid; border-color: transparent #dcf8c5 transparent transparent; }
+        
+        .editor-toolbar { border: 1px solid #cbd5e1; border-bottom: none; border-radius: 6px 6px 0 0; background: #f8fafc; padding: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+        .toolbar-btn { background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 14px; font-weight: bold; color: #475569; font-family: inherit; }
+        .toolbar-btn:hover { background: #f1f5f9; color: var(--primary); }
+        .message-textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 0 0 6px 6px; padding: 15px; min-height: 150px; resize: vertical; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; }
+        .message-textarea:focus { border-color: var(--primary); }
+        
+        .drag-drop-zone { border: 2px dashed #3b82f6; background: #eff6ff; padding: 40px 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .drag-drop-zone:hover { background: #dbeafe; border-color: #2563eb; }
+        .drag-drop-zone h4 { color: #1e3a8a; margin: 15px 0 5px; font-weight: 800; font-size: 18px; }
+        .drag-drop-zone p { color: #60a5fa; font-size: 13px; margin: 0; }
 
-        .card h3 {
-            margin-top: 0;
-            color: var(--dark);
-            border-bottom: 2px solid #f1f5f9;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        /* الإشعارات الذكية */
-        #toast-container {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .toast {
-            background: white;
-            color: var(--text-main);
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-            font-weight: 500;
-            animation: slideIn 0.3s ease forwards;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-right: 4px solid var(--primary);
-        }
+        /* Toasts and Sidebar Elements */
+        #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); font-weight: 600; border-right: 4px solid var(--primary); animation: slideIn 0.3s forwards; }
         .toast.error { border-right-color: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+        .chat-sidebar-box { height: 250px; overflow-y: auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 15px; font-size: 13px; }
+        .log-msg { background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
         
-        @keyframes slideIn {
-            from { transform: translateX(-100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        input[type="text"], textarea {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 15px;
-            box-sizing: border-box;
-            background: #f8fafc;
-            transition: border-color 0.2s;
-        }
-        input[type="text"]:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: white;
-        }
-
-        .file-upload-box {
-            border: 2px dashed #cbd5e1;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            background: #f8fafc;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-        .file-upload-box:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: #f0fdf4;
-        }
-
-        .chat-box {
-            height: 250px;
-            overflow-y: auto;
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #e2e8f0;
-        }
-        .message {
-            background: var(--primary);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            border-top-right-radius: 0;
-            margin-bottom: 10px;
-            display: inline-block;
-            font-size: 14px;
-        }
-
-        .token-box {
-            display: flex;
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-        .token-box input {
-            border: none;
-            background: transparent;
-            margin: 0;
-            flex: 1;
-            padding: 15px;
-            font-family: monospace;
-            color: var(--text-muted);
-            outline: none;
-        }
-        .token-box button {
-            margin: 0;
-            border-radius: 0;
-            height: auto;
-        }
-
-        pre {
-            background: var(--dark);
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: monospace;
-            direction: ltr;
-            text-align: left;
-            font-size: 13px;
-        }
+        .token-box { display: flex; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
+        .token-box input { border: none; background: transparent; padding: 12px; flex: 1; font-family: monospace; font-size: 12px; outline: none; }
+        .token-box button { background: var(--primary); color: white; border: none; padding: 0 15px; cursor: pointer; font-weight: bold; }
+        pre { background: #1e293b; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; direction: ltr; text-align: left; font-size: 12px; }
+        
         .hidden { display: none !important; }
-        
-        #qr-container { text-align: center; }
-        #qr-container img {
-            width: 260px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 10px;
-            background: white;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-            margin: 20px 0;
-        }
+        #qr-container img { width: 100%; max-width: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -237,63 +95,108 @@
             <h2>مرحباً، <%= user.username %> 👋</h2>
             <div style="display: flex; gap: 10px;">
                 <a href="/logs" class="btn btn-secondary">سجل الرسائل 📜</a>
-                <a href="/logout" class="btn btn-danger">تسجيل خروج</a>
+                <a href="/logout" class="btn btn-dark">تسجيل خروج</a>
             </div>
         </div>
         
-        <div class="grid">
-            <div class="card" id="connection-card">
-                <h3 id="status-title">حالة الاتصال ⏳</h3>
+        <div class="grid-layout">
+            <!-- Sidebar: Connection & Logs -->
+            <div class="card" style="padding: 20px;">
+                <h3 class="section-title" id="status-title" style="font-size: 16px;">حالة الاتصال ⏳</h3>
                 
                 <div id="qr-container" class="hidden">
-                    <p style="color: var(--text-muted);">امسح رمز QR باستخدام واتساب في هاتفك لربط الجلسة:</p>
-                    <div id="qr-img"></div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin:0;">امسح رمز QR لربط الجلسة:</p>
+                    <div id="qr-img" style="text-align: center;"></div>
                 </div>
                 
                 <div id="connected-container" class="hidden">
-                    <p style="color: var(--primary); font-size: 18px; font-weight: 700;">✅ واتساب متصل وجاهز للإرسال!</p>
+                    <p style="color: var(--primary); font-size: 15px; font-weight: 700; text-align:center;">✅ واتساب متصل وجاهز</p>
                     
-                    <h4 style="margin-top: 30px;">الربط الخارجي (API Token) 🔗</h4>
-                    
+                    <h4 style="font-size: 14px; margin-top: 25px;">إشعارات الإرسال المباشرة:</h4>
+                    <div class="chat-sidebar-box" id="messages">
+                        <div style="color: #94a3b8; text-align: center; margin-top: 20px;">لا يوجد إرسال حالياً...</div>
+                    </div>
+
+                    <h4 style="font-size: 14px; margin-top: 20px;">الربط الخارجي (API) 🔗</h4>
                     <div class="token-box">
                         <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
-                        <button class="btn btn-primary" onclick="copyToken()">نسخ الرمز</button>
+                        <button onclick="copyToken()">نسخ</button>
                     </div>
-                    
-                    <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟')">
-                        <button type="submit" class="btn btn-secondary" style="width:100%;">توليد رمز جديد 🔄</button>
-                    </form>
-
-                    <h4 style="margin-top: 30px;">طريقة استخدام الـ API 💻</h4>
-                    <pre>
-{
-  "to": ["966511111111"],
-  "body": "مرحباً! هذه رسالة مع صورة",
-  "media": [
-    {
-       "mimetype": "image/png",
-       "filename": "image.png",
-       "data": "iVBORw0KGgo..."
-    }
-  ]
-}</pre>
                 </div>
             </div>
 
-            <div class="card hidden" id="chat-card">
-                <h3>الإرسال السريع 💬</h3>
-                <div class="chat-box" id="messages"></div>
-                
-                <input type="text" id="phone" placeholder="الأرقام (افصل بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
-                
-                <div class="file-upload-box" onclick="document.getElementById('mediaFiles').click()">
-                    📎 اضغط هنا لإرفاق الصور أو الملفات
-                </div>
-                <input type="file" id="mediaFiles" multiple class="hidden" onchange="updateFileName()">
-                <p id="fileNames" style="color: var(--primary); font-size: 13px; font-weight: 600; margin-top:-10px;"></p>
+            <!-- Main Content: Steps -->
+            <div>
+                <!-- الخطوة الأولى: المستلمين -->
+                <div id="step-1" class="form-step active">
+                    <div class="card">
+                        <h3 class="section-title">إضافة المستلمين</h3>
+                        
+                        <label>أدخل رقم الهاتف (مع رمز البلد)</label>
+                        <div class="input-group">
+                            <button onclick="addManualNumber()">+ أضف</button>
+                            <input type="text" id="manualPhone" placeholder="مثال: 966551234567 (اضغط إنتر للإضافة)" dir="ltr">
+                        </div>
 
-                <textarea id="msg" placeholder="اكتب رسالتك هنا..." rows="3"></textarea>
-                <button class="btn btn-primary" id="send-btn" style="width: 100%;">إرسال الرسالة 🚀</button>
+                        <label>أو تحميل أرقام من ملف (TXT)</label>
+                        <div class="input-group" onclick="document.getElementById('txtFileInput').click()">
+                            <button>+ رفع</button>
+                            <div class="file-upload-styled" id="txtFileLabel">لم يتم اختيار أي ملف</div>
+                            <input type="file" id="txtFileInput" accept=".txt" style="display:none;" onchange="handleTxtUpload(event)">
+                        </div>
+
+                        <label style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px;">
+                            <span>قائمة المستلمين <span class="counter-badge" id="recipientsCount">0</span></span>
+                            <span style="font-size: 13px; color: var(--danger); cursor: pointer; text-decoration: underline;" onclick="clearRecipients()">مسح القائمة</span>
+                        </label>
+                        <textarea id="recipientsList" class="recipients-list" placeholder="الأرقام المضافة ستظهر هنا..." readonly></textarea>
+                        
+                        <div style="display: flex; justify-content: flex-end; margin-top: 25px;">
+                            <button class="btn btn-primary" onclick="goToStep(2)">التالي ←</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الخطوة الثانية: الرسالة والمرفقات -->
+                <div id="step-2" class="form-step">
+                    <div class="card">
+                        <h3 class="section-title">الرسالة والمرفقات</h3>
+                        
+                        <label>معاينة الرسائل</label>
+                        <div class="preview-box">
+                            <div class="preview-bubble" id="livePreview">ستظهر رسالتك هنا...</div>
+                        </div>
+
+                        <label>محتوى الرسالة</label>
+                        <div>
+                            <div class="editor-toolbar">
+                                <button class="toolbar-btn" onclick="insertFormat('*')" title="غامق"><b>B</b></button>
+                                <button class="toolbar-btn" onclick="insertFormat('_')" title="مائل"><i>I</i></button>
+                                <button class="toolbar-btn" onclick="insertFormat('~')" title="مشطوب"><s>S</s></button>
+                                <button class="toolbar-btn" onclick="insertText('😊')">😀</button>
+                                <div style="flex:1;"></div>
+                                <button class="toolbar-btn" onclick="insertDate('اليوم')">اليوم</button>
+                                <button class="toolbar-btn" onclick="insertDate('ميلادي')">التاريخ الميلادي</button>
+                                <button class="toolbar-btn" onclick="insertDate('هجري')">التاريخ الهجري</button>
+                            </div>
+                            <textarea id="msg" class="message-textarea" placeholder="اكتب رسالتك هنا..." onkeyup="updatePreview()"></textarea>
+                        </div>
+
+                        <label style="margin-top:25px; display:block;">أضف الوسائط (اختياري)</label>
+                        <div class="drag-drop-zone" id="dropZone" onclick="document.getElementById('mediaFiles').click()">
+                            <div style="font-size:50px; color:#3b82f6;">☁️</div>
+                            <h4>انقر لتحديد الوسائط</h4>
+                            <p>أو سحب الملف وإسقاطه هنا (الحد الأقصى 15 ميجابايت)</p>
+                            <div id="mediaFilesNames" style="margin-top:15px; color:#1e3a8a; font-weight:bold;"></div>
+                        </div>
+                        <input type="file" id="mediaFiles" multiple style="display:none;" onchange="handleMediaSelect()">
+
+                        <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                            <button class="btn btn-dark" onclick="goToStep(1)">→ عودة</button>
+                            <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة (للطابور)</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -308,53 +211,163 @@
             toast.className = `toast ${type}`;
             toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 5000);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 5000);
         }
 
         socket.on('qr', (imgData) => {
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
             document.getElementById('qr-container').classList.remove('hidden');
             document.getElementById('connected-container').classList.add('hidden');
-            document.getElementById('chat-card').classList.add('hidden');
-            document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`;
         });
 
         socket.on('ready', () => {
-            document.getElementById('status-title').innerText = "متصل ✅";
+            document.getElementById('status-title').innerText = "الربط وجاهزية النظام";
             document.getElementById('qr-container').classList.add('hidden');
             document.getElementById('connected-container').classList.remove('hidden');
-            document.getElementById('chat-card').classList.remove('hidden');
         });
 
-        socket.on('status-update', (msg) => document.getElementById('status-title').innerText = msg);
-
+        // استلام إشعارات الطابور المباشرة
         socket.on('message-sent', (data) => {
-            const el = document.createElement('div');
-            el.className = 'message';
-            el.innerText = `أنت -> ${data.to}: ${data.body}`;
             const msgs = document.getElementById('messages');
+            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = ''; // إزالة النص الافتراضي
+            const el = document.createElement('div');
+            el.className = 'log-msg';
+            el.innerText = `✅ أُرسلت لـ ${data.to}`;
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
         });
 
-        function updateFileName() {
+        socket.on('error', (err) => {
+            const msgs = document.getElementById('messages');
+            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = '';
+            const el = document.createElement('div');
+            el.className = 'log-msg';
+            el.style.backgroundColor = '#fee2e2';
+            el.style.color = '#b91c1c';
+            el.innerText = `❌ ${err}`;
+            msgs.appendChild(el);
+            msgs.scrollTop = msgs.scrollHeight;
+        });
+
+        // =============== Step 1 Logic ===============
+        let recipientsSet = new Set();
+
+        function addManualNumber() {
+            const val = document.getElementById('manualPhone').value.trim();
+            if(val) {
+                recipientsSet.add(val);
+                document.getElementById('manualPhone').value = '';
+                updateRecipientsUI();
+            }
+        }
+
+        document.getElementById('manualPhone').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addManualNumber();
+        });
+
+        function handleTxtUpload(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            document.getElementById('txtFileLabel').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const text = evt.target.result;
+                const lines = text.split(/\r?\n/);
+                lines.forEach(line => {
+                    const num = line.trim();
+                    if(num) recipientsSet.add(num);
+                });
+                updateRecipientsUI();
+            };
+            reader.readAsText(file);
+        }
+
+        function updateRecipientsUI() {
+            const arr = Array.from(recipientsSet);
+            document.getElementById('recipientsList').value = arr.join('\n');
+            document.getElementById('recipientsCount').innerText = arr.length;
+        }
+
+        function clearRecipients() {
+            recipientsSet.clear();
+            updateRecipientsUI();
+            document.getElementById('txtFileLabel').innerText = 'لم يتم اختيار أي ملف';
+            document.getElementById('txtFileInput').value = '';
+        }
+
+        function goToStep(step) {
+            if(step === 2 && recipientsSet.size === 0) return showToast("الرجاء إضافة مستلمين أولاً!", "error");
+            document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+        }
+
+        // =============== Step 2 Logic ===============
+        function insertFormat(char) {
+            const txtArea = document.getElementById('msg');
+            const start = txtArea.selectionStart;
+            const end = txtArea.selectionEnd;
+            const text = txtArea.value;
+            let selectedText = text.substring(start, end);
+            if (!selectedText) selectedText = "نص";
+            const replacement = `${char}${selectedText}${char}`;
+            txtArea.value = text.substring(0, start) + replacement + text.substring(end);
+            updatePreview();
+        }
+
+        function insertText(str) {
+            const txtArea = document.getElementById('msg');
+            const start = txtArea.selectionStart;
+            txtArea.value = txtArea.value.substring(0, start) + str + txtArea.value.substring(start);
+            updatePreview();
+        }
+
+        function insertDate(type) {
+            const now = new Date();
+            let str = '';
+            if(type === 'اليوم') {
+                const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+                str = days[now.getDay()];
+            } else if(type === 'ميلادي') {
+                str = now.toLocaleDateString('en-GB');
+            } else if(type === 'هجري') {
+                str = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {day: 'numeric', month: 'long', year : 'numeric'}).format(now);
+            }
+            insertText(str);
+        }
+
+        function updatePreview() {
+            let text = document.getElementById('msg').value;
+            if(!text) text = "ستظهر رسالتك هنا...";
+            text = text.replace(/\*(.*?)\*/g, '<b>$1</b>');
+            text = text.replace(/_(.*?)_/g, '<i>$1</i>');
+            text = text.replace(/~(.*?)~/g, '<s>$1</s>');
+            document.getElementById('livePreview').innerHTML = text;
+        }
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = '#2563eb'; dropZone.style.background = '#dbeafe'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#3b82f6'; dropZone.style.background = '#eff6ff'; });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#3b82f6'; 
+            dropZone.style.background = '#eff6ff';
+            document.getElementById('mediaFiles').files = e.dataTransfer.files;
+            handleMediaSelect();
+        });
+
+        function handleMediaSelect() {
             const files = document.getElementById('mediaFiles').files;
             if(files.length > 0) {
-                let totalSize = 0;
-                for(let i=0; i<files.length; i++) totalSize += files[i].size;
-                const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-                
-                // تم تقليص الحد إلى 15 ميجا لتسريع الرفع وتخفيف الضغط عن السيرفر المجاني
-                if (sizeMB > 15) {
-                    document.getElementById('fileNames').innerHTML = `<span style="color:var(--danger);">❌ حجم الملفات (${sizeMB} MB) يتجاوز الحد المسموح (15 MB)</span>`;
+                let size = 0;
+                for(let f of files) size += f.size;
+                const mb = (size/(1024*1024)).toFixed(2);
+                if (mb > 15) {
+                    document.getElementById('mediaFilesNames').innerHTML = `<span style="color:red;">❌ حجم المرفقات (${mb} MB) يتجاوز الحد المسموح (15 MB)</span>`;
+                    document.getElementById('mediaFiles').value = '';
                 } else {
-                    document.getElementById('fileNames').innerHTML = `تم تحديد ${files.length} مرفقات (${sizeMB} MB) جاهزة للرفع.`;
+                    document.getElementById('mediaFilesNames').innerText = `تم تحديد ${files.length} مرفقات (${mb} MB) جاهزة.`;
                 }
-            } else {
-                document.getElementById('fileNames').innerText = '';
             }
         }
 
@@ -362,86 +375,56 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve({
-                    mimetype: file.type,
-                    filename: file.name,
-                    data: reader.result
-                });
+                reader.onload = () => resolve({ mimetype: file.type, filename: file.name, data: reader.result });
                 reader.onerror = error => reject(error);
             });
         }
 
-        document.getElementById('send-btn').onclick = async () => {
-            const to = document.getElementById('phone').value;
+        async function sendCampaign() {
+            const numbersArr = Array.from(recipientsSet);
             const body = document.getElementById('msg').value;
             const fileInput = document.getElementById('mediaFiles');
-            const token = document.getElementById('apiToken').value; // استخدام التوكن الخاص بالمستخدم
+            const token = document.getElementById('apiToken').value;
             
-            if (!to || (!body && fileInput.files.length === 0)) return showToast("الرجاء إدخال الأرقام والنص أو الملف!", "error");
-            
-            const MAX_SIZE_MB = 15;
-            let totalSize = 0;
-            for(let i = 0; i < fileInput.files.length; i++) {
-                totalSize += fileInput.files[i].size;
-            }
-            if (totalSize > MAX_SIZE_MB * 1024 * 1024) {
-                return showToast(`حجم الملف كبير جداً! الحد الأقصى هو ${MAX_SIZE_MB} ميجابايت.`, "error");
-            }
-            
+            if (!body && fileInput.files.length === 0) return showToast("الرجاء كتابة رسالة أو إضافة مرفق!", "error");
+
             const btn = document.getElementById('send-btn');
-            btn.innerText = 'جاري المعالجة والإرسال... ⏳';
+            btn.innerText = 'جاري الإرسال للطابور... ⏳';
             btn.disabled = true;
 
             try {
                 const mediaArray = [];
-                for(let i = 0; i < fileInput.files.length; i++) {
-                    mediaArray.push(await fileToBase64(fileInput.files[i]));
-                }
+                for(let i=0; i<fileInput.files.length; i++) mediaArray.push(await fileToBase64(fileInput.files[i]));
 
-                // 🌟 الحل الجذري: إرسال الطلب عبر الـ API الرسمي بدلاً من Socket
-                // الـ API أقوى بكثير في التعامل مع الملفات الكبيرة
+                // إرسال البيانات للـ API (الذي سيضعها في الطابور ويرد فوراً)
                 const response = await fetch('/api/send-message', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        to: to.split(',').map(n => n.trim()).filter(n => n),
-                        body: body,
-                        media: mediaArray
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ to: numbersArr, body: body, media: mediaArray })
                 });
 
                 const result = await response.json();
                 
-                btn.innerText = 'إرسال الرسالة 🚀';
+                btn.innerText = '🚀 إرسال الحملة (للطابور)';
                 btn.disabled = false;
-                
+
                 if (result.success) {
-                    showToast("تم الإرسال بنجاح!", "success");
+                    showToast(result.message, "success");
+                    clearRecipients();
                     document.getElementById('msg').value = '';
                     fileInput.value = '';
-                    document.getElementById('fileNames').innerText = '';
-                    
-                    // إضافة الرسالة لسجل المحادثة الوهمي في الشاشة
-                    const msgs = document.getElementById('messages');
-                    const el = document.createElement('div');
-                    el.className = 'message';
-                    el.innerText = `أنت -> ${to}: ${body || '(مرفق)'}`;
-                    msgs.appendChild(el);
-                    msgs.scrollTop = msgs.scrollHeight;
+                    document.getElementById('mediaFilesNames').innerText = '';
+                    updatePreview();
+                    goToStep(1); // العودة للخطوة الأولى
                 } else {
-                    showToast(result.error || "حدث خطأ في الإرسال لبعض الأرقام", "error");
+                    showToast(result.error || "خطأ", "error");
                 }
-                
             } catch(e) {
-                console.error(e);
-                showToast("حدث خطأ أثناء الاتصال بالسيرفر! تأكد من سرعة الإنترنت.", "error");
-                btn.innerText = 'إرسال الرسالة 🚀';
+                showToast("حدث خطأ أثناء التواصل مع السيرفر!", "error");
+                btn.innerText = '🚀 إرسال الحملة (للطابور)';
                 btn.disabled = false;
             }
-        };
+        }
 
         function copyToken() {
             const tokenInput = document.getElementById('apiToken');
