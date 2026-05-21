@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const Pino = require('pino');
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,89 +11,87 @@ const io = socketIo(server);
 app.use(express.static('public'));
 app.use(express.json());
 
-let sock;
-let isClientReady = false;
-// متغير لتخزين رمز الإقتران المؤقت
-let pairingCode = null;
+let clientReady = false;
+let currentQR = null;
 
-async function connectToWhatsApp() {
-    console.log("🚀 بدء تشغيل بوت واتساب...");
-    
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    
-    sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true,
-        logger: Pino({ level: 'silent' }),
-        // نسخة المتصفح التي سيتم إرسالها إلى واتساب
-        browser: ['Edge (Windows)', 'Edge', '122.0.0.0'],
-        // استخدام إصدار ثابت ومستقر من واتساب ويب
-        waWebVersion: '2.3000.1018732514'
-    });
-
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (qr) {
-            console.log("تم استلام QR لكننا لن نستخدمه");
-        }
-        
-        if (connection === 'open') {
-            isClientReady = true;
-            pairingCode = null;
-            console.log("🎉 واتساب متصل بنجاح!");
-            io.emit('ready', 'WhatsApp is ready!');
-        }
-        
-        if (connection === 'close') {
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            isClientReady = false;
-            console.log("⚠️ تم قطع الاتصال، إعادة محاولة...");
-            if (statusCode !== DisconnectReason.loggedOut) {
-                setTimeout(connectToWhatsApp, 5000);
-            } else {
-                io.emit('error', 'تم تسجيل الخروج، أعد تشغيل التطبيق');
-            }
-        }
-    });
-
-    sock.ev.on('creds.update', saveCreds);
-}
-
-// بدء تشغيل البوت عند تشغيل الخادم
-connectToWhatsApp();
-
-// نقطة نهاية (Endpoint) جديدة لطلب رمز الإقتران
-app.post('/api/request-pairing-code', express.json(), async (req, res) => {
-    if (isClientReady) {
-        return res.json({ error: 'الجهاز متصل بالفعل' });
+// إعداد عميل واتساب مع إعدادات مناسبة لـ Render
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: true
     }
-    
-    const { phoneNumber } = req.body;
-    if (!phoneNumber) {
-        return res.status(400).json({ error: 'رقم الهاتف مطلوب' });
-    }
-    
+});
+
+client.on('qr', async (qr) => {
+    console.log('✅ تم استلام QR من المكتبة');
+    currentQR = qr;
     try {
-        console.log(`محاولة طلب رمز إقتران للرقم: ${phoneNumber}`);
-        const code = await sock.requestPairingCode(phoneNumber);
-        pairingCode = code;
-        console.log(`تم إنشاء رمز الإقتران: ${code}`);
-        res.json({ pairingCode: code });
-    } catch (error) {
-        console.error('خطأ في طلب رمز الإقتران:', error);
-        res.status(500).json({ error: 'فشل في طلب رمز الإقتران' });
+        const qrImage = await qrcode.toDataURL(qr);
+        io.emit('qr', qrImage);
+        console.log('📱 تم إرسال QR إلى المتصفح');
+    } catch (err) {
+        console.error('خطأ بتحويل QR:', err);
     }
 });
 
-// WebSocket للمتصفحات
+client.on('ready', () => {
+    clientReady = true;
+    currentQR = null;
+    console.log('🎉 واتساب جاهز!');
+    io.emit('ready', 'WhatsApp ready');
+});
+
+client.on('message', async (message) => {
+    if (!message.fromMe) {
+        io.emit('message', {
+            from: message.from,
+            body: message.body,
+            timestamp: message.timestamp
+        });
+    }
+});
+
+client.initialize();
+
+// نقطة نهاية إضافية لجلب QR يدوياً
+app.get('/api/qr-status', (req, res) => {
+    if (clientReady) {
+        return res.json({ ready: true });
+    }
+    if (currentQR) {
+        return res.json({ ready: false, qr: currentQR });
+    }
+    res.json({ ready: false, qr: null });
+});
+
 io.on('connection', (socket) => {
-    console.log("🌐 متصفح متصل");
-    if (isClientReady) {
-        socket.emit('ready', 'WhatsApp is ready!');
+    console.log('متصفح متصل');
+    if (clientReady) {
+        socket.emit('ready', 'WhatsApp ready');
+    } else if (currentQR) {
+        (async () => {
+            const qrImage = await qrcode.toDataURL(currentQR);
+            socket.emit('qr', qrImage);
+        })();
     }
+
+    socket.on('send-message', async ({ to, body }) => {
+        if (!clientReady) {
+            socket.emit('error', 'العميل ليس جاهزاً');
+            return;
+        }
+        try {
+            const chatId = `${to}@c.us`;
+            await client.sendMessage(chatId, body);
+            socket.emit('message-sent', { to, body });
+        } catch (err) {
+            socket.emit('error', err.message);
+        }
+    });
 });
 
-server.listen(3000, () => {
-    console.log("✅ الخادم يعمل على المنفذ 3000");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`✅ الخادم يعمل على المنفذ ${PORT}`);
 });
