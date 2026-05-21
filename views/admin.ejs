@@ -5,8 +5,8 @@
     <title>لوحة الإدارة</title>
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; }
-        .card { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .btn { background: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
@@ -17,7 +17,9 @@
 <body>
     <div class="header">
         <h2>إدارة المستخدمين ⚙️</h2>
-        <a href="/" class="btn">رجوع للوحة الخاصة بي</a>
+        <div>
+            <a href="/logout" class="btn" style="background:#d32f2f;">تسجيل خروج</a>
+        </div>
     </div>
     <div class="card">
         <h3>إضافة مستخدم جديد</h3>
@@ -34,9 +36,9 @@
             <% users.forEach(u => { %>
             <tr>
                 <td><%= u.username %></td>
-                <td><%= u.role %></td>
+                <td><%= u.role === 'admin' ? 'مدير' : 'مستخدم' %></td>
                 <td><%= u.isActive ? 'نشط ✅' : 'موقوف ❌' %></td>
-                <td><code><%= u.apiToken %></code></td>
+                <td><code style="background:#eee;padding:3px;border-radius:3px;"><%= u.apiToken %></code></td>
             </tr>
             <% }) %>
         </table>
