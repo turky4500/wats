@@ -3,6 +3,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,60 +15,73 @@ app.use(express.json());
 
 let clientReady = false;
 let currentQR = null;
+let whatsappClient = null;
 
-// إعداد عميل واتساب مع إعدادات مناسبة لـ Render
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true
-    }
-});
-
-client.on('qr', async (qr) => {
-    console.log('✅ تم استلام QR من المكتبة');
-    currentQR = qr;
+// دالة لبدء تشغيل عميل واتساب
+async function initWhatsApp() {
+    console.log("🚀 جاري تشغيل واتساب...");
     try {
-        const qrImage = await qrcode.toDataURL(qr);
-        io.emit('qr', qrImage);
-        console.log('📱 تم إرسال QR إلى المتصفح');
-    } catch (err) {
-        console.error('خطأ بتحويل QR:', err);
-    }
-});
+        const executablePath = await chromium.executablePath();
+        console.log("✅ مسار Chromium:", executablePath);
 
-client.on('ready', () => {
-    clientReady = true;
-    currentQR = null;
-    console.log('🎉 واتساب جاهز!');
-    io.emit('ready', 'WhatsApp ready');
-});
-
-client.on('message', async (message) => {
-    if (!message.fromMe) {
-        io.emit('message', {
-            from: message.from,
-            body: message.body,
-            timestamp: message.timestamp
+        const client = new Client({
+            authStrategy: new LocalAuth(),
+            puppeteer: {
+                headless: true,
+                args: chromium.args,
+                executablePath: executablePath,
+                ignoreDefaultArgs: ['--disable-extensions']
+            }
         });
+
+        client.on('qr', async (qr) => {
+            console.log("📱 تم استلام QR Code");
+            currentQR = qr;
+            try {
+                const qrImage = await qrcode.toDataURL(qr);
+                io.emit('qr', qrImage);
+            } catch (err) {
+                console.error("❌ خطأ في تحويل QR:", err);
+            }
+        });
+
+        client.on('ready', () => {
+            console.log("🎉 واتساب جاهز للاستخدام!");
+            clientReady = true;
+            currentQR = null;
+            io.emit('ready', 'WhatsApp ready');
+        });
+
+        client.on('message', async (message) => {
+            if (!message.fromMe) {
+                io.emit('message', {
+                    from: message.from,
+                    body: message.body,
+                    timestamp: message.timestamp
+                });
+            }
+        });
+
+        await client.initialize();
+        whatsappClient = client;
+        console.log("✅ تم تهيئة العميل بنجاح");
+    } catch (err) {
+        console.error("❌ فشل في تهيئة واتساب:", err);
     }
-});
+}
 
-client.initialize();
+// تشغيل العميل
+initWhatsApp();
 
-// نقطة نهاية إضافية لجلب QR يدوياً
+// نقطة نهاية احتياطية لجلب QR
 app.get('/api/qr-status', (req, res) => {
-    if (clientReady) {
-        return res.json({ ready: true });
-    }
-    if (currentQR) {
-        return res.json({ ready: false, qr: currentQR });
-    }
+    if (clientReady) return res.json({ ready: true });
+    if (currentQR) return res.json({ ready: false, qr: currentQR });
     res.json({ ready: false, qr: null });
 });
 
 io.on('connection', (socket) => {
-    console.log('متصفح متصل');
+    console.log("🌐 متصفح متصل");
     if (clientReady) {
         socket.emit('ready', 'WhatsApp ready');
     } else if (currentQR) {
@@ -77,15 +92,15 @@ io.on('connection', (socket) => {
     }
 
     socket.on('send-message', async ({ to, body }) => {
-        if (!clientReady) {
-            socket.emit('error', 'العميل ليس جاهزاً');
-            return;
+        if (!clientReady || !whatsappClient) {
+            return socket.emit('error', 'العميل ليس جاهزاً بعد');
         }
         try {
-            const chatId = `${to}@c.us`;
-            await client.sendMessage(chatId, body);
+            await whatsappClient.sendMessage(`${to}@c.us`, body);
             socket.emit('message-sent', { to, body });
+            console.log(`📨 تم إرسال رسالة إلى ${to}`);
         } catch (err) {
+            console.error("❌ فشل الإرسال:", err);
             socket.emit('error', err.message);
         }
     });
