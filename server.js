@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const User = require('./models/User');
+const MessageLog = require('./models/MessageLog');
 const { startWhatsAppSession, getSession } = require('./whatsappManager');
 
 const app = express();
@@ -13,24 +14,17 @@ const io = socketIo(server);
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ متصل بقاعدة بيانات MongoDB'))
-    .catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
+    .catch(err => console.error('❌ خطأ في الاتصال:', err));
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'wats_secret_123',
-    resave: false,
-    saveUninitialized: false
-}));
+app.use(session({ secret: process.env.SESSION_SECRET || 'wats_secret_123', resave: false, saveUninitialized: false }));
 
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
-    if (!admin) {
-        await User.create({ username: 'admin', password: 'password', role: 'admin' });
-        console.log('✅ تم إنشاء حساب الأدمن الافتراضي');
-    }
+    if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
 }
 createDefaultAdmin();
 
@@ -48,13 +42,14 @@ const requireAdmin = async (req, res, next) => {
 
 app.get('/', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    // جلب رابط الموقع الحالي ليكون جاهزاً في الشرح
+    // توجيه الأدمن مباشرة للوحة التحكم الخاصة به
+    if (user.role === 'admin') return res.redirect('/admin');
+    
     const host = req.protocol + '://' + req.get('host');
     res.render('dashboard', { user, host });
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
-
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
@@ -62,15 +57,10 @@ app.post('/login', async (req, res) => {
         req.session.userId = user._id;
         return res.redirect('/');
     }
-    res.render('login', { error: 'اسم المستخدم أو كلمة المرور غير صحيحة.' });
+    res.render('login', { error: 'بيانات غير صحيحة.' });
 });
+app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
 
-app.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/login');
-});
-
-// ميزة تغيير التوكن (Refresh Token)
 app.post('/refresh-token', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     user.apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
@@ -89,9 +79,15 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
         const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
         await User.create({ username, password, apiToken });
         res.redirect('/admin');
-    } catch (e) {
-        res.status(400).send('حدث خطأ، ربما اسم المستخدم موجود بالفعل.');
-    }
+    } catch (e) { res.status(400).send('خطأ: المستخدم موجود.'); }
+});
+
+// صفحة سجل الرسائل (الأرشيف)
+app.get('/logs', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    if (user.role === 'admin') return res.redirect('/admin');
+    const logs = await MessageLog.find({ userId: user._id }).sort({ createdAt: -1 }).limit(100);
+    res.render('logs', { user, logs });
 });
 
 app.post('/api/send-message', async (req, res) => {
@@ -100,11 +96,10 @@ app.post('/api/send-message', async (req, res) => {
     
     const token = authHeader.split(' ')[1];
     const user = await User.findOne({ apiToken: token, isActive: true });
-    
-    if (!user) return res.status(401).json({ error: 'Invalid or inactive token' });
+    if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     const sock = getSession(user._id.toString());
-    if (!sock) return res.status(503).json({ error: 'WhatsApp not connected. Please login and scan QR.' });
+    if (!sock) return res.status(503).json({ error: 'WhatsApp not connected.' });
 
     const { to, body } = req.body;
     const numbers = Array.isArray(to) ? to : [to];
@@ -115,9 +110,11 @@ app.post('/api/send-message', async (req, res) => {
         try {
             await sock.sendMessage(jid, { text: body });
             results.push({ number: num, status: 'success' });
+            await MessageLog.create({ userId: user._id, to: num, body, status: 'success' });
             await new Promise(r => setTimeout(r, 3000));
         } catch (e) {
             results.push({ number: num, status: 'error', error: e.message });
+            await MessageLog.create({ userId: user._id, to: num, body, status: 'failed', errorDetails: e.message });
         }
     }
     res.json({ success: true, results });
@@ -129,12 +126,8 @@ io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
     if (sessionUserId) {
         socket.join(sessionUserId);
-        
         startWhatsAppSession(sessionUserId, io).then(sock => {
-            // حل مشكلة دخول المتصفح الثاني: إذا كان متصلاً مسبقاً نرسل له فوراً أنه متصل
-            if (sock && sock.user) {
-                socket.emit('ready', 'WhatsApp is connected');
-            }
+            if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected');
         });
         
         socket.on('send-message', async ({ to, body }) => {
@@ -147,9 +140,11 @@ io.on('connection', (socket) => {
                 try {
                     await sock.sendMessage(jid, { text: body });
                     socket.emit('message-sent', { to: num, body });
+                    await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'success' });
                     await new Promise(r => setTimeout(r, 3000));
                 } catch (e) {
                     socket.emit('error', `خطأ في إرسال رسالة لـ ${num}`);
+                    await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'failed', errorDetails: e.message });
                 }
             }
         });
