@@ -122,6 +122,12 @@ app.post('/api/send-message', async (req, res) => {
     for (const num of numbers) {
         const jid = `${num}@s.whatsapp.net`;
         try {
+            // فحص إذا كان الرقم مسجل في واتساب
+            const wpCheck = await sock.onWhatsApp(jid);
+            if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
+                throw new Error('الرقم غير مسجل في واتساب');
+            }
+
             await sock.sendMessage(jid, { text: body });
             results.push({ number: num, status: 'success' });
             await MessageLog.create({ userId: user._id, to: num, body, status: 'success' });
@@ -152,12 +158,18 @@ io.on('connection', (socket) => {
             for (const num of numbers) {
                 const jid = `${num}@s.whatsapp.net`;
                 try {
+                    // فحص إذا كان الرقم مسجل في واتساب
+                    const wpCheck = await sock.onWhatsApp(jid);
+                    if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
+                        throw new Error('الرقم غير مسجل في واتساب');
+                    }
+
                     await sock.sendMessage(jid, { text: body });
                     socket.emit('message-sent', { to: num, body });
                     await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'success' });
                     await new Promise(r => setTimeout(r, 3000));
                 } catch (e) {
-                    socket.emit('error', `خطأ في إرسال رسالة لـ ${num}`);
+                    socket.emit('error', `خطأ في إرسال رسالة لـ ${num} (${e.message})`);
                     await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'failed', errorDetails: e.message });
                 }
             }
