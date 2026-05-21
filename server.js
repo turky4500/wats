@@ -142,7 +142,6 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-// ميزة عودة الآدمن لحسابه بعد الدخول لحساب مستخدم
 app.get('/return-to-admin', (req, res) => {
     if(req.session.originalAdminId) {
         req.session.userId = req.session.originalAdminId;
@@ -177,7 +176,6 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
     }
 });
 
-// تعديل الرقم السري وزيادة الأيام للمستخدم
 app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
     try {
         const { password, addDays } = req.body;
@@ -195,21 +193,18 @@ app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
     }
 });
 
-// الدخول إلى حساب المستخدم كمدير
 app.get('/admin/login-as/:id', requireAdmin, async (req, res) => {
     req.session.originalAdminId = req.session.userId;
     req.session.userId = req.params.id;
     res.redirect('/');
 });
 
-// مشاهدة أرشيف المستخدم
 app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
     const user = await User.findById(req.params.id);
     const logs = await MessageLog.find({ userId: user._id }).sort({ createdAt: -1 }).limit(200);
     res.render('logs', { user, logs, isAdminView: true });
 });
 
-// ================= أرشيف المستخدم العادي =================
 app.get('/logs', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
@@ -217,7 +212,7 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs, isAdminView: false });
 });
 
-// ================= الـ API والإرسال (محمي بالاشتراك) =================
+// ================= الـ API والإرسال (محمي بالاشتراك الصارم) =================
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -226,9 +221,11 @@ app.post('/api/send-message', async (req, res) => {
     const user = await User.findOne({ apiToken: token, isActive: true });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
-    // فحص الاشتراك
-    if (user.role !== 'admin' && user.subscriptionEndsAt && new Date() > user.subscriptionEndsAt) {
-        return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
+    // فحص الاشتراك الصارم (حتى للعملاء القدامى اللي ما عندهم تاريخ)
+    if (user.role !== 'admin') {
+        if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) {
+            return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
+        }
     }
 
     let sock = getSession(user._id.toString());
