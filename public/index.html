@@ -3,175 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتساب ويب - نسخة مستقرة</title>
+    <title>واتساب ويب</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #075e54;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            direction: rtl;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            width: 450px;
-            max-width: 90%;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-        #qr-img {
-            width: 250px;
-            height: 250px;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-        }
-        button {
-            background: #25d366;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 24px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .chat-box {
-            height: 300px;
-            overflow-y: auto;
-            background: #e5ddd5;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            text-align: left;
-        }
-        .message {
-            background: #dcf8c5;
-            padding: 8px;
-            border-radius: 12px;
-            margin: 5px 0;
-            width: fit-content;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 20px;
-            border: 1px solid #ccc;
-        }
-        .hidden {
-            display: none;
-        }
-        .error {
-            color: red;
-        }
+        body { font-family: Arial; background: #075e54; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 20px; border-radius: 16px; text-align: center; width: 350px; }
+        #qr-img img { width: 250px; height: 250px; margin: 10px auto; }
+        .chat-box { height: 300px; overflow-y: auto; background: #e5ddd5; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: left; }
+        .message { background: #dcf8c5; padding: 8px; border-radius: 12px; margin: 5px; display: inline-block; }
+        input, textarea { width: 100%; margin: 5px 0; padding: 8px; border-radius: 20px; border: 1px solid #ccc; }
+        button { background: #25d366; border: none; padding: 10px; border-radius: 24px; color: white; font-weight: bold; cursor: pointer; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div id="login" class="container">
-        <h2>امسح رمز QR</h2>
-        <div id="qr-img">⏳ جاري تجهيز الباركود...</div>
-        <p id="status">جاري الاتصال...</p>
-        <button id="refresh-btn">تحديث</button>
-        <div id="error-msg" class="error"></div>
-    </div>
+<div id="login" class="container">
+    <h2>امسح رمز QR</h2>
+    <div id="qr-img">⏳ جاري تجهيز الباركود...</div>
+    <p id="status">جاري الاتصال...</p>
+    <button onclick="location.reload()">تحديث</button>
+</div>
+<div id="chat" class="container hidden">
+    <h3>محادثة واتساب</h3>
+    <div id="messages" class="chat-box"></div>
+    <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 966512345678)" dir="ltr">
+    <textarea id="msg" placeholder="اكتب رسالتك..."></textarea>
+    <button id="send">إرسال</button>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const login = document.getElementById('login');
+    const chat = document.getElementById('chat');
+    const qrDiv = document.getElementById('qr-img');
+    const statusP = document.getElementById('status');
+    const messagesDiv = document.getElementById('messages');
 
-    <div id="chat" class="container hidden">
-        <h3>محادثة واتساب</h3>
-        <div id="chat-messages" class="chat-box"></div>
-        <input type="text" id="phone" placeholder="رقم الهاتف (9665xxxxxxx)" dir="ltr">
-        <textarea id="msg" placeholder="اكتب رسالتك..."></textarea>
-        <button id="send">إرسال</button>
-    </div>
+    socket.on('qr', (imgData) => {
+        login.style.display = 'block';
+        chat.classList.add('hidden');
+        qrDiv.innerHTML = `<img src="${imgData}" style="width:250px">`;
+        statusP.innerText = 'امسح الباركود من واتساب (الإعدادات > الأجهزة المرتبطة)';
+    });
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let qrReceived = false;
-        let fallbackInterval;
+    socket.on('ready', () => {
+        login.style.display = 'none';
+        chat.classList.remove('hidden');
+    });
 
-        const loginDiv = document.getElementById('login');
-        const chatDiv = document.getElementById('chat');
-        const qrImgDiv = document.getElementById('qr-img');
-        const statusP = document.getElementById('status');
-        const errorDiv = document.getElementById('error-msg');
+    socket.on('message', (msg) => {
+        const el = document.createElement('div');
+        el.className = 'message';
+        el.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
+        messagesDiv.appendChild(el);
+    });
 
-        socket.on('qr', (qrImageData) => {
-            console.log('QR received via socket');
-            qrReceived = true;
-            loginDiv.style.display = 'block';
-            chatDiv.classList.add('hidden');
-            qrImgDiv.innerHTML = `<img src="${qrImageData}" style="width:250px;height:250px">`;
-            statusP.innerText = 'امسح الباركود من واتساب (الإعدادات > الأجهزة المرتبطة)';
-            if (fallbackInterval) clearInterval(fallbackInterval);
-        });
+    socket.on('message-sent', (data) => {
+        const el = document.createElement('div');
+        el.className = 'message';
+        el.style.background = '#dcf8c5';
+        el.innerText = `أنت → ${data.to}: ${data.body}`;
+        messagesDiv.appendChild(el);
+        document.getElementById('msg').value = '';
+    });
 
-        socket.on('ready', () => {
-            loginDiv.style.display = 'none';
-            chatDiv.classList.remove('hidden');
-            statusP.innerText = 'متصل ✓';
-        });
+    socket.on('error', (err) => alert(err));
 
-        socket.on('message', (msg) => {
-            const container = document.getElementById('chat-messages');
-            const el = document.createElement('div');
-            el.className = 'message';
-            el.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
-            container.appendChild(el);
-        });
-
-        socket.on('message-sent', (data) => {
-            const container = document.getElementById('chat-messages');
-            const el = document.createElement('div');
-            el.className = 'message';
-            el.style.background = '#dcf8c5';
-            el.style.alignSelf = 'flex-end';
-            el.innerText = `أنت → ${data.to}: ${data.body}`;
-            container.appendChild(el);
-            document.getElementById('msg').value = '';
-        });
-
-        socket.on('error', (err) => {
-            errorDiv.innerText = 'خطأ: ' + err;
-        });
-
-        // نظام احتياطي: إذا لم يأتي QR بعد 10 ثوانٍ، نطلب من الخادم مرة أخرى
-        setTimeout(() => {
-            if (!qrReceived) {
-                statusP.innerText = 'لم يتم استلام QR، جاري إعادة المحاولة...';
-                fallbackInterval = setInterval(async () => {
-                    try {
-                        const res = await fetch('/api/qr-status');
-                        const data = await res.json();
-                        if (data.ready) {
-                            clearInterval(fallbackInterval);
-                            window.location.reload();
-                        } else if (data.qr) {
-                            const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
-                            qrImgDiv.innerHTML = `<img src="${qrImgUrl}" style="width:250px;height:250px">`;
-                            statusP.innerText = 'تم جلب QR (نسخة احتياطية) امسحه الآن';
-                            qrReceived = true;
-                            clearInterval(fallbackInterval);
-                        }
-                    } catch(e) {}
-                }, 5000);
-            }
-        }, 10000);
-
-        document.getElementById('refresh-btn').addEventListener('click', () => {
-            window.location.reload();
-        });
-
-        document.getElementById('send').addEventListener('click', () => {
-            const to = document.getElementById('phone').value.trim();
-            const body = document.getElementById('msg').value.trim();
-            if (!to || !body) return alert('أدخل الرقم والرسالة');
-            socket.emit('send-message', { to, body });
-        });
-    </script>
+    document.getElementById('send').onclick = () => {
+        const to = document.getElementById('phone').value.trim();
+        const body = document.getElementById('msg').value.trim();
+        if (!to || !body) return alert('أدخل الرقم والرسالة');
+        socket.emit('send-message', { to, body });
+    };
+</script>
 </body>
 </html>
