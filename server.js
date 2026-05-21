@@ -1,10 +1,10 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const Pino = require('pino');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,47 +13,63 @@ const io = socketIo(server);
 app.use(express.static('public'));
 app.use(express.json());
 
-// إعداد عميل واتساب ليعمل على Render
-const whatsappClient = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        puppeteer: {
-            launch: async () => {
-                const browser = await puppeteer.launch({
-                    args: chromium.args,
-                    defaultViewport: chromium.defaultViewport,
-                    executablePath: await chromium.executablePath(),
-                    headless: chromium.headless,
-                });
-                return browser;
-            },
-        },
-    },
-});
-
+let sock;
 let isClientReady = false;
 
-whatsappClient.on('qr', async (qr) => {
-    const qrImage = await qrcode.toDataURL(qr);
-    io.emit('qr', qrImage);
-    console.log('QR code generated');
-});
-
-whatsappClient.on('ready', () => {
-    isClientReady = true;
-    io.emit('ready', 'WhatsApp is ready!');
-    console.log('WhatsApp client is ready');
-});
-
-whatsappClient.on('message', async (message) => {
-    io.emit('message', {
-        from: message.from,
-        body: message.body,
-        timestamp: message.timestamp
+async function connectToWhatsApp() {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    
+    sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        logger: Pino({ level: 'silent' }),
+        browser: ['Ubuntu Chrome', 'Chrome', '110.0.5481.100']
     });
-});
 
-whatsappClient.initialize();
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
+        
+        if (qr) {
+            const qrImage = await qrcode.toDataURL(qr);
+            io.emit('qr', qrImage);
+            console.log('QR code generated');
+        }
+        
+        if (connection === 'open') {
+            isClientReady = true;
+            io.emit('ready', 'WhatsApp is ready!');
+            console.log('WhatsApp client is ready');
+        }
+        
+        if (connection === 'close') {
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            isClientReady = false;
+            console.log('Connection closed. Reconnecting...');
+            if (statusCode !== DisconnectReason.loggedOut) {
+                connectToWhatsApp();
+            } else {
+                io.emit('error', 'Logged out. Please restart the app and scan QR again.');
+            }
+        }
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.key.fromMe && msg.message) {
+            const from = msg.key.remoteJid;
+            const body = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+            io.emit('message', {
+                from: from,
+                body: body,
+                timestamp: msg.messageTimestamp
+            });
+        }
+    });
+}
+
+connectToWhatsApp();
 
 io.on('connection', (socket) => {
     console.log('Frontend connected');
@@ -64,10 +80,11 @@ io.on('connection', (socket) => {
             return;
         }
         try {
-            const chatId = `${to}@c.us`;
-            await whatsappClient.sendMessage(chatId, body);
+            const jid = `${to}@s.whatsapp.net`;
+            await sock.sendMessage(jid, { text: body });
             socket.emit('message-sent', { to, body, status: 'sent' });
         } catch (err) {
+            console.error(err);
             socket.emit('error', err.message);
         }
     });
