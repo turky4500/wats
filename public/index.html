@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Web Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="qr-container" class="container">
+        <h2>امسح الباركود باستخدام واتساب</h2>
+        <div id="qr-code"></div>
+        <p id="status">جاري الاتصال...</p>
+    </div>
+
+    <div id="chat-container" class="container" style="display: none;">
+        <div class="chat-header">
+            <h3>محادثة واتساب</h3>
+            <span id="ready-status">متصل ✅</span>
+        </div>
+        <div class="chat-messages" id="messages"></div>
+        <div class="chat-input">
+            <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 966512345678)">
+            <textarea id="message" placeholder="اكتب رسالتك..."></textarea>
+            <button id="send-btn">إرسال</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
