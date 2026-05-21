@@ -1,10 +1,9 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const Pino = require('pino');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,94 +12,89 @@ const io = socketIo(server);
 app.use(express.static('public'));
 app.use(express.json());
 
-let clientReady = false;
-let currentQR = null;
-let whatsappClient = null;
+let sock;
+let isClientReady = false;
+let pairingCodeRequested = false; // لمنع الطلبات المتكررة
 
-// دالة لبدء تشغيل عميل واتساب
-async function initWhatsApp() {
-    console.log("🚀 جاري تشغيل واتساب...");
-    try {
-        const executablePath = await chromium.executablePath();
-        console.log("✅ مسار Chromium:", executablePath);
+async function connectToWhatsApp() {
+    console.log("🚀 جاري تشغيل بوت واتساب...");
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        logger: Pino({ level: 'silent' }),
+        browser: ['Chrome (Linux)', 'Chrome', '110.0.5481.100']
+    });
 
-        const client = new Client({
-            authStrategy: new LocalAuth(),
-            puppeteer: {
-                headless: true,
-                args: chromium.args,
-                executablePath: executablePath,
-                ignoreDefaultArgs: ['--disable-extensions']
+    sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
+        if (qr) {
+            // إذا تم إنشاء QR كبديل، نحوله لصورة ونرسله
+            const qrImage = await qrcode.toDataURL(qr);
+            io.emit('qr', qrImage);
+            console.log("📱 QR Code generated");
+        }
+        if (connection === 'open') {
+            isClientReady = true;
+            pairingCodeRequested = false;
+            console.log("🎉 واتساب متصل وجاهز!");
+            io.emit('ready', 'WhatsApp is ready!');
+        }
+        if (connection === 'close') {
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            isClientReady = false;
+            console.log("⚠️ تم قطع الاتصال، جاري إعادة المحاولة...");
+            if (statusCode !== DisconnectReason.loggedOut) {
+                setTimeout(connectToWhatsApp, 5000);
+            } else {
+                io.emit('error', 'تم تسجيل الخروج. يرجى إعادة تشغيل التطبيق');
             }
-        });
-
-        client.on('qr', async (qr) => {
-            console.log("📱 تم استلام QR Code");
-            currentQR = qr;
-            try {
-                const qrImage = await qrcode.toDataURL(qr);
-                io.emit('qr', qrImage);
-            } catch (err) {
-                console.error("❌ خطأ في تحويل QR:", err);
-            }
-        });
-
-        client.on('ready', () => {
-            console.log("🎉 واتساب جاهز للاستخدام!");
-            clientReady = true;
-            currentQR = null;
-            io.emit('ready', 'WhatsApp ready');
-        });
-
-        client.on('message', async (message) => {
-            if (!message.fromMe) {
-                io.emit('message', {
-                    from: message.from,
-                    body: message.body,
-                    timestamp: message.timestamp
-                });
-            }
-        });
-
-        await client.initialize();
-        whatsappClient = client;
-        console.log("✅ تم تهيئة العميل بنجاح");
-    } catch (err) {
-        console.error("❌ فشل في تهيئة واتساب:", err);
-    }
+        }
+    });
+    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.key.fromMe && msg.message) {
+            const from = msg.key.remoteJid;
+            const body = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+            io.emit('message', { from, body, timestamp: msg.messageTimestamp });
+        }
+    });
 }
 
-// تشغيل العميل
-initWhatsApp();
+connectToWhatsApp();
 
-// نقطة نهاية احتياطية لجلب QR
-app.get('/api/qr-status', (req, res) => {
-    if (clientReady) return res.json({ ready: true });
-    if (currentQR) return res.json({ ready: false, qr: currentQR });
-    res.json({ ready: false, qr: null });
+// Endpoint خاص بطلب pairing code
+app.post('/api/request-pairing-code', express.json(), async (req, res) => {
+    if (isClientReady) return res.json({ error: 'الجهاز متصل بالفعل' });
+    if (pairingCodeRequested) return res.json({ error: 'تم طلب رمز مسبقاً، انتظر قليلاً' });
+    const { phoneNumber } = req.body;
+    if (!phoneNumber || !/^\d+$/.test(phoneNumber)) {
+        return res.status(400).json({ error: 'رقم الهاتف مطلوب (أرقام فقط مع مفتاح الدولة)' });
+    }
+    try {
+        console.log(`محاولة طلب رمز الإقتران للرقم: ${phoneNumber}`);
+        pairingCodeRequested = true;
+        const code = await sock.requestPairingCode(phoneNumber);
+        console.log(`✅ تم إنشاء رمز الإقتران: ${code}`);
+        res.json({ pairingCode: code });
+    } catch (error) {
+        console.error('خطأ في طلب رمز الإقتران:', error);
+        pairingCodeRequested = false;
+        res.status(500).json({ error: 'فشل في طلب رمز الإقتران، حاول مرة أخرى' });
+    }
 });
 
 io.on('connection', (socket) => {
     console.log("🌐 متصفح متصل");
-    if (clientReady) {
-        socket.emit('ready', 'WhatsApp ready');
-    } else if (currentQR) {
-        (async () => {
-            const qrImage = await qrcode.toDataURL(currentQR);
-            socket.emit('qr', qrImage);
-        })();
-    }
-
+    if (isClientReady) socket.emit('ready', 'WhatsApp is ready!');
     socket.on('send-message', async ({ to, body }) => {
-        if (!clientReady || !whatsappClient) {
-            return socket.emit('error', 'العميل ليس جاهزاً بعد');
-        }
+        if (!isClientReady) return socket.emit('error', 'العميل ليس جاهزاً بعد');
         try {
-            await whatsappClient.sendMessage(`${to}@c.us`, body);
-            socket.emit('message-sent', { to, body });
-            console.log(`📨 تم إرسال رسالة إلى ${to}`);
+            const jid = `${to}@s.whatsapp.net`;
+            await sock.sendMessage(jid, { text: body });
+            socket.emit('message-sent', { to, body, status: 'sent' });
         } catch (err) {
-            console.error("❌ فشل الإرسال:", err);
             socket.emit('error', err.message);
         }
     });
