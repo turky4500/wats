@@ -2,65 +2,270 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة المستخدم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واتس اب تكوين - لوحة التحكم</title>
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
-        .btn-warning { background: #f57c00; }
-        .grid { display: flex; gap: 20px; flex-wrap: wrap; }
-        .card { background: white; padding: 25px; border-radius: 8px; flex: 1; min-width: 300px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+        :root {
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --secondary: #3b82f6;
+            --dark: #0f172a;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin-bottom: 25px;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-secondary { background: var(--warning); color: white; }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-danger:hover { background: #fecaca; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: var(--dark);
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* الإشعارات الذكية */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: white;
+            color: var(--text-main);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            font-weight: 500;
+            animation: slideIn 0.3s ease forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-right: 4px solid var(--primary);
+        }
+        .toast.error { border-right-color: var(--danger); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 15px;
+            box-sizing: border-box;
+            background: #f8fafc;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .file-upload-box {
+            border: 2px dashed #cbd5e1;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .file-upload-box:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdf4;
+        }
+
+        .chat-box {
+            height: 250px;
+            overflow-y: auto;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .message {
+            background: var(--primary);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-top-right-radius: 0;
+            margin-bottom: 10px;
+            display: inline-block;
+            font-size: 14px;
+        }
+
+        .token-box {
+            display: flex;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .token-box input {
+            border: none;
+            background: transparent;
+            margin: 0;
+            flex: 1;
+            padding: 15px;
+            font-family: monospace;
+            color: var(--text-muted);
+            outline: none;
+        }
+        .token-box button {
+            margin: 0;
+            border-radius: 0;
+            height: auto;
+        }
+
+        pre {
+            background: var(--dark);
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+            font-size: 13px;
+        }
+        .hidden { display: none !important; }
+        
         #qr-container { text-align: center; }
-        #qr-container img { width: 250px; border: 10px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 10px; margin: 20px 0; }
-        .chat-box { height: 250px; overflow-y: auto; background: #e5ddd5; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .message { background: #dcf8c5; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: inline-block; }
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .token-box { display: flex; align-items: center; background: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
-        .token-box input { border: none; background: transparent; padding: 15px; margin: 0; font-family: monospace; font-size: 16px; outline: none; }
-        .token-box button { background: #128C7E; margin: 0; border-radius: 0; height: 100%; }
-        pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; direction: ltr; text-align: left; }
-        .hidden { display: none; }
-        .file-upload-box { border: 2px dashed #bbb; padding: 15px; text-align: center; margin-bottom: 15px; border-radius: 5px; background: #fafafa; cursor: pointer; }
+        #qr-container img {
+            width: 260px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>مرحباً، <%= user.username %> 👋</h2>
-        <div>
-            <a href="/logs" class="btn" style="background:#f57c00;">سجل الرسائل 📜</a>
-            <a href="/logout" class="btn" style="background:#d32f2f;">تسجيل خروج</a>
-        </div>
-    </div>
-    
-    <div class="grid">
-        <div class="card" id="connection-card">
-            <h3 id="status-title">حالة الاتصال ⏳</h3>
-            
-            <div id="qr-container" class="hidden">
-                <p>امسح رمز QR باستخدام واتساب في هاتفك:</p>
-                <div id="qr-img"></div>
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <div class="header">
+            <h2>مرحباً، <%= user.username %> 👋</h2>
+            <div style="display: flex; gap: 10px;">
+                <a href="/logs" class="btn btn-secondary">سجل الرسائل 📜</a>
+                <a href="/logout" class="btn btn-danger">تسجيل خروج</a>
             </div>
-            
-            <div id="connected-container" class="hidden">
-                <p style="color: #25D366; font-size: 18px; font-weight: bold;">✅ واتساب متصل وجاهز للإرسال!</p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        </div>
+        
+        <div class="grid">
+            <div class="card" id="connection-card">
+                <h3 id="status-title">حالة الاتصال ⏳</h3>
                 
-                <h4>الربط الخارجي (API Token) 🔗</h4>
-                <div class="token-box">
-                    <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
-                    <button class="btn" onclick="copyToken()">نسخ</button>
+                <div id="qr-container" class="hidden">
+                    <p style="color: var(--text-muted);">امسح رمز QR باستخدام واتساب في هاتفك لربط الجلسة:</p>
+                    <div id="qr-img"></div>
                 </div>
                 
-                <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟')">
-                    <button type="submit" class="btn btn-warning" style="width:100%;">توليد توكن جديد 🔄</button>
-                </form>
+                <div id="connected-container" class="hidden">
+                    <p style="color: var(--primary); font-size: 18px; font-weight: 700;">✅ واتساب متصل وجاهز للإرسال!</p>
+                    
+                    <h4 style="margin-top: 30px;">الربط الخارجي (API Token) 🔗</h4>
+                    
+                    <div class="token-box">
+                        <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
+                        <button class="btn btn-primary" onclick="copyToken()">نسخ الرمز</button>
+                    </div>
+                    
+                    <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟')">
+                        <button type="submit" class="btn btn-secondary" style="width:100%;">توليد رمز جديد 🔄</button>
+                    </form>
 
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                
-                <h4>طريقة استخدام الـ API 💻</h4>
-                <p>يمكنك الآن إرسال المرفقات عن طريق الـ API بصيغة Base64 كالتالي:</p>
-                <code style="background:#eee; padding:5px; border-radius:4px; font-family:monospace;"><%= host %>/api/send-message</code>
-                <pre>
+                    <h4 style="margin-top: 30px;">طريقة استخدام الـ API 💻</h4>
+                    <pre>
 {
   "to": ["966511111111"],
   "body": "مرحباً! هذه رسالة مع صورة",
@@ -68,34 +273,46 @@
     {
        "mimetype": "image/png",
        "filename": "image.png",
-       "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+       "data": "iVBORw0KGgo..."
     }
   ]
 }</pre>
+                </div>
             </div>
-        </div>
 
-        <!-- قسم الإرسال اليدوي -->
-        <div class="card hidden" id="chat-card">
-            <h3>الإرسال اليدوي من المنصة 💬</h3>
-            <div class="chat-box" id="messages"></div>
-            
-            <input type="text" id="phone" placeholder="الأرقام (افصل بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
-            
-            <div class="file-upload-box" onclick="document.getElementById('mediaFiles').click()">
-                📎 اضغط هنا لاختيار الصور أو الملفات (يمكنك اختيار أكثر من ملف)
+            <div class="card hidden" id="chat-card">
+                <h3>الإرسال السريع 💬</h3>
+                <div class="chat-box" id="messages"></div>
+                
+                <input type="text" id="phone" placeholder="الأرقام (افصل بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
+                
+                <div class="file-upload-box" onclick="document.getElementById('mediaFiles').click()">
+                    📎 اضغط هنا لإرفاق الصور أو الملفات
+                </div>
+                <input type="file" id="mediaFiles" multiple class="hidden" onchange="updateFileName()">
+                <p id="fileNames" style="color: var(--primary); font-size: 13px; font-weight: 600; margin-top:-10px;"></p>
+
+                <textarea id="msg" placeholder="اكتب رسالتك هنا..." rows="3"></textarea>
+                <button class="btn btn-primary" id="send-btn" style="width: 100%;">إرسال الرسالة 🚀</button>
             </div>
-            <input type="file" id="mediaFiles" multiple class="hidden" onchange="updateFileName()">
-            <p id="fileNames" style="color: green; font-size: 13px; margin-top:-10px;"></p>
-
-            <textarea id="msg" placeholder="اكتب رسالتك هنا (أو وصف للملف)..." rows="3"></textarea>
-            <button class="btn" id="send-btn" style="width: 100%;">إرسال</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ query: { userId: "<%= user._id %>" } });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
 
         socket.on('qr', (imgData) => {
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
@@ -112,9 +329,7 @@
             document.getElementById('chat-card').classList.remove('hidden');
         });
 
-        socket.on('status-update', (msg) => {
-            document.getElementById('status-title').innerText = msg;
-        });
+        socket.on('status-update', (msg) => document.getElementById('status-title').innerText = msg);
 
         socket.on('message-sent', (data) => {
             const el = document.createElement('div');
@@ -125,20 +340,15 @@
             msgs.scrollTop = msgs.scrollHeight;
         });
 
-        socket.on('error', (err) => {
-            console.error('خطأ:', err);
-        });
-
         function updateFileName() {
             const files = document.getElementById('mediaFiles').files;
             if(files.length > 0) {
-                document.getElementById('fileNames').innerText = `تم تحديد ${files.length} ملفات جاهزة للرفع.`;
+                document.getElementById('fileNames').innerText = `تم تحديد ${files.length} مرفقات جاهزة للرفع.`;
             } else {
                 document.getElementById('fileNames').innerText = '';
             }
         }
 
-        // دالة لتحويل الملفات إلى Base64
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -157,7 +367,7 @@
             const body = document.getElementById('msg').value;
             const fileInput = document.getElementById('mediaFiles');
             
-            if (!to || (!body && fileInput.files.length === 0)) return alert("الرجاء إدخال الأرقام والنص أو الملف!");
+            if (!to || (!body && fileInput.files.length === 0)) return showToast("الرجاء إدخال الأرقام والنص أو الملف!", "error");
             
             const btn = document.getElementById('send-btn');
             btn.innerText = 'جاري المعالجة والإرسال... ⏳';
@@ -165,21 +375,29 @@
 
             try {
                 const mediaArray = [];
-                // تحويل كل الملفات المحددة إلى Base64
                 for(let i = 0; i < fileInput.files.length; i++) {
-                    const fileObj = await fileToBase64(fileInput.files[i]);
-                    mediaArray.push(fileObj);
+                    mediaArray.push(await fileToBase64(fileInput.files[i]));
                 }
 
-                socket.emit('send-message', { to, body, media: mediaArray });
+                // النظام الجديد للانتظار وعدم المسح إلا بعد التأكيد من السيرفر!
+                socket.emit('send-message', { to, body, media: mediaArray }, (response) => {
+                    btn.innerText = 'إرسال الرسالة 🚀';
+                    btn.disabled = false;
+                    
+                    if (response.error) {
+                        showToast(response.error, "error");
+                    } else {
+                        showToast("تم الإرسال بنجاح!", "success");
+                        // مسح الحقول فقط إذا نجح الإرسال
+                        document.getElementById('msg').value = '';
+                        fileInput.value = '';
+                        document.getElementById('fileNames').innerText = '';
+                    }
+                });
                 
-                document.getElementById('msg').value = '';
-                fileInput.value = '';
-                document.getElementById('fileNames').innerText = '';
             } catch(e) {
-                alert("حدث خطأ في قراءة الملفات!");
-            } finally {
-                btn.innerText = 'إرسال';
+                showToast("حدث خطأ في قراءة الملفات!", "error");
+                btn.innerText = 'إرسال الرسالة 🚀';
                 btn.disabled = false;
             }
         };
@@ -188,7 +406,7 @@
             const tokenInput = document.getElementById('apiToken');
             tokenInput.select();
             document.execCommand('copy');
-            alert('تم نسخ الـ Token بنجاح!');
+            showToast('تم نسخ رمز الـ API بنجاح!');
         }
     </script>
 </body>
