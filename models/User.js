@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
     isActive: { type: Boolean, default: true },
     apiToken: { type: String, unique: true },
+    subscriptionEndsAt: { type: Date }, // نظام SaaS: تاريخ انتهاء الاشتراك
     createdAt: { type: Date, default: Date.now }
 });
 
