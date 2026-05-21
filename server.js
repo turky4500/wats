@@ -20,11 +20,18 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: process.env.SESSION_SECRET || 'wats_secret_123', resave: false, saveUninitialized: false }));
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'wats_secret_123',
+    resave: false,
+    saveUninitialized: false
+}));
 
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
-    if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
+    if (!admin) {
+        await User.create({ username: 'admin', password: 'password', role: 'admin' });
+        console.log('✅ تم إنشاء حساب الأدمن الافتراضي');
+    }
 }
 createDefaultAdmin();
 
@@ -50,6 +57,7 @@ app.get('/', requireAuth, async (req, res) => {
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
+
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
@@ -59,7 +67,11 @@ app.post('/login', async (req, res) => {
     }
     res.render('login', { error: 'بيانات غير صحيحة.' });
 });
-app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
+
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
 
 app.post('/refresh-token', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
@@ -79,7 +91,9 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
         const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
         await User.create({ username, password, apiToken });
         res.redirect('/admin');
-    } catch (e) { res.status(400).send('خطأ: المستخدم موجود.'); }
+    } catch (e) {
+        res.status(400).send('خطأ: المستخدم موجود.');
+    }
 });
 
 // صفحة سجل الرسائل (الأرشيف)
