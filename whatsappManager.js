@@ -34,7 +34,8 @@ async function startWhatsAppSession(userId, io) {
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             sessions.delete(userId);
-            io.to(userId).emit('error', 'Connection closed');
+            // إخفاء التنبيه المزعج واستبداله بحالة صامتة
+            io.to(userId).emit('status-update', 'جاري إعادة الاتصال بالخادم... 🔄');
             if (statusCode !== DisconnectReason.loggedOut) {
                 setTimeout(() => startWhatsAppSession(userId, io), 5000);
             }
@@ -47,8 +48,5 @@ async function startWhatsAppSession(userId, io) {
     return sock;
 }
 
-function getSession(userId) {
-    return sessions.get(userId);
-}
-
+function getSession(userId) { return sessions.get(userId); }
 module.exports = { startWhatsAppSession, getSession };
