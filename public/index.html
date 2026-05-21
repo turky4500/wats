@@ -3,77 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتساب ويب</title>
+    <title>واتساب ويب - تسجيل الدخول</title>
     <style>
-        body { font-family: Arial; background: #075e54; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 20px; border-radius: 16px; text-align: center; width: 350px; }
-        #qr-img img { width: 250px; height: 250px; margin: 10px auto; }
-        .chat-box { height: 300px; overflow-y: auto; background: #e5ddd5; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: left; }
-        .message { background: #dcf8c5; padding: 8px; border-radius: 12px; margin: 5px; display: inline-block; }
-        input, textarea { width: 100%; margin: 5px 0; padding: 8px; border-radius: 20px; border: 1px solid #ccc; }
-        button { background: #25d366; border: none; padding: 10px; border-radius: 24px; color: white; font-weight: bold; cursor: pointer; }
-        .hidden { display: none; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #075e54;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            direction: rtl;
+        }
+        .container {
+            background: #fff;
+            border-radius: 16px;
+            padding: 30px;
+            width: 400px;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 24px;
+            font-size: 16px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        button {
+            background: #25d366;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 24px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #128c7e;
+        }
+        .pairing-code-box {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .code {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #075e54;
+            margin: 10px 0;
+        }
+        .steps {
+            text-align: right;
+            margin: 20px 0;
+            padding-right: 20px;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .chat-header {
+            background: #128c7e;
+            color: white;
+            padding: 12px;
+            border-radius: 12px 12px 0 0;
+            margin: -30px -30px 10px -30px;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            background: #e5ddd5;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: left;
+        }
+        .message {
+            background: #dcf8c5;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin: 6px 0;
+            width: fit-content;
+            max-width: 80%;
+        }
+        .chat-input {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #phone, #message {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 24px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-<div id="login" class="container">
-    <h2>امسح رمز QR</h2>
-    <div id="qr-img">⏳ جاري تجهيز الباركود...</div>
-    <p id="status">جاري الاتصال...</p>
-    <button onclick="location.reload()">تحديث</button>
+<div id="login-container" class="container">
+    <h2>تسجيل الدخول إلى واتساب</h2>
+    <p>أدخل رقم هاتفك مع رمز الدولة (مثال: 966512345678)</p>
+    <input type="tel" id="phone-number" placeholder="966512345678" dir="ltr">
+    <button id="request-code-btn">طلب رمز الإقتران</button>
+    <div id="pairing-code-area" class="pairing-code-box hidden">
+        <h3>🌟 رمز الإقتران الخاص بك</h3>
+        <div class="code" id="pairing-code-display"></div>
+        <p>قم بفتح واتساب على هاتفك → الإعدادات → الأجهزة المرتبطة → ربط جهاز → إدخال رمز مكون من 8 أرقام</p>
+        <p class="success">⏳ انتظر قليلاً بعد إدخال الرمز، سيتصل الجهاز تلقائياً</p>
+    </div>
+    <div id="error-message" class="error hidden"></div>
+    <div id="waiting-message" class="hidden">🔄 جاري الاتصال... يرجى الانتظار</div>
 </div>
-<div id="chat" class="container hidden">
-    <h3>محادثة واتساب</h3>
-    <div id="messages" class="chat-box"></div>
-    <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 966512345678)" dir="ltr">
-    <textarea id="msg" placeholder="اكتب رسالتك..."></textarea>
-    <button id="send">إرسال</button>
+
+<div id="chat-container" class="container hidden">
+    <div class="chat-header"><h3>محادثة واتساب</h3><span>✅ متصل</span></div>
+    <div class="chat-messages" id="messages"></div>
+    <div class="chat-input">
+        <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 966512345678)">
+        <textarea id="message" placeholder="اكتب رسالتك..."></textarea>
+        <button id="send-btn">إرسال</button>
+    </div>
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
-    const login = document.getElementById('login');
-    const chat = document.getElementById('chat');
-    const qrDiv = document.getElementById('qr-img');
-    const statusP = document.getElementById('status');
+    const loginContainer = document.getElementById('login-container');
+    const chatContainer = document.getElementById('chat-container');
+    const phoneInput = document.getElementById('phone-number');
+    const requestBtn = document.getElementById('request-code-btn');
+    const pairingCodeArea = document.getElementById('pairing-code-area');
+    const pairingCodeDisplay = document.getElementById('pairing-code-display');
+    const errorMessage = document.getElementById('error-message');
+    const waitingMessage = document.getElementById('waiting-message');
     const messagesDiv = document.getElementById('messages');
+    const sendPhone = document.getElementById('phone');
+    const sendMsg = document.getElementById('message');
+    const sendBtn = document.getElementById('send-btn');
 
-    socket.on('qr', (imgData) => {
-        login.style.display = 'block';
-        chat.classList.add('hidden');
-        qrDiv.innerHTML = `<img src="${imgData}" style="width:250px">`;
-        statusP.innerText = 'امسح الباركود من واتساب (الإعدادات > الأجهزة المرتبطة)';
+    requestBtn.addEventListener('click', async () => {
+        const phoneNumber = phoneInput.value.trim();
+        if (!phoneNumber) {
+            showError('الرجاء إدخال رقم الهاتف');
+            return;
+        }
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'جاري الطلب...';
+        hideError();
+        waitingMessage.classList.remove('hidden');
+        try {
+            const response = await fetch('/api/request-pairing-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber })
+            });
+            const data = await response.json();
+            if (data.error) {
+                showError(data.error);
+                requestBtn.disabled = false;
+                requestBtn.textContent = 'طلب رمز الإقتران';
+                waitingMessage.classList.add('hidden');
+            } else if (data.pairingCode) {
+                pairingCodeDisplay.textContent = data.pairingCode;
+                pairingCodeArea.classList.remove('hidden');
+                waitingMessage.classList.add('hidden');
+                requestBtn.textContent = 'تم إرسال الطلب';
+            }
+        } catch (err) {
+            showError('حدث خطأ في الاتصال بالخادم');
+            requestBtn.disabled = false;
+            requestBtn.textContent = 'طلب رمز الإقتران';
+            waitingMessage.classList.add('hidden');
+        }
     });
 
     socket.on('ready', () => {
-        login.style.display = 'none';
-        chat.classList.remove('hidden');
+        loginContainer.classList.add('hidden');
+        chatContainer.classList.remove('hidden');
     });
 
     socket.on('message', (msg) => {
-        const el = document.createElement('div');
-        el.className = 'message';
-        el.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
-        messagesDiv.appendChild(el);
+        const msgElement = document.createElement('div');
+        msgElement.classList.add('message');
+        msgElement.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
+        messagesDiv.appendChild(msgElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
     socket.on('message-sent', (data) => {
-        const el = document.createElement('div');
-        el.className = 'message';
-        el.style.background = '#dcf8c5';
-        el.innerText = `أنت → ${data.to}: ${data.body}`;
-        messagesDiv.appendChild(el);
-        document.getElementById('msg').value = '';
+        const msgElement = document.createElement('div');
+        msgElement.classList.add('message');
+        msgElement.style.background = '#dcf8c5';
+        msgElement.style.alignSelf = 'flex-end';
+        msgElement.innerText = `أنت → ${data.to}: ${data.body}`;
+        messagesDiv.appendChild(msgElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        sendMsg.value = '';
     });
 
-    socket.on('error', (err) => alert(err));
+    socket.on('error', (err) => showError(err));
 
-    document.getElementById('send').onclick = () => {
-        const to = document.getElementById('phone').value.trim();
-        const body = document.getElementById('msg').value.trim();
+    sendBtn.addEventListener('click', () => {
+        const to = sendPhone.value.trim();
+        const body = sendMsg.value.trim();
         if (!to || !body) return alert('أدخل الرقم والرسالة');
         socket.emit('send-message', { to, body });
-    };
+    });
+
+    function showError(msg) {
+        errorMessage.textContent = msg;
+        errorMessage.classList.remove('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+    }
+    function hideError() { errorMessage.classList.add('hidden'); }
 </script>
 </body>
 </html>
