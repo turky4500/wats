@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>أرشيف الرسائل</title>
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn { background: #128C7E; color: white; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; }
+        .success { color: #25D366; font-weight: bold; }
+        .failed { color: #d32f2f; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>أرشيف الرسائل 📜</h2>
+        <a href="/" class="btn">العودة للوحة التحكم</a>
+    </div>
+
+    <table>
+        <tr>
+            <th>الرقم</th>
+            <th>نص الرسالة</th>
+            <th>الحالة</th>
+            <th>التاريخ والوقت</th>
+            <th>ملاحظات</th>
+        </tr>
+        <% logs.forEach(log => { %>
+        <tr>
+            <td dir="ltr"><%= log.to %></td>
+            <td><%= log.body.substring(0, 50) %><%= log.body.length > 50 ? '...' : '' %></td>
+            <td class="<%= log.status %>"><%= log.status === 'success' ? '✅ نجحت' : '❌ فشلت' %></td>
+            <td dir="ltr"><%= new Date(log.createdAt).toLocaleString('ar-SA') %></td>
+            <td><%= log.errorDetails || '-' %></td>
+        </tr>
+        <% }) %>
+    </table>
+</body>
+</html>
