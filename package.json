@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "postinstall": "npx puppeteer browsers install chrome"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
     "qrcode": "^1.5.3",
-    "whatsapp-web.js": "^1.26.0",
-    "puppeteer": "^24.0.0"
+    "whatsapp-web.js": "github:Salman-3435/whatsapp-web.js?branch=fix-work-in-progress",
+    "puppeteer-core": "^21.0.0",
+    "@sparticuz/chromium": "^121.0.0"
   }
 }
