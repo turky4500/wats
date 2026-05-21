@@ -13,17 +13,27 @@ const io = socketIo(server);
 app.use(express.static('public'));
 app.use(express.json());
 
-let sock;
+// متغير لتخزين QR الحالي
+let currentQR = null;
 let isClientReady = false;
 
+// إضافة endpoint للحصول على QR مباشرة (لنستخدمه كاحتياطي)
+app.get('/api/qr', (req, res) => {
+    if (currentQR) {
+        res.json({ qr: currentQR, ready: isClientReady });
+    } else {
+        res.json({ qr: null, ready: isClientReady, message: 'جاري تجهيز QR...' });
+    }
+});
+
 async function connectToWhatsApp() {
-    console.log("🚀 جاري تشغيل بوت واتساب...");
+    console.log("🚀 بدء تشغيل بوت واتساب...");
     
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     
-    sock = makeWASocket({
+    const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,  // الباركود سيظهر في سجلات Render
+        printQRInTerminal: true,
         logger: Pino({ level: 'silent' }),
         browser: ['Chrome (Linux)', 'Chrome', '110.0.5481.100']
     });
@@ -32,82 +42,77 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log("✅ تم استلام رمز QR، جاري تحويله إلى صورة...");
+            currentQR = qr;
+            console.log("✅ QR جاهز، طول النص:", qr.length);
+            // توليد صورة QR
             try {
-                // تحويل QR إلى صورة base64
                 const qrImage = await qrcode.toDataURL(qr);
-                // إرسال الصورة إلى جميع المتصفحات المتصلة
+                // إرسال عبر socket لجميع المتصفحات المتصلة حالياً
                 io.emit('qr', qrImage);
-                console.log("📱 تم إرسال رمز QR إلى الصفحة");
-            } catch (err) {
-                console.error("❌ خطأ في تحويل QR:", err);
+                console.log("📱 تم إرسال QR عبر WebSocket");
+            } catch(err) {
+                console.error("خطأ بتحويل QR:", err);
             }
-            // أيضاً نطبع نص QR في السجلات كنسخة احتياطية
-            console.log("🔹 نسخة نصية من QR (يمكنك استخدامها يدوياً):", qr);
         }
         
         if (connection === 'open') {
             isClientReady = true;
-            console.log("🎉 واتساب متصل وجاهز!");
+            currentQR = null;
+            console.log("🎉 واتساب متصل بنجاح!");
             io.emit('ready', 'WhatsApp is ready!');
         }
         
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             isClientReady = false;
-            console.log("⚠️ تم قطع الاتصال، جاري إعادة المحاولة...");
+            console.log("⚠️ تم قطع الاتصال، إعادة محاولة...");
             if (statusCode !== DisconnectReason.loggedOut) {
-                connectToWhatsApp();
+                setTimeout(connectToWhatsApp, 5000);
             } else {
-                io.emit('error', 'تم تسجيل الخروج. يرجى إعادة تشغيل التطبيق ومسح QR مرة أخرى.');
+                io.emit('error', 'تم تسجيل الخروج، أعد تشغيل التطبيق');
             }
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
-
+    
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.key.fromMe && msg.message) {
             const from = msg.key.remoteJid;
             const body = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-            io.emit('message', {
-                from: from,
-                body: body,
-                timestamp: msg.messageTimestamp
-            });
+            io.emit('message', { from, body, timestamp: msg.messageTimestamp });
         }
     });
 }
 
-// بدء الاتصال
 connectToWhatsApp();
 
+// WebSocket للمتصفحات
 io.on('connection', (socket) => {
-    console.log("🌐 متصفح جديد متصل بالخادم");
-    
-    // إذا كان العميل جاهزاً بالفعل، نرسل الحالة الجاهزة
+    console.log("🌐 متصفح متصل");
     if (isClientReady) {
         socket.emit('ready', 'WhatsApp is ready!');
+    } else if (currentQR) {
+        // إذا كان هناك QR موجود لكن لم يرسل بعد، أرسله الآن
+        (async () => {
+            const qrImage = await qrcode.toDataURL(currentQR);
+            socket.emit('qr', qrImage);
+        })();
     }
 
     socket.on('send-message', async ({ to, body }) => {
-        if (!isClientReady) {
-            socket.emit('error', 'العميل ليس جاهزاً بعد');
-            return;
-        }
+        if (!isClientReady) return socket.emit('error', 'ليس جاهزاً بعد');
         try {
             const jid = `${to}@s.whatsapp.net`;
             await sock.sendMessage(jid, { text: body });
             socket.emit('message-sent', { to, body, status: 'sent' });
-            console.log(`📨 تم إرسال رسالة إلى ${to}`);
         } catch (err) {
-            console.error("❌ فشل إرسال الرسالة:", err);
             socket.emit('error', err.message);
         }
     });
 });
 
 server.listen(3000, () => {
-    console.log("✅ الخادم يعمل على http://localhost:3000");
+    console.log("✅ الخادم يعمل على المنفذ 3000");
 });
