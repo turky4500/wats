@@ -4,20 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp Web Clone</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #075e54; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; direction: rtl; }
+        .container { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 500px; max-width: 90%; padding: 20px; text-align: center; }
+        #qr-code img { width: 250px; height: 250px; margin: 20px auto; border: 1px solid #ddd; border-radius: 12px; }
+        .chat-header { background: #128c7e; color: white; padding: 12px; border-radius: 12px 12px 0 0; margin: -20px -20px 10px -20px; }
+        .chat-messages { height: 300px; overflow-y: auto; background: #e5ddd5; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: left; }
+        .message { background: #dcf8c5; padding: 8px 12px; border-radius: 12px; margin: 6px 0; width: fit-content; max-width: 80%; }
+        .chat-input { display: flex; flex-direction: column; gap: 8px; }
+        #phone, #message { padding: 10px; border: 1px solid #ccc; border-radius: 24px; font-size: 14px; }
+        button { background: #25d366; border: none; padding: 10px; border-radius: 24px; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { background: #128c7e; }
+        .error { color: red; margin-top: 10px; }
+    </style>
 </head>
 <body>
     <div id="qr-container" class="container">
         <h2>امسح الباركود باستخدام واتساب</h2>
-        <div id="qr-code"></div>
+        <div id="qr-code">⏳ جاري تحميل الباركود...</div>
         <p id="status">جاري الاتصال...</p>
     </div>
 
     <div id="chat-container" class="container" style="display: none;">
-        <div class="chat-header">
-            <h3>محادثة واتساب</h3>
-            <span id="ready-status">متصل ✅</span>
-        </div>
+        <div class="chat-header"><h3>محادثة واتساب</h3><span>متصل ✅</span></div>
         <div class="chat-messages" id="messages"></div>
         <div class="chat-input">
             <input type="text" id="phone" placeholder="رقم الهاتف (مثال: 966512345678)">
@@ -27,6 +36,102 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script>
+        const socket = io();
+        const qrContainer = document.getElementById('qr-container');
+        const chatContainer = document.getElementById('chat-container');
+        const qrDiv = document.getElementById('qr-code');
+        const statusP = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const phoneInput = document.getElementById('phone');
+        const msgInput = document.getElementById('message');
+        const sendBtn = document.getElementById('send-btn');
+
+        let fallbackInterval = null;
+
+        // استقبال QR من WebSocket
+        socket.on('qr', (qrImageData) => {
+            console.log('QR received via socket');
+            clearFallback();
+            qrContainer.style.display = 'block';
+            chatContainer.style.display = 'none';
+            qrDiv.innerHTML = `<img src="${qrImageData}" alt="QR Code"><p>امسح الباركود من واتساب (الإعدادات > الأجهزة المرتبطة)</p>`;
+            statusP.innerText = 'انتظر المسح...';
+        });
+
+        socket.on('ready', () => {
+            console.log('Ready event');
+            clearFallback();
+            qrContainer.style.display = 'none';
+            chatContainer.style.display = 'block';
+            statusP.innerText = 'متصل وجاهز للإرسال';
+        });
+
+        socket.on('message', (msg) => {
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('message');
+            msgElement.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
+            messagesDiv.appendChild(msgElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+
+        socket.on('message-sent', (data) => {
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('message');
+            msgElement.style.background = '#dcf8c5';
+            msgElement.style.alignSelf = 'flex-end';
+            msgElement.innerText = `أنت → ${data.to}: ${data.body}`;
+            messagesDiv.appendChild(msgElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            msgInput.value = '';
+        });
+
+        socket.on('error', (err) => {
+            alert('خطأ: ' + err);
+        });
+
+        // فشل احتياطي: جلب QR من endpoint /api/qr كل 3 ثوانٍ
+        function startFallback() {
+            if (fallbackInterval) clearInterval(fallbackInterval);
+            fallbackInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/qr');
+                    const data = await res.json();
+                    if (data.ready) {
+                        clearFallback();
+                        window.location.reload(); // إعادة تحميل الصفحة لتحديث الحالة
+                    } else if (data.qr) {
+                        // توليد صورة QR من النص
+                        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
+                        qrDiv.innerHTML = `<img src="${qrImgUrl}" alt="QR Code"><p>امسح الباركود (طريقة احتياطية)</p>`;
+                        statusP.innerText = 'تم جلب QR تلقائياً، امسحه';
+                        qrContainer.style.display = 'block';
+                        chatContainer.style.display = 'none';
+                    } else if (!data.qr && !data.ready) {
+                        qrDiv.innerHTML = '⏳ انتظر تجهيز الباركود...';
+                    }
+                } catch(e) {
+                    console.log('Fallback fetch error', e);
+                }
+            }, 3000);
+        }
+
+        function clearFallback() {
+            if (fallbackInterval) {
+                clearInterval(fallbackInterval);
+                fallbackInterval = null;
+            }
+        }
+
+        // بدء الاحتياطي بعد 5 ثوانٍ إذا لم يأتي QR عبر socket
+        setTimeout(startFallback, 5000);
+
+        sendBtn.addEventListener('click', () => {
+            const to = phoneInput.value.trim();
+            const body = msgInput.value.trim();
+            if (!to || !body) return alert('أدخل الرقم والرسالة');
+            socket.emit('send-message', { to, body });
+        });
+    </script>
 </body>
 </html>
