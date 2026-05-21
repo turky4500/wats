@@ -6,7 +6,7 @@
     <style>
         body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn { background: #25D366; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; }
         .btn-warning { background: #f57c00; }
         .grid { display: flex; gap: 20px; flex-wrap: wrap; }
         .card { background: white; padding: 25px; border-radius: 8px; flex: 1; min-width: 300px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -20,6 +20,7 @@
         .token-box button { background: #128C7E; margin: 0; border-radius: 0; height: 100%; }
         pre { background: #272822; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; direction: ltr; text-align: left; }
         .hidden { display: none; }
+        .file-upload-box { border: 2px dashed #bbb; padding: 15px; text-align: center; margin-bottom: 15px; border-radius: 5px; background: #fafafa; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -32,7 +33,6 @@
     </div>
     
     <div class="grid">
-        <!-- قسم الاتصال والـ API -->
         <div class="card" id="connection-card">
             <h3 id="status-title">حالة الاتصال ⏳</h3>
             
@@ -46,32 +46,32 @@
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                 
                 <h4>الربط الخارجي (API Token) 🔗</h4>
-                <p>استخدم هذا الرمز السري لربط أنظمتك الخارجية لإرسال الرسائل عن بعد.</p>
-                
                 <div class="token-box">
                     <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
                     <button class="btn" onclick="copyToken()">نسخ</button>
                 </div>
                 
-                <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟ الأنظمة المرتبطة بالتوكن القديم ستتوقف عن العمل.')">
+                <form method="POST" action="/refresh-token" onsubmit="return confirm('هل أنت متأكد من تغيير التوكن؟')">
                     <button type="submit" class="btn btn-warning" style="width:100%;">توليد توكن جديد 🔄</button>
                 </form>
 
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                 
                 <h4>طريقة استخدام الـ API 💻</h4>
-                <p>قم بإرسال طلب من نوع <b>POST</b> إلى هذا الرابط:</p>
+                <p>يمكنك الآن إرسال المرفقات عن طريق الـ API بصيغة Base64 كالتالي:</p>
                 <code style="background:#eee; padding:5px; border-radius:4px; font-family:monospace;"><%= host %>/api/send-message</code>
-                
-                <p><b>مثال باستخدام cURL:</b></p>
                 <pre>
-curl -X POST <%= host %>/api/send-message \
--H "Authorization: Bearer <%= user.apiToken %>" \
--H "Content-Type: application/json" \
--d '{
-  "to": ["966511111111", "966522222222"],
-  "body": "مرحباً! هذه رسالة مجدولة عبر الـ API 🚀"
-}'</pre>
+{
+  "to": ["966511111111"],
+  "body": "مرحباً! هذه رسالة مع صورة",
+  "media": [
+    {
+       "mimetype": "image/png",
+       "filename": "image.png",
+       "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+    }
+  ]
+}</pre>
             </div>
         </div>
 
@@ -79,8 +79,16 @@ curl -X POST <%= host %>/api/send-message \
         <div class="card hidden" id="chat-card">
             <h3>الإرسال اليدوي من المنصة 💬</h3>
             <div class="chat-box" id="messages"></div>
+            
             <input type="text" id="phone" placeholder="الأرقام (افصل بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
-            <textarea id="msg" placeholder="اكتب رسالتك هنا..." rows="3"></textarea>
+            
+            <div class="file-upload-box" onclick="document.getElementById('mediaFiles').click()">
+                📎 اضغط هنا لاختيار الصور أو الملفات (يمكنك اختيار أكثر من ملف)
+            </div>
+            <input type="file" id="mediaFiles" multiple class="hidden" onchange="updateFileName()">
+            <p id="fileNames" style="color: green; font-size: 13px; margin-top:-10px;"></p>
+
+            <textarea id="msg" placeholder="اكتب رسالتك هنا (أو وصف للملف)..." rows="3"></textarea>
             <button class="btn" id="send-btn" style="width: 100%;">إرسال</button>
         </div>
     </div>
@@ -115,19 +123,65 @@ curl -X POST <%= host %>/api/send-message \
             const msgs = document.getElementById('messages');
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
-            document.getElementById('msg').value = '';
         });
 
         socket.on('error', (err) => {
             console.error('خطأ:', err);
         });
 
-        document.getElementById('send-btn').onclick = () => {
+        function updateFileName() {
+            const files = document.getElementById('mediaFiles').files;
+            if(files.length > 0) {
+                document.getElementById('fileNames').innerText = `تم تحديد ${files.length} ملفات جاهزة للرفع.`;
+            } else {
+                document.getElementById('fileNames').innerText = '';
+            }
+        }
+
+        // دالة لتحويل الملفات إلى Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve({
+                    mimetype: file.type,
+                    filename: file.name,
+                    data: reader.result
+                });
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        document.getElementById('send-btn').onclick = async () => {
             const to = document.getElementById('phone').value;
             const body = document.getElementById('msg').value;
-            if (!to || !body) return alert("الرجاء إدخال البيانات");
-            socket.emit('send-message', { to, body });
-            document.getElementById('msg').value = '';
+            const fileInput = document.getElementById('mediaFiles');
+            
+            if (!to || (!body && fileInput.files.length === 0)) return alert("الرجاء إدخال الأرقام والنص أو الملف!");
+            
+            const btn = document.getElementById('send-btn');
+            btn.innerText = 'جاري المعالجة والإرسال... ⏳';
+            btn.disabled = true;
+
+            try {
+                const mediaArray = [];
+                // تحويل كل الملفات المحددة إلى Base64
+                for(let i = 0; i < fileInput.files.length; i++) {
+                    const fileObj = await fileToBase64(fileInput.files[i]);
+                    mediaArray.push(fileObj);
+                }
+
+                socket.emit('send-message', { to, body, media: mediaArray });
+                
+                document.getElementById('msg').value = '';
+                fileInput.value = '';
+                document.getElementById('fileNames').innerText = '';
+            } catch(e) {
+                alert("حدث خطأ في قراءة الملفات!");
+            } finally {
+                btn.innerText = 'إرسال';
+                btn.disabled = false;
+            }
         };
 
         function copyToken() {
