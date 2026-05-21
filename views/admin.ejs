@@ -2,46 +2,104 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة الإدارة</title>
+    <title>الإدارة المركزية | SaaS</title>
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .card { background: white; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn { background: #25D366; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-        th { background: #f8f9fa; }
-        input { padding: 10px; margin-left: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #0f172a; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; border-top: 4px solid #ef4444; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-family: inherit; font-weight: bold; color: white; display: inline-block; font-size: 13px; }
+        .btn-green { background: #10b981; } .btn-blue { background: #3b82f6; } .btn-dark { background: #475569; } .btn-red { background: #ef4444; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 15px; text-align: right; }
+        th { background: #f8fafc; color: #64748b; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>إدارة المستخدمين ⚙️</h2>
-        <div>
-            <a href="/logout" class="btn" style="background:#d32f2f;">تسجيل خروج</a>
+    <div class="container">
+        <div class="header">
+            <h2 style="margin:0;">الإدارة المركزية 👑</h2>
+            <div>
+                <a href="/" class="btn btn-dark">لوحتي الشخصية</a>
+                <a href="/logout" class="btn btn-red">تسجيل خروج</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">إضافة عميل جديد (+2 أيام مجاناً تلقائياً)</h3>
+            <form method="POST" action="/admin/add-user" style="display: flex; gap: 10px;">
+                <input type="text" name="username" placeholder="اسم المستخدم" required style="margin:0;">
+                <input type="password" name="password" placeholder="كلمة المرور" required style="margin:0;">
+                <button type="submit" class="btn btn-green" style="padding: 10px 30px;">إنشاء</button>
+            </form>
+        </div>
+
+        <div class="card" style="overflow-x: auto;">
+            <h3 style="margin-top:0;">العملاء والمشتركين</h3>
+            <table>
+                <tr>
+                    <th>الاسم</th>
+                    <th>حالة الاشتراك</th>
+                    <th>الأيام المتبقية</th>
+                    <th>تاريخ الانضمام</th>
+                    <th>إجراءات التحكم</th>
+                </tr>
+                <% users.forEach(u => { 
+                    let daysLeft = 0;
+                    if(u.subscriptionEndsAt) {
+                        daysLeft = Math.ceil((u.subscriptionEndsAt - new Date()) / (1000*60*60*24));
+                        if(daysLeft < 0) daysLeft = 0;
+                    }
+                %>
+                <tr>
+                    <td style="font-weight:bold;"><%= u.username %></td>
+                    <td>
+                        <span style="padding:4px 8px; border-radius:12px; font-size:12px; color:white; background:<%= daysLeft>0 ? '#10b981' : '#ef4444' %>">
+                            <%= daysLeft>0 ? 'نشط' : 'منتهي' %>
+                        </span>
+                    </td>
+                    <td style="color: <%= daysLeft>0 ? '#10b981' : '#ef4444' %>; font-weight:bold;"><%= daysLeft %> أيام</td>
+                    <td><%= u.createdAt.toISOString().split('T')[0] %></td>
+                    <td style="display: flex; gap: 5px;">
+                        <button class="btn btn-blue" onclick="openModal('<%= u._id %>', '<%= u.username %>')">⚙️ تعديل / تمديد</button>
+                        <a href="/admin/logs/<%= u._id %>" class="btn btn-dark">📜 الأرشيف</a>
+                        <a href="/admin/login-as/<%= u._id %>" class="btn btn-red" onclick="return confirm('سوف تدخل الآن بلوحة تحكم العميل، متأكد؟')">👁️ دخول للحساب</a>
+                    </td>
+                </tr>
+                <% }) %>
+            </table>
         </div>
     </div>
-    <div class="card">
-        <h3>إضافة مستخدم جديد</h3>
-        <form method="POST" action="/admin/add-user">
-            <input type="text" name="username" placeholder="اسم المستخدم" required>
-            <input type="password" name="password" placeholder="كلمة المرور" required>
-            <button type="submit" class="btn">إضافة</button>
-        </form>
+
+    <!-- نافذة تعديل العميل -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-top:0;">تعديل العميل</h3>
+            <form id="editForm" method="POST">
+                <label>تغيير كلمة المرور (اتركه فارغاً إذا لا تريد تغييره):</label>
+                <input type="text" name="password" placeholder="الرقم السري الجديد">
+                
+                <label>إضافة أيام لاشتراكه (تمديد الصلاحية):</label>
+                <input type="number" name="addDays" placeholder="مثال: 30 لإضافة شهر" min="0">
+                
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="btn btn-green" style="flex:1;">حفظ التعديلات</button>
+                    <button type="button" class="btn btn-dark" onclick="document.getElementById('editModal').style.display='none'">إلغاء</button>
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="card">
-        <h3>المستخدمون</h3>
-        <table>
-            <tr><th>الاسم</th><th>النوع</th><th>الحالة</th><th>API Token</th></tr>
-            <% users.forEach(u => { %>
-            <tr>
-                <td><%= u.username %></td>
-                <td><%= u.role === 'admin' ? 'مدير' : 'مستخدم' %></td>
-                <td><%= u.isActive ? 'نشط ✅' : 'موقوف ❌' %></td>
-                <td><code style="background:#eee;padding:3px;border-radius:3px;"><%= u.apiToken %></code></td>
-            </tr>
-            <% }) %>
-        </table>
-    </div>
+
+    <script>
+        function openModal(id, username) {
+            document.getElementById('modalTitle').innerText = `تعديل وإدارة: ${username}`;
+            document.getElementById('editForm').action = `/admin/edit-user/${id}`;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>
