@@ -347,8 +347,9 @@
                 for(let i=0; i<files.length; i++) totalSize += files[i].size;
                 const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
                 
-                if (sizeMB > 25) {
-                    document.getElementById('fileNames').innerHTML = `<span style="color:var(--danger);">❌ حجم الملفات (${sizeMB} MB) يتجاوز الحد المسموح (25 MB)</span>`;
+                // تم تقليص الحد إلى 15 ميجا لتسريع الرفع وتخفيف الضغط عن السيرفر المجاني
+                if (sizeMB > 15) {
+                    document.getElementById('fileNames').innerHTML = `<span style="color:var(--danger);">❌ حجم الملفات (${sizeMB} MB) يتجاوز الحد المسموح (15 MB)</span>`;
                 } else {
                     document.getElementById('fileNames').innerHTML = `تم تحديد ${files.length} مرفقات (${sizeMB} MB) جاهزة للرفع.`;
                 }
@@ -374,10 +375,11 @@
             const to = document.getElementById('phone').value;
             const body = document.getElementById('msg').value;
             const fileInput = document.getElementById('mediaFiles');
+            const token = document.getElementById('apiToken').value; // استخدام التوكن الخاص بالمستخدم
             
             if (!to || (!body && fileInput.files.length === 0)) return showToast("الرجاء إدخال الأرقام والنص أو الملف!", "error");
             
-            const MAX_SIZE_MB = 25;
+            const MAX_SIZE_MB = 15;
             let totalSize = 0;
             for(let i = 0; i < fileInput.files.length; i++) {
                 totalSize += fileInput.files[i].size;
@@ -396,33 +398,46 @@
                     mediaArray.push(await fileToBase64(fileInput.files[i]));
                 }
 
-                let isResponded = false;
-                
-                socket.emit('send-message', { to, body, media: mediaArray }, (response) => {
-                    isResponded = true;
-                    btn.innerText = 'إرسال الرسالة 🚀';
-                    btn.disabled = false;
-                    
-                    if (response.error) {
-                        showToast(response.error, "error");
-                    } else {
-                        showToast("تم الإرسال بنجاح!", "success");
-                        document.getElementById('msg').value = '';
-                        fileInput.value = '';
-                        document.getElementById('fileNames').innerText = '';
-                    }
+                // 🌟 الحل الجذري: إرسال الطلب عبر الـ API الرسمي بدلاً من Socket
+                // الـ API أقوى بكثير في التعامل مع الملفات الكبيرة
+                const response = await fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        to: to.split(',').map(n => n.trim()).filter(n => n),
+                        body: body,
+                        media: mediaArray
+                    })
                 });
+
+                const result = await response.json();
                 
-                setTimeout(() => {
-                    if (!isResponded) {
-                        showToast("تأخر السيرفر في الرد! قد يكون الملف قيد الإرسال في الخلفية.", "error");
-                        btn.innerText = 'إرسال الرسالة 🚀';
-                        btn.disabled = false;
-                    }
-                }, 60000);
+                btn.innerText = 'إرسال الرسالة 🚀';
+                btn.disabled = false;
+                
+                if (result.success) {
+                    showToast("تم الإرسال بنجاح!", "success");
+                    document.getElementById('msg').value = '';
+                    fileInput.value = '';
+                    document.getElementById('fileNames').innerText = '';
+                    
+                    // إضافة الرسالة لسجل المحادثة الوهمي في الشاشة
+                    const msgs = document.getElementById('messages');
+                    const el = document.createElement('div');
+                    el.className = 'message';
+                    el.innerText = `أنت -> ${to}: ${body || '(مرفق)'}`;
+                    msgs.appendChild(el);
+                    msgs.scrollTop = msgs.scrollHeight;
+                } else {
+                    showToast(result.error || "حدث خطأ في الإرسال لبعض الأرقام", "error");
+                }
                 
             } catch(e) {
-                showToast("حدث خطأ في معالجة الملفات!", "error");
+                console.error(e);
+                showToast("حدث خطأ أثناء الاتصال بالسيرفر! تأكد من سرعة الإنترنت.", "error");
                 btn.innerText = 'إرسال الرسالة 🚀';
                 btn.disabled = false;
             }
