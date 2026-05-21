@@ -22,6 +22,7 @@
         .btn-secondary { background: var(--secondary); color: white; }
         .btn-dark { background: #475569; color: white; }
         .btn-warning { background: var(--warning); color: white; }
+        .btn-disabled { background: #cbd5e1 !important; color: white !important; cursor: not-allowed !important; transform: none !important; }
 
         .grid-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; align-items: start; }
         @media (max-width: 800px) { .grid-layout { grid-template-columns: 1fr; } }
@@ -72,11 +73,19 @@
 
     <% 
         let daysRemaining = 0;
-        let isExpired = false;
+        let isExpired = true; // الافتراضي للعملاء القدامى أنه منتهي حتى يثبت العكس بالتاريخ
+        
         if (user.subscriptionEndsAt) {
-            const diffTime = user.subscriptionEndsAt - new Date();
+            const diffTime = new Date(user.subscriptionEndsAt) - new Date();
             daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (daysRemaining <= 0) { daysRemaining = 0; isExpired = true; }
+            if (daysRemaining > 0) isExpired = false;
+            else daysRemaining = 0;
+        }
+
+        // الآدمن اشتراكه لا ينتهي أبداً
+        if (user.role === 'admin') {
+            isExpired = false;
+            daysRemaining = '∞';
         }
     %>
 
@@ -99,7 +108,7 @@
         
         <% if (isExpired) { %>
             <div class="alert-box">
-                ⚠️ اشتراكك منتهي، لا يمكنك الإرسال. الرجاء التواصل مع الدعم الفني: 966598686902
+                ⚠️ عذراً اشتراكك منتهي، لا يمكنك إرسال أي حملات. الرجاء التواصل مع الدعم الفني: 966598686902
             </div>
         <% } %>
 
@@ -183,7 +192,13 @@
 
                         <div style="display: flex; justify-content: space-between; margin-top: 30px;">
                             <button class="btn btn-dark" onclick="goToStep(1)">→ عودة</button>
-                            <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة</button>
+                            
+                            <!-- إخفاء زر الإرسال للمشترك المنتهي -->
+                            <% if (isExpired) { %>
+                                <button class="btn btn-disabled" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
+                            <% } else { %>
+                                <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة</button>
+                            <% } %>
                         </div>
                     </div>
                 </div>
