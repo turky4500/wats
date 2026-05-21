@@ -343,7 +343,15 @@
         function updateFileName() {
             const files = document.getElementById('mediaFiles').files;
             if(files.length > 0) {
-                document.getElementById('fileNames').innerText = `تم تحديد ${files.length} مرفقات جاهزة للرفع.`;
+                let totalSize = 0;
+                for(let i=0; i<files.length; i++) totalSize += files[i].size;
+                const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                
+                if (sizeMB > 25) {
+                    document.getElementById('fileNames').innerHTML = `<span style="color:var(--danger);">❌ حجم الملفات (${sizeMB} MB) يتجاوز الحد المسموح (25 MB)</span>`;
+                } else {
+                    document.getElementById('fileNames').innerHTML = `تم تحديد ${files.length} مرفقات (${sizeMB} MB) جاهزة للرفع.`;
+                }
             } else {
                 document.getElementById('fileNames').innerText = '';
             }
@@ -369,6 +377,15 @@
             
             if (!to || (!body && fileInput.files.length === 0)) return showToast("الرجاء إدخال الأرقام والنص أو الملف!", "error");
             
+            const MAX_SIZE_MB = 25;
+            let totalSize = 0;
+            for(let i = 0; i < fileInput.files.length; i++) {
+                totalSize += fileInput.files[i].size;
+            }
+            if (totalSize > MAX_SIZE_MB * 1024 * 1024) {
+                return showToast(`حجم الملف كبير جداً! الحد الأقصى هو ${MAX_SIZE_MB} ميجابايت.`, "error");
+            }
+            
             const btn = document.getElementById('send-btn');
             btn.innerText = 'جاري المعالجة والإرسال... ⏳';
             btn.disabled = true;
@@ -379,8 +396,10 @@
                     mediaArray.push(await fileToBase64(fileInput.files[i]));
                 }
 
-                // النظام الجديد للانتظار وعدم المسح إلا بعد التأكيد من السيرفر!
+                let isResponded = false;
+                
                 socket.emit('send-message', { to, body, media: mediaArray }, (response) => {
+                    isResponded = true;
                     btn.innerText = 'إرسال الرسالة 🚀';
                     btn.disabled = false;
                     
@@ -388,15 +407,22 @@
                         showToast(response.error, "error");
                     } else {
                         showToast("تم الإرسال بنجاح!", "success");
-                        // مسح الحقول فقط إذا نجح الإرسال
                         document.getElementById('msg').value = '';
                         fileInput.value = '';
                         document.getElementById('fileNames').innerText = '';
                     }
                 });
                 
+                setTimeout(() => {
+                    if (!isResponded) {
+                        showToast("تأخر السيرفر في الرد! قد يكون الملف قيد الإرسال في الخلفية.", "error");
+                        btn.innerText = 'إرسال الرسالة 🚀';
+                        btn.disabled = false;
+                    }
+                }, 60000);
+                
             } catch(e) {
-                showToast("حدث خطأ في قراءة الملفات!", "error");
+                showToast("حدث خطأ في معالجة الملفات!", "error");
                 btn.innerText = 'إرسال الرسالة 🚀';
                 btn.disabled = false;
             }
