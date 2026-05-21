@@ -4,16 +4,19 @@ const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const cors = require('cors'); // مكتبة فك حظر المواقع الخارجية
+const cors = require('cors');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const { startWhatsAppSession, getSession } = require('./whatsappManager');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
 
-// السماح للمواقع الخارجية بطلب الـ API
+// السر هنا: رفع الحد الأقصى للمقاس إلى 50 ميجابايت للسماح بمرور الصور والملفات
+const io = socketIo(server, {
+    maxHttpBufferSize: 50 * 1024 * 1024 // 50 MB
+});
+
 app.use(cors());
 
 mongoose.connect(process.env.MONGODB_URI)
@@ -33,7 +36,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
-app.use(express.json({ limit: '50mb' })); // زيادة حد البيانات لدعم الصور والملفات
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'wats_secret_123',
@@ -62,7 +65,6 @@ const requireAdmin = async (req, res, next) => {
     res.status(403).send('غير مصرح لك بالدخول');
 };
 
-// دالة لمعالجة إرسال النصوص والمرفقات معاً
 async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     if (mediaArray && mediaArray.length > 0) {
         for (let i = 0; i < mediaArray.length; i++) {
@@ -76,16 +78,14 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
             else if (m.mimetype.startsWith('audio/')) content = { audio: buffer, mimetype: 'audio/mp4' };
             else content = { document: buffer, mimetype: m.mimetype, fileName: m.filename || 'file' };
 
-            // إرفاق النص كتعليق مع المرفق الأول فقط
             if (i === 0 && body && !m.mimetype.startsWith('audio/')) {
                 content.caption = body;
             }
 
             await sock.sendMessage(jid, content);
-            await new Promise(r => setTimeout(r, 1500)); // تأخير بسيط بين كل ملف وآخر
+            await new Promise(r => setTimeout(r, 1500));
         }
         
-        // إذا كان الملف الأول صوتياً لا يقبل تعليق، نرسل النص كرسالة منفصلة
         if (mediaArray[0].mimetype.startsWith('audio/') && body) {
             await sock.sendMessage(jid, { text: body });
         }
@@ -149,7 +149,6 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs });
 });
 
-// واجهة الـ API لدعم CORS والمرفقات
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
