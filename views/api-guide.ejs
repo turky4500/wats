@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دليل المطورين والربط الخارجي</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; margin: 0; padding: 40px 20px; color: #1e293b; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .token-box { display: flex; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin: 20px 0; }
+        .token-box input { border: none; background: transparent; padding: 15px; flex: 1; font-family: monospace; outline: none; }
+        .token-box button { background: #8b5cf6; color: white; border: none; padding: 0 20px; font-weight: bold; cursor: pointer; }
+        pre { background: #1e293b; color: #f8f8f2; padding: 20px; border-radius: 8px; direction: ltr; text-align: left; overflow-x: auto; font-family: monospace; }
+        .btn { display: inline-block; background: #475569; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn">← العودة للوحة التحكم</a>
+        <h2>الربط الخارجي (API) 🔌</h2>
+        <p>استخدم هذا الرمز السري لربط حسابك مع برامجك الأخرى أو أنظمة الذكاء الاصطناعي.</p>
+        
+        <div class="token-box">
+            <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
+            <button onclick="copyToken()">نسخ</button>
+        </div>
+        
+        <form method="POST" action="/refresh-token" onsubmit="return confirm('توليد رمز جديد سيلغي الرمز القديم. هل أنت متأكد؟')">
+            <button type="submit" style="background:#f59e0b; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer;">🔄 توليد رمز جديد</button>
+        </form>
+
+        <h3 style="margin-top: 40px;">كود الإرسال البرمجي الموحد (JSON)</h3>
+        <p>قم بإرسال طلب من نوع <b>POST</b> إلى المسار التالي:</p>
+        <code style="background:#e2e8f0; padding:5px 10px; border-radius:4px;" dir="ltr"><%= host %>/api/send-message</code>
+        
+        <pre>
+{
+  "to": ["966511111111", "966522222222"],
+  "body": "مرحباً بك! هذه رسالة آلية عبر الـ API 🚀",
+  "media": [
+    {
+       "mimetype": "image/png",
+       "filename": "image.png",
+       "data": "iVBORw0KGgo..."
+    }
+  ]
+}</pre>
+    </div>
+    <script>
+        function copyToken() {
+            document.getElementById('apiToken').select();
+            document.execCommand('copy');
+            alert('تم النسخ بنجاح!');
+        }
+    </script>
+</body>
+</html>
