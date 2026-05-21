@@ -4,6 +4,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const session = require('express-session');
+const cors = require('cors'); // مكتبة فك حظر المواقع الخارجية
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const { startWhatsAppSession, getSession } = require('./whatsappManager');
@@ -12,7 +13,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// الاتصال بقاعدة البيانات وتشغيل جلسات جميع المستخدمين تلقائياً
+// السماح للمواقع الخارجية بطلب الـ API
+app.use(cors());
+
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
@@ -30,8 +33,8 @@ mongoose.connect(process.env.MONGODB_URI)
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // زيادة حد البيانات لدعم الصور والملفات
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'wats_secret_123',
     resave: false,
@@ -58,6 +61,38 @@ const requireAdmin = async (req, res, next) => {
     if (user && user.role === 'admin') return next();
     res.status(403).send('غير مصرح لك بالدخول');
 };
+
+// دالة لمعالجة إرسال النصوص والمرفقات معاً
+async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
+    if (mediaArray && mediaArray.length > 0) {
+        for (let i = 0; i < mediaArray.length; i++) {
+            const m = mediaArray[i];
+            const base64Data = m.data.includes(',') ? m.data.split(',')[1] : m.data;
+            const buffer = Buffer.from(base64Data, 'base64');
+            
+            let content = {};
+            if (m.mimetype.startsWith('image/')) content = { image: buffer };
+            else if (m.mimetype.startsWith('video/')) content = { video: buffer };
+            else if (m.mimetype.startsWith('audio/')) content = { audio: buffer, mimetype: 'audio/mp4' };
+            else content = { document: buffer, mimetype: m.mimetype, fileName: m.filename || 'file' };
+
+            // إرفاق النص كتعليق مع المرفق الأول فقط
+            if (i === 0 && body && !m.mimetype.startsWith('audio/')) {
+                content.caption = body;
+            }
+
+            await sock.sendMessage(jid, content);
+            await new Promise(r => setTimeout(r, 1500)); // تأخير بسيط بين كل ملف وآخر
+        }
+        
+        // إذا كان الملف الأول صوتياً لا يقبل تعليق، نرسل النص كرسالة منفصلة
+        if (mediaArray[0].mimetype.startsWith('audio/') && body) {
+            await sock.sendMessage(jid, { text: body });
+        }
+    } else if (body) {
+        await sock.sendMessage(jid, { text: body });
+    }
+}
 
 app.get('/', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
@@ -114,7 +149,7 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs });
 });
 
-// واجهة الـ API
+// واجهة الـ API لدعم CORS والمرفقات
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -124,19 +159,17 @@ app.post('/api/send-message', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     let sock = getSession(user._id.toString());
-    
-    // إذا لم تكن الجلسة محملة في الذاكرة، نطلب تشغيلها فوراً
     if (!sock) {
         sock = await startWhatsAppSession(user._id.toString(), io);
     }
-
-    // إذا كانت الجلسة قيد التشغيل ولكن لم تتصل بعد بواتساب
     if (!sock || !sock.user) {
-        return res.status(503).json({ error: 'WhatsApp is currently reconnecting. Please try again in 10 seconds.' });
+        return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
     }
 
-    const { to, body } = req.body;
-    if (!to || !body) return res.status(400).json({ error: 'Missing "to" or "body"' });
+    const { to, body, media } = req.body;
+    if (!to || (!body && (!media || media.length === 0))) {
+        return res.status(400).json({ error: 'Missing Data' });
+    }
 
     const numbers = Array.isArray(to) ? to : [to];
     const results = [];
@@ -149,13 +182,14 @@ app.post('/api/send-message', async (req, res) => {
                 throw new Error('الرقم غير مسجل في واتساب');
             }
 
-            await sock.sendMessage(jid, { text: body });
+            await sendWhatsAppMessage(sock, jid, body, media);
+            
             results.push({ number: num, status: 'success' });
-            await MessageLog.create({ userId: user._id, to: num, body, status: 'success' });
+            await MessageLog.create({ userId: user._id, to: num, body: body || '(رسالة وسائط)', status: 'success' });
             await new Promise(r => setTimeout(r, 3000));
         } catch (e) {
             results.push({ number: num, status: 'error', error: e.message });
-            await MessageLog.create({ userId: user._id, to: num, body, status: 'failed', errorDetails: e.message });
+            await MessageLog.create({ userId: user._id, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
         }
     }
     res.json({ success: true, results });
@@ -171,7 +205,7 @@ io.on('connection', (socket) => {
             if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected');
         });
         
-        socket.on('send-message', async ({ to, body }) => {
+        socket.on('send-message', async ({ to, body, media }) => {
             const sock = getSession(sessionUserId);
             if (!sock || !sock.user) return socket.emit('error', 'واتساب قيد الاتصال، انتظر ثواني قليلة...');
             
@@ -184,13 +218,14 @@ io.on('connection', (socket) => {
                         throw new Error('الرقم غير مسجل في واتساب');
                     }
 
-                    await sock.sendMessage(jid, { text: body });
-                    socket.emit('message-sent', { to: num, body });
-                    await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'success' });
+                    await sendWhatsAppMessage(sock, jid, body, media);
+
+                    socket.emit('message-sent', { to: num, body: body || '(رسالة وسائط تم إرسالها)' });
+                    await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'success' });
                     await new Promise(r => setTimeout(r, 3000));
                 } catch (e) {
                     socket.emit('error', `خطأ في إرسال رسالة لـ ${num} (${e.message})`);
-                    await MessageLog.create({ userId: sessionUserId, to: num, body, status: 'failed', errorDetails: e.message });
+                    await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
                 }
             }
         });
