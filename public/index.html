@@ -10,7 +10,7 @@
         .chat-box { height: 300px; overflow-y: auto; background: #e5ddd5; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: left; }
         .message { background: #dcf8c5; padding: 8px; border-radius: 12px; margin: 5px; display: inline-block; }
         input, textarea { width: 100%; margin: 5px 0; padding: 8px; border-radius: 20px; border: 1px solid #ccc; box-sizing: border-box; }
-        button { background: #25d366; border: none; padding: 10px; border-radius: 24px; color: white; font-weight: bold; width: 100%; }
+        button { background: #25d366; border: none; padding: 10px; border-radius: 24px; color: white; font-weight: bold; width: 100%; cursor: pointer;}
         .hidden { display: none; }
     </style>
 </head>
@@ -22,11 +22,11 @@
     <button onclick="location.reload()">تحديث</button>
 </div>
 <div id="chat" class="container hidden">
-    <h3>محادثة واتساب</h3>
+    <h3>محادثة واتساب والرسائل الجماعية</h3>
     <div id="messages" class="chat-box"></div>
-    <input type="text" id="phone" placeholder="رقم المستلم (مثال: 966512345678)" dir="ltr">
-    <textarea id="msg" placeholder="رسالتك..."></textarea>
-    <button id="send">إرسال</button>
+    <input type="text" id="phone" placeholder="الأرقام (افصل بينها بفاصلة. مثال: 9665.., 9665..)" dir="ltr">
+    <textarea id="msg" placeholder="اكتب رسالتك هنا..."></textarea>
+    <button id="send">إرسال للكل</button>
 </div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -54,6 +54,7 @@
         el.className = 'message';
         el.innerText = `${msg.from.split('@')[0]}: ${msg.body}`;
         messagesDiv.appendChild(el);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
     socket.on('message-sent', (data) => {
@@ -62,6 +63,7 @@
         el.style.background = '#dcf8c5';
         el.innerText = `أنت → ${data.to}: ${data.body}`;
         messagesDiv.appendChild(el);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
         document.getElementById('msg').value = '';
     });
 
@@ -70,7 +72,7 @@
     document.getElementById('send').onclick = () => {
         const to = document.getElementById('phone').value.trim();
         const body = document.getElementById('msg').value.trim();
-        if (!to || !body) return alert('أدخل الرقم والرسالة');
+        if (!to || !body) return alert('أدخل الرقم/الأرقام والرسالة');
         socket.emit('send-message', { to, body });
     };
 </script>
