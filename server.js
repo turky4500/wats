@@ -26,7 +26,6 @@ mongoose.connect(process.env.MONGODB_URI)
             for (const user of users) {
                 startWhatsAppSession(user._id.toString(), io);
             }
-            console.log(`✅ تم تهيئة ${users.length} جلسة واتساب في الخلفية`);
         } catch (e) {
             console.error('خطأ في تشغيل الجلسات في الخلفية:', e);
         }
@@ -43,11 +42,45 @@ app.use(session({
     saveUninitialized: false
 }));
 
+// نظام طابور الإرسال في الخلفية (Queue System) - لمنع تجمد السيرفر
+const messageQueue = [];
+let isProcessingQueue = false;
+
+async function processQueue() {
+    if (isProcessingQueue || messageQueue.length === 0) return;
+    isProcessingQueue = true;
+    
+    while (messageQueue.length > 0) {
+        const job = messageQueue.shift();
+        const { sock, numbers, body, media, userId } = job;
+        
+        for (const num of numbers) {
+            const jid = `${num}@s.whatsapp.net`;
+            try {
+                const wpCheck = await sock.onWhatsApp(jid);
+                if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
+                    throw new Error('الرقم غير مسجل في واتساب');
+                }
+
+                await sendWhatsAppMessage(sock, jid, body, media);
+
+                // إبلاغ واجهة المستخدم بأن الرسالة أُرسلت في الخلفية
+                if (io) io.to(userId).emit('message-sent', { to: num, body: body || '(تم إرسال مرفق)' });
+                await MessageLog.create({ userId: userId, to: num, body: body || '(رسالة وسائط)', status: 'success' });
+                await new Promise(r => setTimeout(r, 2000)); // تأخير بسيط بين الأرقام
+            } catch (e) {
+                if (io) io.to(userId).emit('error', `خطأ مع الرقم ${num}: ${e.message}`);
+                await MessageLog.create({ userId: userId, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
+            }
+        }
+    }
+    isProcessingQueue = false;
+}
+
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
     if (!admin) {
         await User.create({ username: 'admin', password: 'password', role: 'admin' });
-        console.log('✅ تم إنشاء حساب الأدمن الافتراضي');
     }
 }
 createDefaultAdmin();
@@ -96,7 +129,6 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
 app.get('/', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
-    
     const host = req.protocol + '://' + req.get('host');
     res.render('dashboard', { user, host });
 });
@@ -148,6 +180,7 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs });
 });
 
+// استقبال الـ API وتحويله للطابور
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -157,9 +190,8 @@ app.post('/api/send-message', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     let sock = getSession(user._id.toString());
-    if (!sock) {
-        sock = await startWhatsAppSession(user._id.toString(), io);
-    }
+    if (!sock) sock = await startWhatsAppSession(user._id.toString(), io);
+    
     if (!sock || !sock.user) {
         return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
     }
@@ -170,27 +202,21 @@ app.post('/api/send-message', async (req, res) => {
     }
 
     const numbers = Array.isArray(to) ? to : [to];
-    const results = [];
 
-    for (const num of numbers) {
-        const jid = `${num}@s.whatsapp.net`;
-        try {
-            const wpCheck = await sock.onWhatsApp(jid);
-            if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
-                throw new Error('الرقم غير مسجل في واتساب');
-            }
+    // إضافة الحملة للطابور لعدم تجميد السيرفر
+    messageQueue.push({
+        sock: sock,
+        numbers: numbers,
+        body: body,
+        media: media,
+        userId: user._id.toString()
+    });
 
-            await sendWhatsAppMessage(sock, jid, body, media);
-            
-            results.push({ number: num, status: 'success' });
-            await MessageLog.create({ userId: user._id, to: num, body: body || '(رسالة وسائط)', status: 'success' });
-            await new Promise(r => setTimeout(r, 3000));
-        } catch (e) {
-            results.push({ number: num, status: 'error', error: e.message });
-            await MessageLog.create({ userId: user._id, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
-        }
-    }
-    res.json({ success: true, results });
+    // تشغيل معالجة الطابور في الخلفية
+    processQueue().catch(e => console.error(e));
+
+    // الرد الفوري للمستخدم لعدم التجميد
+    res.json({ success: true, message: "تم إضافة الحملة للطابور بنجاح، جاري الإرسال..." });
 });
 
 app.get('/ping', (req, res) => res.send('pong'));
@@ -201,44 +227,6 @@ io.on('connection', (socket) => {
         socket.join(sessionUserId);
         startWhatsAppSession(sessionUserId, io).then(sock => {
             if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected');
-        });
-        
-        // استخدام callback للتأكد من وصول الرسالة
-        socket.on('send-message', async ({ to, body, media }, callback) => {
-            const sock = getSession(sessionUserId);
-            if (!sock || !sock.user) {
-                if(callback) callback({ error: 'واتساب قيد الاتصال، انتظر ثواني قليلة...' });
-                return;
-            }
-            
-            const numbers = to.split(',').map(n => n.trim()).filter(n => n);
-            let errors = [];
-            let successes = 0;
-
-            for (const num of numbers) {
-                const jid = `${num}@s.whatsapp.net`;
-                try {
-                    const wpCheck = await sock.onWhatsApp(jid);
-                    if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
-                        throw new Error('الرقم غير مسجل في واتساب');
-                    }
-
-                    await sendWhatsAppMessage(sock, jid, body, media);
-
-                    socket.emit('message-sent', { to: num, body: body || '(تم إرسال مرفق)' });
-                    await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'success' });
-                    successes++;
-                    await new Promise(r => setTimeout(r, 3000));
-                } catch (e) {
-                    errors.push(`خطأ للرقم ${num}: ${e.message}`);
-                    await MessageLog.create({ userId: sessionUserId, to: num, body: body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
-                }
-            }
-
-            if(callback) {
-                if (errors.length > 0) callback({ error: errors.join('\n') });
-                else callback({ success: true });
-            }
         });
     }
 });
