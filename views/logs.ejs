@@ -2,41 +2,44 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>أرشيف الرسائل</title>
+    <title>سجل الرسائل والأرشيف</title>
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn { background: #128C7E; color: white; padding: 10px 20px; border: none; border-radius: 5px; text-decoration: none; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #ddd; }
-        th { background: #f8f9fa; }
-        .success { color: #25D366; font-weight: bold; }
-        .failed { color: #d32f2f; font-weight: bold; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #0f172a; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .btn { padding: 8px 20px; background: #475569; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 12px; text-align: right; }
+        th { background: #f1f5f9; }
+        .success { color: #10b981; font-weight: bold; }
+        .failed { color: #ef4444; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>أرشيف الرسائل 📜</h2>
-        <a href="/" class="btn">العودة للوحة التحكم</a>
+    <div class="container">
+        <div class="header">
+            <h2>سجل رسائل: <%= user.username %></h2>
+            <a href="<%= locals.isAdminView ? '/admin' : '/' %>" class="btn">العودة</a>
+        </div>
+        <table>
+            <tr>
+                <th>التاريخ والوقت</th>
+                <th>رقم المستلم</th>
+                <th>محتوى الرسالة</th>
+                <th>الحالة</th>
+            </tr>
+            <% logs.forEach(log => { %>
+            <tr>
+                <td dir="ltr" style="text-align: right;"><%= log.createdAt.toLocaleString('en-GB') %></td>
+                <td dir="ltr" style="text-align: right;"><%= log.to %></td>
+                <td><%= log.body.substring(0, 50) %><%= log.body.length > 50 ? '...' : '' %></td>
+                <td class="<%= log.status === 'success' ? 'success' : 'failed' %>">
+                    <%= log.status === 'success' ? 'نجاح ✅' : 'فشل ❌' %>
+                </td>
+            </tr>
+            <% }) %>
+        </table>
     </div>
-
-    <table>
-        <tr>
-            <th>الرقم</th>
-            <th>نص الرسالة</th>
-            <th>الحالة</th>
-            <th>التاريخ والوقت</th>
-            <th>ملاحظات</th>
-        </tr>
-        <% logs.forEach(log => { %>
-        <tr>
-            <td dir="ltr"><%= log.to %></td>
-            <td><%= log.body.substring(0, 50) %><%= log.body.length > 50 ? '...' : '' %></td>
-            <td class="<%= log.status %>"><%= log.status === 'success' ? '✅ نجحت' : '❌ فشلت' %></td>
-            <td dir="ltr"><%= new Date(log.createdAt).toLocaleString('ar-SA') %></td>
-            <td><%= log.errorDetails || '-' %></td>
-        </tr>
-        <% }) %>
-    </table>
 </body>
 </html>
