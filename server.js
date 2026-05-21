@@ -17,38 +17,49 @@ let sock;
 let isClientReady = false;
 
 async function connectToWhatsApp() {
+    console.log("🚀 جاري تشغيل بوت واتساب...");
+    
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     
     sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false,
+        printQRInTerminal: true,  // الباركود سيظهر في سجلات Render
         logger: Pino({ level: 'silent' }),
-        browser: ['Ubuntu Chrome', 'Chrome', '110.0.5481.100']
+        browser: ['Chrome (Linux)', 'Chrome', '110.0.5481.100']
     });
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            const qrImage = await qrcode.toDataURL(qr);
-            io.emit('qr', qrImage);
-            console.log('QR code generated');
+            console.log("✅ تم استلام رمز QR، جاري تحويله إلى صورة...");
+            try {
+                // تحويل QR إلى صورة base64
+                const qrImage = await qrcode.toDataURL(qr);
+                // إرسال الصورة إلى جميع المتصفحات المتصلة
+                io.emit('qr', qrImage);
+                console.log("📱 تم إرسال رمز QR إلى الصفحة");
+            } catch (err) {
+                console.error("❌ خطأ في تحويل QR:", err);
+            }
+            // أيضاً نطبع نص QR في السجلات كنسخة احتياطية
+            console.log("🔹 نسخة نصية من QR (يمكنك استخدامها يدوياً):", qr);
         }
         
         if (connection === 'open') {
             isClientReady = true;
+            console.log("🎉 واتساب متصل وجاهز!");
             io.emit('ready', 'WhatsApp is ready!');
-            console.log('WhatsApp client is ready');
         }
         
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             isClientReady = false;
-            console.log('Connection closed. Reconnecting...');
+            console.log("⚠️ تم قطع الاتصال، جاري إعادة المحاولة...");
             if (statusCode !== DisconnectReason.loggedOut) {
                 connectToWhatsApp();
             } else {
-                io.emit('error', 'Logged out. Please restart the app and scan QR again.');
+                io.emit('error', 'تم تسجيل الخروج. يرجى إعادة تشغيل التطبيق ومسح QR مرة أخرى.');
             }
         }
     });
@@ -69,27 +80,34 @@ async function connectToWhatsApp() {
     });
 }
 
+// بدء الاتصال
 connectToWhatsApp();
 
 io.on('connection', (socket) => {
-    console.log('Frontend connected');
+    console.log("🌐 متصفح جديد متصل بالخادم");
+    
+    // إذا كان العميل جاهزاً بالفعل، نرسل الحالة الجاهزة
+    if (isClientReady) {
+        socket.emit('ready', 'WhatsApp is ready!');
+    }
 
     socket.on('send-message', async ({ to, body }) => {
         if (!isClientReady) {
-            socket.emit('error', 'Client not ready');
+            socket.emit('error', 'العميل ليس جاهزاً بعد');
             return;
         }
         try {
             const jid = `${to}@s.whatsapp.net`;
             await sock.sendMessage(jid, { text: body });
             socket.emit('message-sent', { to, body, status: 'sent' });
+            console.log(`📨 تم إرسال رسالة إلى ${to}`);
         } catch (err) {
-            console.error(err);
+            console.error("❌ فشل إرسال الرسالة:", err);
             socket.emit('error', err.message);
         }
     });
 });
 
 server.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+    console.log("✅ الخادم يعمل على http://localhost:3000");
 });
