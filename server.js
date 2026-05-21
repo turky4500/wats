@@ -12,8 +12,20 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+// الاتصال بقاعدة البيانات وتشغيل جلسات جميع المستخدمين تلقائياً
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ متصل بقاعدة بيانات MongoDB'))
+    .then(async () => {
+        console.log('✅ متصل بقاعدة بيانات MongoDB');
+        try {
+            const users = await User.find({ role: 'user', isActive: true });
+            for (const user of users) {
+                startWhatsAppSession(user._id.toString(), io);
+            }
+            console.log(`✅ تم تهيئة ${users.length} جلسة واتساب في الخلفية`);
+        } catch (e) {
+            console.error('خطأ في تشغيل الجلسات في الخلفية:', e);
+        }
+    })
     .catch(err => console.error('❌ خطأ في الاتصال:', err));
 
 app.set('view engine', 'ejs');
@@ -49,7 +61,6 @@ const requireAdmin = async (req, res, next) => {
 
 app.get('/', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    // توجيه الأدمن مباشرة للوحة التحكم الخاصة به
     if (user.role === 'admin') return res.redirect('/admin');
     
     const host = req.protocol + '://' + req.get('host');
@@ -96,7 +107,6 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
     }
 });
 
-// صفحة سجل الرسائل (الأرشيف)
 app.get('/logs', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
@@ -104,6 +114,7 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs });
 });
 
+// واجهة الـ API
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -112,17 +123,27 @@ app.post('/api/send-message', async (req, res) => {
     const user = await User.findOne({ apiToken: token, isActive: true });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
-    const sock = getSession(user._id.toString());
-    if (!sock) return res.status(503).json({ error: 'WhatsApp not connected.' });
+    let sock = getSession(user._id.toString());
+    
+    // إذا لم تكن الجلسة محملة في الذاكرة، نطلب تشغيلها فوراً
+    if (!sock) {
+        sock = await startWhatsAppSession(user._id.toString(), io);
+    }
+
+    // إذا كانت الجلسة قيد التشغيل ولكن لم تتصل بعد بواتساب
+    if (!sock || !sock.user) {
+        return res.status(503).json({ error: 'WhatsApp is currently reconnecting. Please try again in 10 seconds.' });
+    }
 
     const { to, body } = req.body;
+    if (!to || !body) return res.status(400).json({ error: 'Missing "to" or "body"' });
+
     const numbers = Array.isArray(to) ? to : [to];
     const results = [];
 
     for (const num of numbers) {
         const jid = `${num}@s.whatsapp.net`;
         try {
-            // فحص إذا كان الرقم مسجل في واتساب
             const wpCheck = await sock.onWhatsApp(jid);
             if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
                 throw new Error('الرقم غير مسجل في واتساب');
@@ -152,13 +173,12 @@ io.on('connection', (socket) => {
         
         socket.on('send-message', async ({ to, body }) => {
             const sock = getSession(sessionUserId);
-            if (!sock || !sock.user) return socket.emit('error', 'واتساب غير متصل');
+            if (!sock || !sock.user) return socket.emit('error', 'واتساب قيد الاتصال، انتظر ثواني قليلة...');
             
             const numbers = to.split(',').map(n => n.trim()).filter(n => n);
             for (const num of numbers) {
                 const jid = `${num}@s.whatsapp.net`;
                 try {
-                    // فحص إذا كان الرقم مسجل في واتساب
                     const wpCheck = await sock.onWhatsApp(jid);
                     if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
                         throw new Error('الرقم غير مسجل في واتساب');
