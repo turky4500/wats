@@ -4,23 +4,43 @@
     <meta charset="UTF-8">
     <title>تسجيل الدخول</title>
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-        h1 { color: #128C7E; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; background: #25D366; color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        .error { color: red; margin-bottom: 15px; font-size: 14px; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .auth-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); width: 100%; max-width: 400px; text-align: center; border-top: 4px solid #25d366; }
+        .auth-card h2 { margin-top: 0; color: #1e293b; font-weight: 800; font-size: 24px; margin-bottom: 5px; }
+        .auth-card p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .input-group { margin-bottom: 15px; text-align: right; }
+        .input-group label { display: block; font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 5px; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; transition: 0.2s; }
+        .input-group input:focus { border-color: #25d366; box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1); }
+        .btn { width: 100%; padding: 12px; background: #25d366; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn:hover { background: #22c35e; transform: translateY(-1px); }
+        .error { background: #fef2f2; color: #ef4444; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; font-weight: bold; }
+        .links { margin-top: 20px; font-size: 14px; color: #64748b; display: flex; justify-content: space-between; }
+        .links a { color: #3b82f6; text-decoration: none; font-weight: bold; }
+        .links a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h1>منصة واتساب</h1>
+    <div class="auth-card">
+        <h2>تسجيل الدخول</h2>
+        <p>مرحباً بك مجدداً في منصة الإرسال الذكي</p>
         <% if (error) { %><div class="error"><%= error %></div><% } %>
-        <form method="POST" action="/login">
-            <input type="text" name="username" placeholder="اسم المستخدم" required>
-            <input type="password" name="password" placeholder="كلمة المرور" required>
-            <button type="submit">دخول</button>
+        <form action="/login" method="POST">
+            <div class="input-group">
+                <label>اسم المستخدم</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="input-group">
+                <label>كلمة المرور</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit" class="btn">دخول إلى لوحة التحكم</button>
         </form>
+        <div class="links">
+            <a href="/register">ليس لديك حساب؟ إنشاء حساب</a>
+            <a href="/forgot-password">نسيت كلمة المرور؟</a>
+        </div>
     </div>
 </body>
 </html>
