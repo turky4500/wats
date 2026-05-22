@@ -2,56 +2,67 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>دليل المطورين والربط الخارجي</title>
+    <title>دليل ربط الـ API</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; margin: 0; padding: 40px 20px; color: #1e293b; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .token-box { display: flex; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; margin: 20px 0; }
-        .token-box input { border: none; background: transparent; padding: 15px; flex: 1; font-family: monospace; outline: none; }
-        .token-box button { background: #8b5cf6; color: white; border: none; padding: 0 20px; font-weight: bold; cursor: pointer; }
-        pre { background: #1e293b; color: #f8f8f2; padding: 20px; border-radius: 8px; direction: ltr; text-align: left; overflow-x: auto; font-family: monospace; }
-        .btn { display: inline-block; background: #475569; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #1e293b; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2 { color: #3b82f6; }
+        .token-box { background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe; word-break: break-all; font-family: monospace; font-size: 16px; font-weight: bold; margin: 10px 0; text-align: left; direction: ltr;}
+        .code-block { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; font-family: monospace; text-align: left; direction: ltr; overflow-x: auto; margin: 15px 0; }
+        .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; }
+        .btn-green { background: #10b981; color: white; }
+        .btn-dark { background: #475569; color: white; }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/" class="btn">← العودة للوحة التحكم</a>
-        <h2>الربط الخارجي (API) 🔌</h2>
-        <p>استخدم هذا الرمز السري لربط حسابك مع برامجك الأخرى أو أنظمة الذكاء الاصطناعي.</p>
-        
-        <div class="token-box">
-            <input type="text" id="apiToken" value="<%= user.apiToken %>" readonly>
-            <button onclick="copyToken()">نسخ</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 style="margin:0;">دليل المطورين (API) 🚀</h1>
+            <a href="/dashboard" class="btn btn-dark">العودة للوحة القيادة</a>
         </div>
         
-        <form method="POST" action="/refresh-token" onsubmit="return confirm('توليد رمز جديد سيلغي الرمز القديم. هل أنت متأكد؟')">
-            <button type="submit" style="background:#f59e0b; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer;">🔄 توليد رمز جديد</button>
-        </form>
-
-        <h3 style="margin-top: 40px;">كود الإرسال البرمجي الموحد (JSON)</h3>
-        <p>قم بإرسال طلب من نوع <b>POST</b> إلى المسار التالي:</p>
-        <code style="background:#e2e8f0; padding:5px 10px; border-radius:4px;" dir="ltr"><%= host %>/api/send-message</code>
+        <p>استخدم هذا الرمز السري (Token) لربط متجرك، أنظمتك، أو منصات مثل (سلة، زد) بمنصة الإرسال.</p>
         
-        <pre>
-{
-  "to": ["966511111111", "966522222222"],
-  "body": "مرحباً بك! هذه رسالة آلية عبر الـ API 🚀",
-  "media": [
-    {
-       "mimetype": "image/png",
-       "filename": "image.png",
-       "data": "iVBORw0KGgo..."
-    }
-  ]
-}</pre>
+        <div class="token-box" id="token"><%= user.apiToken %></div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 30px;">
+            <button class="btn btn-green" onclick="navigator.clipboard.writeText('<%= user.apiToken %>'); alert('تم النسخ!');">نسخ الرمز</button>
+            <form action="/refresh-token" method="POST" onsubmit="return confirm('توليد رمز جديد سيوقف عمل الأكواد القديمة المربوطة. متأكد؟');">
+                <button type="submit" class="btn btn-dark" style="background:#ef4444;">توليد رمز جديد</button>
+            </form>
+        </div>
+
+        <h2>1️⃣ إرسال رسالة نصية (JSON)</h2>
+        <p>الطريقة القياسية لإرسال نصوص عادية:</p>
+        <div class="code-block">
+curl -X POST \
+  <%= host %>/api/v1/send \
+  -H 'Authorization: Bearer <%= user.apiToken %>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "to": "966501234567",
+  "message": "مرحباً! هذه رسالة تجريبية من الـ API."
+}'
+        </div>
+
+        <h2>2️⃣ إرسال وسائط وملفات (Form-Data)</h2>
+        <p>الآن يدعم الـ API الرفع القياسي للملفات كما هو متبع عالمياً في جميع المنصات المتقدمة:</p>
+        <div class="code-block">
+curl -X POST \
+  <%= host %>/api/v1/send \
+  -H 'Authorization: Bearer <%= user.apiToken %>' \
+  -F 'to=966501234567' \
+  -F 'message=مرحباً، إليك هذا المرفق التلقائي.' \
+  -F 'media=@/path/to/your/file.jpg'
+        </div>
+
+        <p style="margin-top: 30px; font-weight: bold; color: #ef4444;">ملاحظات هامة:</p>
+        <ul>
+            <li>مسار الـ API الرسمي والموثق الآن هو: <code>/api/v1/send</code></li>
+            <li>رقم الجوال <code>to</code> يجب أن يحتوي على مفتاح الدولة (مثال: 966 أو 20).</li>
+            <li>الحد الأقصى لحجم المرفقات (media) هو 15 ميجابايت للملف الواحد.</li>
+        </ul>
     </div>
-    <script>
-        function copyToken() {
-            document.getElementById('apiToken').select();
-            document.execCommand('copy');
-            alert('تم النسخ بنجاح!');
-        }
-    </script>
 </body>
 </html>
