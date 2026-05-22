@@ -2,58 +2,97 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سجل الرسائل والأرشيف</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل الإرسال</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #0f172a; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items:center; margin-bottom: 20px; }
-        .btn { padding: 8px 20px; background: #475569; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; border:none; cursor:pointer;}
-        .btn-red { background: #ef4444; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 12px; text-align: right; }
-        th { background: #f1f5f9; }
-        .success { color: #10b981; font-weight: bold; }
-        .failed { color: #ef4444; font-weight: bold; }
-        .notice { background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; text-align: center; font-weight: bold;}
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; border-top: 4px solid #3b82f6;}
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;}
+        .btn { display: inline-block; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-family: inherit; cursor: pointer; border: none; font-size: 14px;}
+        .btn-dark { background: #475569; color: white; }
+        .btn-red { background: #ef4444; color: white; }
+        .btn-blue { background: #3b82f6; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;}
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 15px; text-align: right; }
+        th { background-color: #f1f5f9; color: #64748b; }
+        .status-success { color: #10b981; font-weight: bold; background: #d1fae5; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
+        .status-failed { color: #ef4444; font-weight: bold; background: #fee2e2; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
+        .err-msg { font-size: 12px; color: #ef4444; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="notice">💡 معلومة: يقوم النظام بحذف أي رسالة يمر عليها 30 يوماً بشكل آلي لتوفير مساحة التخزين.</div>
-        
         <div class="header">
-            <h2 style="margin:0;">سجل رسائل: <%= user.username %></h2>
-            <div style="display:flex; gap:10px;">
-                <form method="POST" action="/logs/delete" onsubmit="return confirm('هل أنت متأكد من تفريغ كافة السجلات؟ لا يمكن التراجع عن هذا الإجراء!')">
-                    <input type="hidden" name="targetUserId" value="<%= user._id %>">
-                    <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف بالكامل</button>
-                </form>
-                <a href="<%= locals.isAdminView ? '/admin' : '/' %>" class="btn">← العودة</a>
+            <h2 style="margin: 0;">سجل إرسال الحملات 📜 <%= isAdminView ? `(لعميل: ${user.username})` : '' %></h2>
+            <div>
+                <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn btn-dark">العودة للوحة</a>
             </div>
         </div>
 
-        <table>
-            <tr>
-                <th>التاريخ والوقت</th>
-                <th>رقم المستلم</th>
-                <th>محتوى الرسالة</th>
-                <th>الحالة</th>
-            </tr>
-            <% logs.forEach(log => { %>
-            <tr>
-                <td dir="ltr" style="text-align: right;"><%= log.createdAt.toLocaleString('en-GB') %></td>
-                <td dir="ltr" style="text-align: right;"><%= log.to %></td>
-                <td><%= log.body.substring(0, 50) %><%= log.body.length > 50 ? '...' : '' %></td>
-                <td class="<%= log.status === 'success' ? 'success' : 'failed' %>">
-                    <%= log.status === 'success' ? 'نجاح ✅' : 'فشل ❌' %>
-                </td>
-            </tr>
-            <% }) %>
-            <% if(logs.length === 0) { %>
-                <tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">الأرشيف فارغ حالياً.</td></tr>
-            <% } %>
-        </table>
+        <!-- شريط البحث والتاريخ الجديد -->
+        <div class="card" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+            <form method="GET" action="" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight:bold; font-size:14px; margin-bottom:8px; display:block; color:#1e3a8a;">من تاريخ:</label>
+                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-family:inherit; outline:none; box-sizing: border-box;">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight:bold; font-size:14px; margin-bottom:8px; display:block; color:#1e3a8a;">إلى تاريخ:</label>
+                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-family:inherit; outline:none; box-sizing: border-box;">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-blue" style="padding: 12px 25px;">🔍 بحث وتصفية</button>
+                    <% if(query.dateFrom) { %>
+                        <a href="?" class="btn btn-dark" style="padding: 12px 25px;">إلغاء الفلتر</a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin:0;">أرشيف الرسائل</h3>
+                <form action="/logs/delete" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف الأرشيف؟ لا يمكن التراجع!');">
+                    <% if(isAdminView) { %>
+                        <input type="hidden" name="targetUserId" value="<%= user._id %>">
+                    <% } %>
+                    <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف</button>
+                </form>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <tr>
+                        <th>الوقت والتاريخ</th>
+                        <th>المستلم</th>
+                        <th>محتوى الرسالة</th>
+                        <th>الحالة</th>
+                    </tr>
+                    <% logs.forEach(log => { %>
+                    <tr>
+                        <td dir="ltr" style="text-align: right;"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                        <td dir="ltr" style="text-align: right; font-weight:bold;"><%= log.to %></td>
+                        <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= log.body %>"><%= log.body %></td>
+                        <td>
+                            <% if (log.status === 'success') { %>
+                                <span class="status-success">✅ ناجح</span>
+                            <% } else { %>
+                                <span class="status-failed">❌ فاشل</span>
+                                <% if (log.errorDetails) { %>
+                                    <div class="err-msg"><%= log.errorDetails %></div>
+                                <% } %>
+                            <% } %>
+                        </td>
+                    </tr>
+                    <% }) %>
+                    <% if(logs.length === 0) { %>
+                        <tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">لا توجد سجلات مطابقة للبحث في الأرشيف.</td></tr>
+                    <% } %>
+                </table>
+            </div>
+        </div>
     </div>
 </body>
 </html>
