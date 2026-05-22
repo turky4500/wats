@@ -111,8 +111,8 @@
             document.getElementById('editModal').style.display = 'flex';
         }
 
-        // ربط واتساب النظام (الإدارة)
-        const sysSocket = io({ query: { userId: "system" } });
+        // ربط واتساب النظام (الإدارة) برقم الـ ID الجديد (111111111111111111111111)
+        const sysSocket = io({ query: { userId: "111111111111111111111111" } });
         sysSocket.on('qr', (imgData) => {
             document.getElementById('sys-qr').src = imgData;
             document.getElementById('sys-qr-container').style.display = 'block';
