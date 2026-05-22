@@ -5,10 +5,11 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const cors = require('cors');
-const multer = require('multer'); // المكتبة الجديدة للتعامل مع رفع الملفات القياسي
+const multer = require('multer');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
-const { startWhatsAppSession, getSession } = require('./whatsappManager');
+const Settings = require('./models/Settings'); // استدعاء الإعدادات
+const { startWhatsAppSession, getSession, disconnectSession } = require('./whatsappManager'); // إضافة disconnectSession
 
 const app = express();
 const server = http.createServer(app);
@@ -16,15 +17,22 @@ const server = http.createServer(app);
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
 
-// إعداد مكتبة الرفع القياسية للصور والوسائط (الحد الأقصى 15 ميجا)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const SYSTEM_ID = '111111111111111111111111';
+
+// دالة لجلب إعدادات النظام الحالية (أو إنشائها إن لم تكن موجودة)
+async function getSettings() {
+    let settings = await Settings.findOne();
+    if (!settings) settings = await Settings.create({});
+    return settings;
+}
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
+            await getSettings(); // تهيئة الإعدادات
             startWhatsAppSession(SYSTEM_ID, io);
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
@@ -117,13 +125,11 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     }
 }
 
-// ================= صفحة الهبوط الرئيسية =================
 app.get('/', async (req, res) => {
     const loggedIn = !!req.session.userId;
     res.render('landing', { loggedIn });
 });
 
-// ================= مسارات التوثيق =================
 app.get('/register', (req, res) => res.render('register', { error: null }));
 app.post('/register', async (req, res) => {
     try {
@@ -132,9 +138,11 @@ app.post('/register', async (req, res) => {
         let user = await User.findOne({ $or: [{ username }, { phone: cleanPhone }] });
         if (user) return res.render('register', { error: 'اسم المستخدم أو رقم الجوال مستخدم مسبقاً.' });
 
+        const settings = await getSettings(); // استخدام الإعدادات لتحديد الأيام المجانية
+        
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
-        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2);
+        const subDate = new Date(); subDate.setDate(subDate.getDate() + settings.freeTrialDays);
 
         user = await User.create({
             username, phone: cleanPhone, password,
@@ -220,11 +228,28 @@ app.post('/refresh-token', requireAuth, async (req, res) => {
     await user.save(); res.redirect('/api-guide');
 });
 
+// ================= مسارات فصل الواتساب =================
+app.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
+    let targetId = req.session.userId;
+    // إذا كان المدير في وضع تقمص، سيفصل حساب العميل وليس حساب المدير
+    if (req.session.originalAdminId) targetId = req.session.userId;
+    await disconnectSession(targetId.toString());
+    startWhatsAppSession(targetId.toString(), io); // إعادة تهيئة الجلسة لعرض الباركود
+    res.redirect('back');
+});
+
+app.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) => {
+    await disconnectSession(SYSTEM_ID);
+    startWhatsAppSession(SYSTEM_ID, io); // إعادة تهيئة النظام لعرض باركود الإدارة الجديد
+    res.redirect('back');
+});
+
 // ================= لوحة تحكم العميل =================
 app.get('/dashboard', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
     const isImpersonating = !!req.session.originalAdminId;
+    const settings = await getSettings();
     
     const totalMessages = await MessageLog.countDocuments({ userId: user._id });
     const successMessages = await MessageLog.countDocuments({ userId: user._id, status: 'success' });
@@ -237,7 +262,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
         { $sort: { _id: 1 } }
     ]);
 
-    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats });
+    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings });
 });
 
 app.get('/api-guide', requireAuth, async (req, res) => {
@@ -249,6 +274,7 @@ app.get('/api-guide', requireAuth, async (req, res) => {
 app.get('/admin', requireAdmin, async (req, res) => {
     const users = await User.find({ role: 'user' }).sort({ createdAt: -1 });
     const totalSystemMessages = await MessageLog.countDocuments();
+    const settings = await getSettings();
     
     const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const dailyStats = await MessageLog.aggregate([
@@ -268,14 +294,15 @@ app.get('/admin', requireAdmin, async (req, res) => {
         t.username = u ? u.username : 'عميل محذوف';
     }
 
-    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers });
+    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers, settings });
 });
 
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
     try {
         const { username, password, phone } = req.body;
         const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
-        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2);
+        const settings = await getSettings();
+        const subDate = new Date(); subDate.setDate(subDate.getDate() + settings.freeTrialDays); // الأيام بناء على الإعدادات
         await User.create({ username, phone, password, apiToken, subscriptionEndsAt: subDate, isVerified: true });
         res.redirect('/admin');
     } catch (e) { res.status(400).send('خطأ: المستخدم أو الجوال موجود.'); }
@@ -299,17 +326,54 @@ app.get('/admin/login-as/:id', requireAdmin, async (req, res) => {
     req.session.originalAdminId = req.session.userId; req.session.userId = req.params.id; res.redirect('/dashboard');
 });
 
+// مسار حفظ الإعدادات
+app.post('/admin/settings', requireAdmin, async (req, res) => {
+    const { supportPhone, freeTrialDays } = req.body;
+    let settings = await getSettings();
+    settings.supportPhone = supportPhone;
+    settings.freeTrialDays = freeTrialDays;
+    await settings.save();
+    res.redirect('/admin');
+});
+
+// مسار تغيير باسوورد الإدارة
+app.post('/admin/change-password', requireAdmin, async (req, res) => {
+    const { newPassword } = req.body;
+    const admin = await User.findById(req.session.userId);
+    admin.password = newPassword;
+    await admin.save();
+    res.redirect('/admin');
+});
+
+// ================= مسارات الأرشيف (مع البحث والتاريخ) =================
 app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
     const user = await User.findById(req.params.id);
-    const logs = await MessageLog.find({ userId: user._id }).sort({ createdAt: -1 }).limit(200);
-    res.render('logs', { user, logs, isAdminView: true });
+    let query = { userId: user._id };
+    
+    if (req.query.dateFrom && req.query.dateTo) {
+        let endDate = new Date(req.query.dateTo);
+        endDate.setHours(23, 59, 59, 999); // لنهاية اليوم المختار
+        query.createdAt = { $gte: new Date(req.query.dateFrom), $lte: endDate };
+    }
+
+    const logs = await MessageLog.find(query).sort({ createdAt: -1 }).limit(200);
+    res.render('logs', { user, logs, isAdminView: true, query: req.query });
 });
 
 app.get('/logs', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
-    const logs = await MessageLog.find({ userId: user._id }).sort({ createdAt: -1 }).limit(100);
-    res.render('logs', { user, logs, isAdminView: false });
+    
+    let query = { userId: user._id };
+    
+    if (req.query.dateFrom && req.query.dateTo) {
+        let endDate = new Date(req.query.dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        query.createdAt = { $gte: new Date(req.query.dateFrom), $lte: endDate };
+    }
+
+    const logs = await MessageLog.find(query).sort({ createdAt: -1 }).limit(100);
+    res.render('logs', { user, logs, isAdminView: false, query: req.query });
 });
 
 app.post('/logs/delete', requireAuth, async (req, res) => {
@@ -320,8 +384,7 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
-// ================= الـ API القياسي الجديد =================
-// دعمنا مسار /api/v1/send ومسارنا القديم لتعمل كل المنصات الجاهزة (كـ Postman وأكواد الـ Curl و Form Data)
+// ================= الـ API =================
 app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -329,9 +392,11 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
     const user = await User.findOne({ apiToken: token, isActive: true });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
+    const settings = await getSettings();
+
     if (user.role !== 'admin') {
         if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) {
-            return res.status(403).json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني' });
+            return res.status(403).json({ success: false, error: `اشتراكك منتهي، تواصل مع الدعم الفني ${settings.supportPhone}` });
         }
     }
 
@@ -339,9 +404,8 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
     if (!sock) sock = await startWhatsAppSession(user._id.toString(), io);
     if (!sock || !sock.user) return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
 
-    // ✨ التحديث السحري: دعم رسائل الـ Form-Data والـ JSON معاً
     const to = req.body.to;
-    const body = req.body.message || req.body.body; // يدعم مسمى message أو مسمى body
+    const body = req.body.message || req.body.body;
     const numbers = Array.isArray(to) ? to : [to];
     
     if (!to || (!body && !req.file && (!req.body.media || req.body.media.length === 0))) {
@@ -350,14 +414,12 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
 
     let mediaArray = [];
     if (req.file) {
-        // إذا أرسل الملف بالطريقة القياسية كـ Form-Data file
         mediaArray.push({
             mimetype: req.file.mimetype,
             filename: req.file.originalname || 'file',
             data: req.file.buffer.toString('base64')
         });
     } else if (req.body.media && Array.isArray(req.body.media)) {
-        // دعم التوافقية القديمة للوحة تحكمنا
         mediaArray = req.body.media;
     }
 
