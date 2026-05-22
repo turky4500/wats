@@ -66,6 +66,12 @@
         .hidden { display: none !important; }
         #qr-container img { width: 100%; max-width: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; margin-top: 15px; }
         .alert-box { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; }
+
+        /* ستايل الإحصائيات */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; }
+        .stat-card .num { font-size: 28px; font-weight: 800; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -110,6 +116,45 @@
                 ⚠️ عذراً اشتراكك منتهي، لا يمكنك إرسال أي حملات. الرجاء التواصل مع الدعم الفني: 966598686902
             </div>
         <% } %>
+
+        <!-- قسم الإحصائيات الجديد -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>إجمالي إرسالك</h3>
+                <div class="num" style="color: #3b82f6;"><%= totalMessages %></div>
+            </div>
+            <div class="stat-card">
+                <h3>الرسائل الناجحة</h3>
+                <div class="num" style="color: #10b981;"><%= successMessages %></div>
+            </div>
+            <div class="stat-card">
+                <h3>الرسائل الفاشلة</h3>
+                <div class="num" style="color: #ef4444;"><%= failedMessages %></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 25px; padding: 20px;">
+            <h3 style="margin-top:0; font-size: 16px;">إحصائية الإرسال آخر 7 أيام 📈</h3>
+            <% 
+                let maxCount = 0;
+                dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; });
+                if (maxCount === 0) maxCount = 1;
+            %>
+            <div style="display: flex; align-items: flex-end; gap: 10px; height: 100px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-top: 10px;">
+                <% dailyStats.forEach(s => { 
+                    let heightPercent = (s.count / maxCount) * 100;
+                %>
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;"><%= s.count %></div>
+                    <div style="width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; transition: 0.5s; height: <%= heightPercent %>%;"></div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
+                </div>
+                <% }) %>
+                <% if(dailyStats.length === 0) { %>
+                    <p style="width:100%; text-align:center; color:#94a3b8; font-size: 13px;">لا توجد عمليات إرسال في آخر 7 أيام</p>
+                <% } %>
+            </div>
+        </div>
 
         <div class="grid-layout">
             <div class="card" style="padding: 20px;">
@@ -222,7 +267,6 @@
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
             document.getElementById('qr-container').classList.remove('hidden');
             document.getElementById('connected-container').classList.add('hidden');
-            // السطر الذي تمت إضافته لطباعة الصورة:
             document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`; 
         });
 
