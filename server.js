@@ -15,23 +15,18 @@ const server = http.createServer(app);
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
 
-// معرّف ثابت للإدارة مكون من 24 حرف (لكي لا يرفضه Mongoose)
 const SYSTEM_ID = '111111111111111111111111';
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
-            // تشغيل رقم الإدارة فوراً للعمل بالخلفية
             startWhatsAppSession(SYSTEM_ID, io);
-            
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
                 startWhatsAppSession(user._id.toString(), io);
             }
-        } catch (e) {
-            console.error('خطأ:', e);
-        }
+        } catch (e) { console.error('خطأ:', e); }
     }).catch(err => console.error('❌ خطأ في الاتصال:', err));
 
 app.set('view engine', 'ejs');
@@ -40,8 +35,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'wats_secret_123',
-    resave: false,
-    saveUninitialized: false
+    resave: false, saveUninitialized: false
 }));
 
 const messageQueue = [];
@@ -71,7 +65,6 @@ async function processQueue() {
     isProcessingQueue = false;
 }
 
-// دالة إرسال أكواد التفعيل من رقم الإدارة
 async function sendSystemOTP(phone, message) {
     let sock = getSession(SYSTEM_ID);
     if (!sock || !sock.user) throw new Error('رقم الإدارة غير متصل! تواصل مع الدعم الفني.');
@@ -120,9 +113,14 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     }
 }
 
+// ================= صفحة الهبوط الرئيسية =================
+app.get('/', async (req, res) => {
+    const loggedIn = !!req.session.userId;
+    res.render('landing', { loggedIn });
+});
+
 // ================= مسارات التوثيق =================
 app.get('/register', (req, res) => res.render('register', { error: null }));
-
 app.post('/register', async (req, res) => {
     try {
         const { username, phone, password } = req.body;
@@ -132,7 +130,7 @@ app.post('/register', async (req, res) => {
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
-        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2); // يومين مجانية
+        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2);
 
         user = await User.create({
             username, phone: cleanPhone, password,
@@ -141,19 +139,15 @@ app.post('/register', async (req, res) => {
         });
 
         await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
-        
         req.session.verifyUserId = user._id;
         res.redirect('/verify');
-    } catch (e) {
-        res.render('register', { error: e.message });
-    }
+    } catch (e) { res.render('register', { error: e.message }); }
 });
 
 app.get('/verify', (req, res) => {
     if (!req.session.verifyUserId) return res.redirect('/register');
     res.render('verify', { error: null });
 });
-
 app.post('/verify', async (req, res) => {
     try {
         const user = await User.findById(req.session.verifyUserId);
@@ -164,14 +158,11 @@ app.post('/verify', async (req, res) => {
         await user.save();
         req.session.userId = user._id;
         req.session.verifyUserId = null;
-        res.redirect('/');
-    } catch (e) {
-        res.render('verify', { error: 'حدث خطأ' });
-    }
+        res.redirect('/dashboard');
+    } catch (e) { res.render('verify', { error: 'حدث خطأ' }); }
 });
 
 app.get('/forgot-password', (req, res) => res.render('forgot-password', { error: null }));
-
 app.post('/forgot-password', async (req, res) => {
     try {
         const cleanPhone = req.body.phone.replace(/\D/g, '');
@@ -180,91 +171,101 @@ app.post('/forgot-password', async (req, res) => {
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
+        user.otpCode = otp; user.otpExpires = otpExp; await user.save();
 
-        user.otpCode = otp; user.otpExpires = otpExp;
-        await user.save();
-
-        await sendSystemOTP(cleanPhone, `مرحباً 👋\nتلقينا طلباً لاستعادة كلمة المرور.\nرمز التحقق الخاص بك هو: *${otp}*\nإذا لم تطلب ذلك، تجاهل هذه الرسالة.`);
+        await sendSystemOTP(cleanPhone, `مرحباً 👋\nرمز التحقق لاستعادة المرور هو: *${otp}*`);
         req.session.resetUserId = user._id;
         res.redirect('/reset-password');
-    } catch (e) {
-        res.render('forgot-password', { error: e.message });
-    }
+    } catch (e) { res.render('forgot-password', { error: e.message }); }
 });
 
 app.get('/reset-password', (req, res) => {
     if (!req.session.resetUserId) return res.redirect('/forgot-password');
     res.render('reset-password', { error: null });
 });
-
 app.post('/reset-password', async (req, res) => {
     try {
         const { otp, newPassword } = req.body;
         const user = await User.findById(req.session.resetUserId);
-        if (user.otpCode !== otp || new Date() > user.otpExpires) return res.render('reset-password', { error: 'الرمز غير صحيح أو منتهي الصلاحية' });
+        if (user.otpCode !== otp || new Date() > user.otpExpires) return res.render('reset-password', { error: 'الرمز غير صحيح أو منتهي' });
 
-        user.password = newPassword; user.otpCode = null; user.otpExpires = null;
-        await user.save();
-        req.session.resetUserId = null;
-        res.redirect('/login');
-    } catch (e) {
-        res.render('reset-password', { error: 'حدث خطأ' });
-    }
+        user.password = newPassword; user.otpCode = null; user.otpExpires = null; await user.save();
+        req.session.resetUserId = null; res.redirect('/login');
+    } catch (e) { res.render('reset-password', { error: 'حدث خطأ' }); }
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
-
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (user && user.isActive && await user.comparePassword(password)) {
-        if (!user.isVerified) {
-            req.session.verifyUserId = user._id;
-            return res.redirect('/verify');
-        }
+        if (!user.isVerified) { req.session.verifyUserId = user._id; return res.redirect('/verify'); }
         req.session.userId = user._id;
-        return res.redirect('/');
+        return res.redirect('/dashboard');
     }
     res.render('login', { error: 'بيانات غير صحيحة.' });
 });
-
-app.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/login');
-});
-
+app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
 app.get('/return-to-admin', (req, res) => {
-    if(req.session.originalAdminId) {
-        req.session.userId = req.session.originalAdminId;
-        req.session.originalAdminId = null;
-        res.redirect('/admin');
-    } else res.redirect('/');
+    if(req.session.originalAdminId) { req.session.userId = req.session.originalAdminId; req.session.originalAdminId = null; res.redirect('/admin'); }
+    else res.redirect('/dashboard');
 });
-
 app.post('/refresh-token', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     user.apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
-    await user.save();
-    res.redirect('/api-guide');
+    await user.save(); res.redirect('/api-guide');
 });
 
-// ================= مسارات الإدارة =================
-app.get('/', requireAuth, async (req, res) => {
+// ================= لوحة تحكم العميل (مع الإحصائيات) =================
+app.get('/dashboard', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
     const isImpersonating = !!req.session.originalAdminId;
-    res.render('dashboard', { user, isImpersonating });
+    
+    // إحصائيات المستخدم
+    const totalMessages = await MessageLog.countDocuments({ userId: user._id });
+    const successMessages = await MessageLog.countDocuments({ userId: user._id, status: 'success' });
+    const failedMessages = totalMessages - successMessages;
+
+    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dailyStats = await MessageLog.aggregate([
+        { $match: { userId: user._id, createdAt: { $gte: sevenDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
+
+    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats });
 });
 
 app.get('/api-guide', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    const host = req.protocol + '://' + req.get('host');
-    res.render('api-guide', { user, host });
+    res.render('api-guide', { user, host: req.protocol + '://' + req.get('host') });
 });
 
+// ================= الإدارة (مع الإحصائيات) =================
 app.get('/admin', requireAdmin, async (req, res) => {
     const users = await User.find({ role: 'user' }).sort({ createdAt: -1 });
-    res.render('admin', { users });
+    const totalSystemMessages = await MessageLog.countDocuments();
+    
+    const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dailyStats = await MessageLog.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
+
+    const topUsers = await MessageLog.aggregate([
+        { $group: { _id: "$userId", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+    ]);
+    
+    for (let t of topUsers) {
+        const u = await User.findById(t._id);
+        t.username = u ? u.username : 'عميل محذوف';
+    }
+
+    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers });
 });
 
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
@@ -274,9 +275,7 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
         const subDate = new Date(); subDate.setDate(subDate.getDate() + 2);
         await User.create({ username, phone, password, apiToken, subscriptionEndsAt: subDate, isVerified: true });
         res.redirect('/admin');
-    } catch (e) {
-        res.status(400).send('خطأ: المستخدم أو الجوال موجود.');
-    }
+    } catch (e) { res.status(400).send('خطأ: المستخدم أو الجوال موجود.'); }
 });
 
 app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
@@ -289,17 +288,12 @@ app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
             currentEnd.setDate(currentEnd.getDate() + parseInt(addDays));
             user.subscriptionEndsAt = currentEnd;
         }
-        await user.save();
-        res.redirect('/admin');
-    } catch (e) {
-        res.status(400).send('حدث خطأ');
-    }
+        await user.save(); res.redirect('/admin');
+    } catch (e) { res.status(400).send('حدث خطأ'); }
 });
 
 app.get('/admin/login-as/:id', requireAdmin, async (req, res) => {
-    req.session.originalAdminId = req.session.userId;
-    req.session.userId = req.params.id;
-    res.redirect('/');
+    req.session.originalAdminId = req.session.userId; req.session.userId = req.params.id; res.redirect('/dashboard');
 });
 
 app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
@@ -332,9 +326,7 @@ app.post('/api/send-message', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     if (user.role !== 'admin') {
-        if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) {
-            return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
-        }
+        if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
     }
 
     let sock = getSession(user._id.toString());
@@ -356,9 +348,7 @@ io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
     if (sessionUserId) {
         socket.join(sessionUserId);
-        startWhatsAppSession(sessionUserId, io).then(sock => {
-            if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected');
-        });
+        startWhatsAppSession(sessionUserId, io).then(sock => { if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected'); });
     }
 });
 
