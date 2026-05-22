@@ -13,13 +13,15 @@ const app = express();
 const server = http.createServer(app);
 
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
-
 app.use(cors());
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
+            // تشغيل رقم الإدارة فوراً للعمل بالخلفية
+            startWhatsAppSession('system', io);
+            
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
                 startWhatsAppSession(user._id.toString(), io);
@@ -45,19 +47,15 @@ let isProcessingQueue = false;
 async function processQueue() {
     if (isProcessingQueue || messageQueue.length === 0) return;
     isProcessingQueue = true;
-    
     while (messageQueue.length > 0) {
         const job = messageQueue.shift();
         const { sock, numbers, body, media, userId } = job;
-        
         for (const num of numbers) {
             const jid = `${num}@s.whatsapp.net`;
             try {
                 const wpCheck = await sock.onWhatsApp(jid);
                 if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل');
-
                 await sendWhatsAppMessage(sock, jid, body, media);
-
                 if (io) io.to(userId).emit('message-sent', { to: num, body: body || '(تم إرسال مرفق)' });
                 await MessageLog.create({ userId: userId, to: num, body: body || '(رسالة وسائط)', status: 'success' });
                 await new Promise(r => setTimeout(r, 2000));
@@ -70,11 +68,19 @@ async function processQueue() {
     isProcessingQueue = false;
 }
 
+// دالة إرسال أكواد التفعيل من رقم الإدارة
+async function sendSystemOTP(phone, message) {
+    let sock = getSession('system');
+    if (!sock || !sock.user) throw new Error('رقم الإدارة غير متصل! تواصل مع الدعم الفني.');
+    const jid = `${phone}@s.whatsapp.net`;
+    const wpCheck = await sock.onWhatsApp(jid);
+    if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم الذي أدخلته غير موجود في الواتساب.');
+    await sock.sendMessage(jid, { text: message });
+}
+
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
-    if (!admin) {
-        await User.create({ username: 'admin', password: 'password', role: 'admin' });
-    }
+    if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
 }
 createDefaultAdmin();
 
@@ -101,7 +107,6 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
             else if (m.mimetype.startsWith('video/')) content = { video: buffer };
             else if (m.mimetype.startsWith('audio/')) content = { audio: buffer, mimetype: 'audio/mp4' };
             else content = { document: buffer, mimetype: m.mimetype, fileName: m.filename || 'file' };
-
             if (i === 0 && body && !m.mimetype.startsWith('audio/')) content.caption = body;
             await sock.sendMessage(jid, content);
             await new Promise(r => setTimeout(r, 1500));
@@ -112,17 +117,97 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     }
 }
 
-app.get('/', requireAuth, async (req, res) => {
-    const user = await User.findById(req.session.userId);
-    if (user.role === 'admin') return res.redirect('/admin');
-    const isImpersonating = !!req.session.originalAdminId;
-    res.render('dashboard', { user, isImpersonating });
+// ================= مسارات التوثيق (تسجيل، توثيق، نسيان المرور) =================
+app.get('/register', (req, res) => res.render('register', { error: null }));
+
+app.post('/register', async (req, res) => {
+    try {
+        const { username, phone, password } = req.body;
+        const cleanPhone = phone.replace(/\D/g, '');
+        let user = await User.findOne({ $or: [{ username }, { phone: cleanPhone }] });
+        if (user) return res.render('register', { error: 'اسم المستخدم أو رقم الجوال مستخدم مسبقاً.' });
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
+        
+        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2); // يومين مجانية
+
+        user = await User.create({
+            username, phone: cleanPhone, password,
+            apiToken: Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2),
+            subscriptionEndsAt: subDate, isVerified: false, otpCode: otp, otpExpires: otpExp
+        });
+
+        await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
+        
+        req.session.verifyUserId = user._id;
+        res.redirect('/verify');
+    } catch (e) {
+        res.render('register', { error: e.message });
+    }
 });
 
-app.get('/api-guide', requireAuth, async (req, res) => {
-    const user = await User.findById(req.session.userId);
-    const host = req.protocol + '://' + req.get('host');
-    res.render('api-guide', { user, host });
+app.get('/verify', (req, res) => {
+    if (!req.session.verifyUserId) return res.redirect('/register');
+    res.render('verify', { error: null });
+});
+
+app.post('/verify', async (req, res) => {
+    try {
+        const user = await User.findById(req.session.verifyUserId);
+        if (!user) return res.redirect('/register');
+        if (user.otpCode !== req.body.otp || new Date() > user.otpExpires) return res.render('verify', { error: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+        user.isVerified = true; user.otpCode = null; user.otpExpires = null;
+        await user.save();
+        req.session.userId = user._id;
+        req.session.verifyUserId = null;
+        res.redirect('/');
+    } catch (e) {
+        res.render('verify', { error: 'حدث خطأ' });
+    }
+});
+
+app.get('/forgot-password', (req, res) => res.render('forgot-password', { error: null }));
+
+app.post('/forgot-password', async (req, res) => {
+    try {
+        const cleanPhone = req.body.phone.replace(/\D/g, '');
+        const user = await User.findOne({ phone: cleanPhone });
+        if (!user) return res.render('forgot-password', { error: 'رقم الجوال غير مسجل لدينا' });
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
+
+        user.otpCode = otp; user.otpExpires = otpExp;
+        await user.save();
+
+        await sendSystemOTP(cleanPhone, `مرحباً 👋\nتلقينا طلباً لاستعادة كلمة المرور.\nرمز التحقق الخاص بك هو: *${otp}*\nإذا لم تطلب ذلك، تجاهل هذه الرسالة.`);
+        req.session.resetUserId = user._id;
+        res.redirect('/reset-password');
+    } catch (e) {
+        res.render('forgot-password', { error: e.message });
+    }
+});
+
+app.get('/reset-password', (req, res) => {
+    if (!req.session.resetUserId) return res.redirect('/forgot-password');
+    res.render('reset-password', { error: null });
+});
+
+app.post('/reset-password', async (req, res) => {
+    try {
+        const { otp, newPassword } = req.body;
+        const user = await User.findById(req.session.resetUserId);
+        if (user.otpCode !== otp || new Date() > user.otpExpires) return res.render('reset-password', { error: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+        user.password = newPassword; user.otpCode = null; user.otpExpires = null;
+        await user.save();
+        req.session.resetUserId = null;
+        res.redirect('/login');
+    } catch (e) {
+        res.render('reset-password', { error: 'حدث خطأ' });
+    }
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
@@ -131,6 +216,10 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (user && user.isActive && await user.comparePassword(password)) {
+        if (!user.isVerified) {
+            req.session.verifyUserId = user._id;
+            return res.redirect('/verify');
+        }
         req.session.userId = user._id;
         return res.redirect('/');
     }
@@ -157,7 +246,20 @@ app.post('/refresh-token', requireAuth, async (req, res) => {
     res.redirect('/api-guide');
 });
 
-// ================= مسارات الإدارة (Admin) =================
+// ================= مسارات الإدارة =================
+app.get('/', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    if (user.role === 'admin') return res.redirect('/admin');
+    const isImpersonating = !!req.session.originalAdminId;
+    res.render('dashboard', { user, isImpersonating });
+});
+
+app.get('/api-guide', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    const host = req.protocol + '://' + req.get('host');
+    res.render('api-guide', { user, host });
+});
+
 app.get('/admin', requireAdmin, async (req, res) => {
     const users = await User.find({ role: 'user' }).sort({ createdAt: -1 });
     res.render('admin', { users });
@@ -165,14 +267,13 @@ app.get('/admin', requireAdmin, async (req, res) => {
 
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, phone } = req.body;
         const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
-        const subDate = new Date();
-        subDate.setDate(subDate.getDate() + 2); // يومين مجانية
-        await User.create({ username, password, apiToken, subscriptionEndsAt: subDate });
+        const subDate = new Date(); subDate.setDate(subDate.getDate() + 2);
+        await User.create({ username, phone, password, apiToken, subscriptionEndsAt: subDate, isVerified: true });
         res.redirect('/admin');
     } catch (e) {
-        res.status(400).send('خطأ: المستخدم موجود.');
+        res.status(400).send('خطأ: المستخدم أو الجوال موجود.');
     }
 });
 
@@ -212,16 +313,23 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs, isAdminView: false });
 });
 
-// ================= الـ API والإرسال (محمي بالاشتراك الصارم) =================
+// تفريغ الأرشيف يدوياً
+app.post('/logs/delete', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    let targetId = user._id;
+    if (user.role === 'admin' && req.body.targetUserId) targetId = req.body.targetUserId;
+    await MessageLog.deleteMany({ userId: targetId });
+    res.redirect('back');
+});
+
+// ================= الـ API =================
 app.post('/api/send-message', async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
-    
     const token = authHeader.split(' ')[1];
     const user = await User.findOne({ apiToken: token, isActive: true });
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
-    // فحص الاشتراك الصارم (حتى للعملاء القدامى اللي ما عندهم تاريخ)
     if (user.role !== 'admin') {
         if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) {
             return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
@@ -234,17 +342,9 @@ app.post('/api/send-message', async (req, res) => {
 
     const { to, body, media } = req.body;
     if (!to || (!body && (!media || media.length === 0))) return res.status(400).json({ error: 'Missing Data' });
-
     const numbers = Array.isArray(to) ? to : [to];
 
-    messageQueue.push({
-        sock: sock,
-        numbers: numbers,
-        body: body,
-        media: media,
-        userId: user._id.toString()
-    });
-
+    messageQueue.push({ sock, numbers, body, media, userId: user._id.toString() });
     processQueue().catch(e => console.error(e));
     res.json({ success: true, message: "تم إضافة الحملة للطابور بنجاح، جاري الإرسال..." });
 });
