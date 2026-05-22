@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واتساب تكوين | الإرسال الذكي</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap');
+        body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #0f172a; overflow-x: hidden;}
+        
+        /* Navbar */
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 50px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .logo { font-size: 24px; font-weight: 900; color: #25d366; display:flex; align-items:center; gap:10px;}
+        .nav-links a { margin-right: 20px; text-decoration: none; color: #475569; font-weight: 700; transition: 0.3s; }
+        .nav-links a:hover { color: #25d366; }
+        .nav-btn { background: #25d366; color: white !important; padding: 10px 25px; border-radius: 30px; border: none; font-weight: 700; text-decoration: none; box-shadow: 0 4px 6px rgba(37, 211, 102, 0.3); transition: 0.3s; }
+        .nav-btn:hover { background: #22c35e; transform: translateY(-2px); }
+
+        /* Hero Section */
+        .hero { text-align: center; padding: 100px 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-bottom-left-radius: 50% 10%; border-bottom-right-radius: 50% 10%; }
+        .hero h1 { font-size: 55px; font-weight: 900; color: #1e293b; margin-bottom: 20px; line-height: 1.2; }
+        .hero h1 span { color: #25d366; }
+        .hero p { font-size: 20px; color: #475569; max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
+        .cta-buttons { display: flex; justify-content: center; gap: 15px; }
+        .btn-primary { background: #25d366; color: white; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.4); transition: 0.3s; }
+        .btn-primary:hover { background: #16a34a; transform: translateY(-3px); box-shadow: 0 15px 20px -3px rgba(37, 211, 102, 0.5); }
+        .btn-outline { background: white; color: #475569; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; text-decoration: none; border: 2px solid #cbd5e1; transition: 0.3s; }
+        .btn-outline:hover { border-color: #94a3b8; background: #f1f5f9; }
+
+        /* Features */
+        .features { padding: 80px 20px; max-width: 1200px; margin: 0 auto; text-align: center; }
+        .features h2 { font-size: 35px; font-weight: 800; margin-bottom: 50px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .card { background: white; padding: 40px 30px; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; border: 1px solid #e2e8f0; }
+        .card:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #25d366; }
+        .card-icon { font-size: 50px; margin-bottom: 20px; }
+        .card h3 { font-size: 22px; font-weight: 800; margin-bottom: 15px; }
+        .card p { color: #64748b; font-size: 15px; line-height: 1.6; }
+
+        /* Footer */
+        footer { background: #1e293b; color: #cbd5e1; text-align: center; padding: 30px 20px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">💬 واتساب تكوين</div>
+        <div class="nav-links">
+            <% if (loggedIn) { %>
+                <a href="/dashboard" class="nav-btn">الذهاب للوحة التحكم ←</a>
+            <% } else { %>
+                <a href="/login">تسجيل الدخول</a>
+                <a href="/register" class="nav-btn">ابدأ مجاناً</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1>أرسل حملاتك عبر <span>الواتساب</span> بضغطة زر واحدة!</h1>
+        <p>منصة سحابية متكاملة لربط رقمك وإرسال الرسائل والمرفقات الجماعية لعملائك بسهولة، مع نظام حماية وإحصائيات متقدمة.</p>
+        <div class="cta-buttons">
+            <% if (loggedIn) { %>
+                <a href="/dashboard" class="btn-primary">لوحة التحكم الخاصة بك</a>
+            <% } else { %>
+                <a href="/register" class="btn-primary">جرب النظام الآن (يومين مجاناً)</a>
+                <a href="/api-guide" class="btn-outline">اكتشف دليل الـ API</a>
+            <% } %>
+        </div>
+    </div>
+
+    <div class="features">
+        <h2>لماذا نحن الخيار الأفضل لعملك؟ 🌟</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon">🚀</div>
+                <h3>إرسال بالخلفية</h3>
+                <p>لا حاجة لإبقاء المتصفح مفتوحاً! أرسل آلاف الرسائل، وسيتكفل خادمنا السحابي بإنهاء المهمة في الخلفية.</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <h3>إحصائيات دقيقة</h3>
+                <p>تابع نجاح حملاتك وتعرف على الرسائل الناجحة والفاشلة من خلال لوحة تحكم رسومية دقيقة.</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🔌</div>
+                <h3>ربط API برمجي</h3>
+                <p>اربط متجرك أو موقعك بنظامنا عبر الـ API وأرسل رسائل الفواتير والتنبيهات برمجياً بكل سهولة.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>جميع الحقوق محفوظة © 2026 | منصة واتساب تكوين</p>
+    </footer>
+</body>
+</html>
