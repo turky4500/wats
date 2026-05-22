@@ -7,21 +7,32 @@
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
         body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #0f172a; }
         .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .btn { padding: 8px 20px; background: #475569; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items:center; margin-bottom: 20px; }
+        .btn { padding: 8px 20px; background: #475569; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; border:none; cursor:pointer;}
+        .btn-red { background: #ef4444; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { border-bottom: 1px solid #e2e8f0; padding: 12px; text-align: right; }
         th { background: #f1f5f9; }
         .success { color: #10b981; font-weight: bold; }
         .failed { color: #ef4444; font-weight: bold; }
+        .notice { background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; text-align: center; font-weight: bold;}
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="notice">💡 معلومة: يقوم النظام بحذف أي رسالة يمر عليها 30 يوماً بشكل آلي لتوفير مساحة التخزين.</div>
+        
         <div class="header">
-            <h2>سجل رسائل: <%= user.username %></h2>
-            <a href="<%= locals.isAdminView ? '/admin' : '/' %>" class="btn">العودة</a>
+            <h2 style="margin:0;">سجل رسائل: <%= user.username %></h2>
+            <div style="display:flex; gap:10px;">
+                <form method="POST" action="/logs/delete" onsubmit="return confirm('هل أنت متأكد من تفريغ كافة السجلات؟ لا يمكن التراجع عن هذا الإجراء!')">
+                    <input type="hidden" name="targetUserId" value="<%= user._id %>">
+                    <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف بالكامل</button>
+                </form>
+                <a href="<%= locals.isAdminView ? '/admin' : '/' %>" class="btn">← العودة</a>
+            </div>
         </div>
+
         <table>
             <tr>
                 <th>التاريخ والوقت</th>
@@ -39,6 +50,9 @@
                 </td>
             </tr>
             <% }) %>
+            <% if(logs.length === 0) { %>
+                <tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">الأرشيف فارغ حالياً.</td></tr>
+            <% } %>
         </table>
     </div>
 </body>
