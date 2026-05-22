@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const cors = require('cors');
+const multer = require('multer'); // المكتبة الجديدة للتعامل مع رفع الملفات القياسي
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const { startWhatsAppSession, getSession } = require('./whatsappManager');
@@ -14,6 +15,9 @@ const server = http.createServer(app);
 
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
+
+// إعداد مكتبة الرفع القياسية للصور والوسائط (الحد الأقصى 15 ميجا)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const SYSTEM_ID = '111111111111111111111111';
 
@@ -216,13 +220,12 @@ app.post('/refresh-token', requireAuth, async (req, res) => {
     await user.save(); res.redirect('/api-guide');
 });
 
-// ================= لوحة تحكم العميل (مع الإحصائيات) =================
+// ================= لوحة تحكم العميل =================
 app.get('/dashboard', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
     const isImpersonating = !!req.session.originalAdminId;
     
-    // إحصائيات المستخدم
     const totalMessages = await MessageLog.countDocuments({ userId: user._id });
     const successMessages = await MessageLog.countDocuments({ userId: user._id, status: 'success' });
     const failedMessages = totalMessages - successMessages;
@@ -242,7 +245,7 @@ app.get('/api-guide', requireAuth, async (req, res) => {
     res.render('api-guide', { user, host: req.protocol + '://' + req.get('host') });
 });
 
-// ================= الإدارة (مع الإحصائيات) =================
+// ================= الإدارة =================
 app.get('/admin', requireAdmin, async (req, res) => {
     const users = await User.find({ role: 'user' }).sort({ createdAt: -1 });
     const totalSystemMessages = await MessageLog.countDocuments();
@@ -317,8 +320,9 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
-// ================= الـ API =================
-app.post('/api/send-message', async (req, res) => {
+// ================= الـ API القياسي الجديد =================
+// دعمنا مسار /api/v1/send ومسارنا القديم لتعمل كل المنصات الجاهزة (كـ Postman وأكواد الـ Curl و Form Data)
+app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
     const token = authHeader.split(' ')[1];
@@ -326,20 +330,40 @@ app.post('/api/send-message', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid token' });
 
     if (user.role !== 'admin') {
-        if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) return res.json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني 966598686902' });
+        if (!user.subscriptionEndsAt || new Date(user.subscriptionEndsAt) < new Date()) {
+            return res.status(403).json({ success: false, error: 'اشتراكك منتهي، تواصل مع الدعم الفني' });
+        }
     }
 
     let sock = getSession(user._id.toString());
     if (!sock) sock = await startWhatsAppSession(user._id.toString(), io);
     if (!sock || !sock.user) return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
 
-    const { to, body, media } = req.body;
-    if (!to || (!body && (!media || media.length === 0))) return res.status(400).json({ error: 'Missing Data' });
+    // ✨ التحديث السحري: دعم رسائل الـ Form-Data والـ JSON معاً
+    const to = req.body.to;
+    const body = req.body.message || req.body.body; // يدعم مسمى message أو مسمى body
     const numbers = Array.isArray(to) ? to : [to];
+    
+    if (!to || (!body && !req.file && (!req.body.media || req.body.media.length === 0))) {
+        return res.status(400).json({ error: 'Missing Data' });
+    }
 
-    messageQueue.push({ sock, numbers, body, media, userId: user._id.toString() });
+    let mediaArray = [];
+    if (req.file) {
+        // إذا أرسل الملف بالطريقة القياسية كـ Form-Data file
+        mediaArray.push({
+            mimetype: req.file.mimetype,
+            filename: req.file.originalname || 'file',
+            data: req.file.buffer.toString('base64')
+        });
+    } else if (req.body.media && Array.isArray(req.body.media)) {
+        // دعم التوافقية القديمة للوحة تحكمنا
+        mediaArray = req.body.media;
+    }
+
+    messageQueue.push({ sock, numbers, body, media: mediaArray, userId: user._id.toString() });
     processQueue().catch(e => console.error(e));
-    res.json({ success: true, message: "تم إضافة الحملة للطابور بنجاح، جاري الإرسال..." });
+    res.json({ success: true, message: "تم الاستلام وجاري الإرسال" });
 });
 
 app.get('/ping', (req, res) => res.send('pong'));
