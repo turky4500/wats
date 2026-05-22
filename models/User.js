@@ -3,11 +3,18 @@ const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
+    phone: { type: String, sparse: true }, // رقم الجوال (مطلوب للـ OTP)
     password: { type: String, required: true },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
     isActive: { type: Boolean, default: true },
     apiToken: { type: String, unique: true },
-    subscriptionEndsAt: { type: Date }, // نظام SaaS: تاريخ انتهاء الاشتراك
+    subscriptionEndsAt: { type: Date },
+    
+    // نظام الـ OTP والتفعيل
+    isVerified: { type: Boolean, default: true }, // افتراضي true للقدامى، والجدد سيكون false حتى يفعلوا
+    otpCode: { type: String },
+    otpExpires: { type: Date },
+
     createdAt: { type: Date, default: Date.now }
 });
 
