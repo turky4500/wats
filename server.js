@@ -15,12 +15,15 @@ const server = http.createServer(app);
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
 
+// معرّف ثابت للإدارة مكون من 24 حرف (لكي لا يرفضه Mongoose)
+const SYSTEM_ID = '111111111111111111111111';
+
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
             // تشغيل رقم الإدارة فوراً للعمل بالخلفية
-            startWhatsAppSession('system', io);
+            startWhatsAppSession(SYSTEM_ID, io);
             
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
@@ -70,7 +73,7 @@ async function processQueue() {
 
 // دالة إرسال أكواد التفعيل من رقم الإدارة
 async function sendSystemOTP(phone, message) {
-    let sock = getSession('system');
+    let sock = getSession(SYSTEM_ID);
     if (!sock || !sock.user) throw new Error('رقم الإدارة غير متصل! تواصل مع الدعم الفني.');
     const jid = `${phone}@s.whatsapp.net`;
     const wpCheck = await sock.onWhatsApp(jid);
@@ -117,7 +120,7 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     }
 }
 
-// ================= مسارات التوثيق (تسجيل، توثيق، نسيان المرور) =================
+// ================= مسارات التوثيق =================
 app.get('/register', (req, res) => res.render('register', { error: null }));
 
 app.post('/register', async (req, res) => {
@@ -129,7 +132,6 @@ app.post('/register', async (req, res) => {
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
-        
         const subDate = new Date(); subDate.setDate(subDate.getDate() + 2); // يومين مجانية
 
         user = await User.create({
@@ -313,7 +315,6 @@ app.get('/logs', requireAuth, async (req, res) => {
     res.render('logs', { user, logs, isAdminView: false });
 });
 
-// تفريغ الأرشيف يدوياً
 app.post('/logs/delete', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     let targetId = user._id;
