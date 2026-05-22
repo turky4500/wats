@@ -2,12 +2,18 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>الإدارة المركزية | SaaS</title>
+    <title>الإدارة المركزية | التحليلات</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
         body { font-family: 'Tajawal', sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #0f172a; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; border-top: 4px solid #ef4444; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card h3 { color: #64748b; font-size: 16px; margin-top:0; }
+        .stat-card .number { font-size: 40px; font-weight: 800; color: #0f172a; margin: 10px 0; }
+        
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-family: inherit; font-weight: bold; color: white; display: inline-block; font-size: 13px; }
         .btn-green { background: #10b981; } .btn-blue { background: #3b82f6; } .btn-dark { background: #475569; } .btn-red { background: #ef4444; } .btn-purple { background: #8b5cf6; }
@@ -18,21 +24,86 @@
         .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; }
         input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
         #sys-qr { width: 200px; border-radius: 10px; border: 2px solid #e2e8f0; padding: 5px; }
+
+        /* شريط الرسم البياني البسيط */
+        .bar-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 20px 0; margin-top: 10px; border-bottom: 2px solid #e2e8f0; }
+        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .bar { width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; transition: 0.5s; }
+        .bar-label { font-size: 11px; color: #64748b; margin-top: 5px; text-align: center; }
+        .bar-value { font-size: 11px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="margin:0;">الإدارة المركزية 👑</h2>
+            <h2 style="margin:0;">الإدارة المركزية والإحصائيات 👑</h2>
             <div>
-                <a href="/" class="btn btn-dark">لوحتي الشخصية</a>
+                <a href="/dashboard" class="btn btn-dark">لوحتي الشخصية</a>
                 <a href="/logout" class="btn btn-red">تسجيل خروج</a>
             </div>
         </div>
 
+        <!-- الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>إجمالي العملاء المسجلين</h3>
+                <div class="number" style="color: #8b5cf6;"><%= users.length %></div>
+                <p style="color: #94a3b8; font-size: 13px; margin:0;">عميل في المنصة</p>
+            </div>
+            <div class="stat-card">
+                <h3>إجمالي الرسائل المرسلة (بالنظام كاملاً)</h3>
+                <div class="number" style="color: #10b981;"><%= totalSystemMessages %></div>
+                <p style="color: #94a3b8; font-size: 13px; margin:0;">رسالة معالجة</p>
+            </div>
+        </div>
+
+        <div class="grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="card">
+                <h3 style="margin-top:0;">إحصائية الإرسال لآخر 7 أيام (لجميع العملاء) 📈</h3>
+                <% 
+                   let maxCount = 0;
+                   dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; });
+                   if (maxCount === 0) maxCount = 1;
+                %>
+                <div class="bar-chart">
+                    <% dailyStats.forEach(s => { 
+                        let heightPercent = (s.count / maxCount) * 100;
+                    %>
+                    <div class="bar-col">
+                        <div class="bar-value"><%= s.count %></div>
+                        <div class="bar" style="height: <%= heightPercent %>%; background: #3b82f6;"></div>
+                        <div class="bar-label"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
+                    </div>
+                    <% }) %>
+                    <% if(dailyStats.length === 0) { %>
+                        <p style="width:100%; text-align:center; color:#94a3b8;">لا توجد بيانات للأيام السبعة الماضية</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0;">🏆 أكثر العملاء إرسالاً</h3>
+                <table style="margin-top: 0;">
+                    <% topUsers.forEach((t, i) => { %>
+                    <tr>
+                        <td style="padding: 10px; border:none; font-weight:bold;">
+                            <%= i===0?'🥇':(i===1?'🥈':(i===2?'🥉':'👤')) %> <%= t.username %>
+                        </td>
+                        <td style="padding: 10px; border:none; text-align:left;">
+                            <span style="background:#f1f5f9; padding:3px 10px; border-radius:10px;"><%= t.count %> رسالة</span>
+                        </td>
+                    </tr>
+                    <% }) %>
+                    <% if(topUsers.length === 0) { %>
+                        <tr><td style="text-align:center; color:#94a3b8;">لا توجد إحصائيات بعد</td></tr>
+                    <% } %>
+                </table>
+            </div>
+        </div>
+
+        <!-- رقم الإدارة -->
         <div class="card" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
-            <h3 style="margin-top:0; color:#166534;">🤖 رقم الإدارة (النظام الآلي)</h3>
-            <p style="color:#15803d; font-size:14px;">امسح هذا الباركود بجوال الإدارة. هذا الرقم سيقوم تلقائياً بإرسال (أكواد التسجيل واستعادة كلمات المرور) للعملاء.</p>
+            <h3 style="margin-top:0; color:#166534;">🤖 رقم الإدارة (النظام الآلي للـ OTP)</h3>
             <h4 id="sys-status" style="color:#b91c1c;">بانتظار التحميل...</h4>
             <div id="sys-qr-container" style="display:none; text-align:center;">
                 <img id="sys-qr" src="">
@@ -49,6 +120,7 @@
             </form>
         </div>
 
+        <!-- جدول العملاء (نفس السابق) -->
         <div class="card" style="overflow-x: auto;">
             <h3 style="margin-top:0;">العملاء والمشتركين</h3>
             <table>
@@ -89,7 +161,7 @@
         <div class="modal-content">
             <h3 id="modalTitle" style="margin-top:0;">تعديل العميل</h3>
             <form id="editForm" method="POST">
-                <label>تغيير كلمة المرور (اتركه فارغاً إذا لا تريد تغييره):</label>
+                <label>تغيير كلمة المرور (اتركه فارغاً):</label>
                 <input type="text" name="password" placeholder="الرقم السري الجديد">
                 
                 <label>إضافة أيام لاشتراكه (تمديد الصلاحية):</label>
@@ -111,7 +183,6 @@
             document.getElementById('editModal').style.display = 'flex';
         }
 
-        // ربط واتساب النظام (الإدارة) برقم الـ ID الجديد (111111111111111111111111)
         const sysSocket = io({ query: { userId: "111111111111111111111111" } });
         sysSocket.on('qr', (imgData) => {
             document.getElementById('sys-qr').src = imgData;
