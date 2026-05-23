@@ -33,10 +33,14 @@ mongoose.connect(process.env.MONGODB_URI)
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
             await getSettings();
-            startWhatsAppSession(SYSTEM_ID, io);
+            
+            let sysSock = getSession(SYSTEM_ID);
+            if (!sysSock) startWhatsAppSession(SYSTEM_ID, io);
+            
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
-                startWhatsAppSession(user._id.toString(), io);
+                let uSock = getSession(user._id.toString());
+                if (!uSock) startWhatsAppSession(user._id.toString(), io);
             }
         } catch (e) { console.error('خطأ:', e); }
     }).catch(err => console.error('❌ خطأ في الاتصال:', err));
@@ -50,14 +54,15 @@ app.use(session({
     resave: false, saveUninitialized: false
 }));
 
-// ================= نظام محرك الطابور المتوازي (الذكي) =================
-const activeCampaigns = {}; // طابور مستقل لكل عميل
+// ================= نظام إدارة الحملات المتعددة (Campaign Manager) =================
+const activeCampaigns = {}; // { userId: { campaignId1: {...}, campaignId2: {...} } }
 
-async function processUserCampaign(userId) {
-    const campaign = activeCampaigns[userId];
+async function processUserCampaign(userId, campaignId) {
+    const campaign = activeCampaigns[userId][campaignId];
     if (!campaign) return;
 
-    while (campaign.numbers.length > 0) {
+    // الحلقة تستمر طالما يوجد أرقام ولم يقم المستخدم بإلغاء الحملة
+    while (campaign.numbers.length > 0 && !campaign.isCancelled) {
         let settings = await getSettings();
 
         // 1. فحص أوقات الهدوء (توقيت السعودية UTC+3)
@@ -65,21 +70,26 @@ async function processUserCampaign(userId) {
             const now = new Date();
             const ksaHour = (now.getUTCHours() + 3) % 24;
             
-            // من 11 مساءً (23) إلى ما قبل 8 صباحاً (8) يتوقف النظام
             if (ksaHour >= 23 || ksaHour < 8) {
-                campaign.status = 'أوقات الهدوء تعمل (الإرسال متوقف تلقائياً للصباح 🌙)';
-                if (io) io.to(userId).emit('campaign-status', campaign);
-                // ينام السيرفر لمدة 3 دقائق ثم يتأكد هل حان الوقت أم لا
-                await new Promise(r => setTimeout(r, 3 * 60 * 1000));
+                campaign.status = 'أوقات الهدوء 🌙 (متوقف للصباح)';
+                if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+                
+                // النوم المتقطع لكي نستجيب لزر الإلغاء فوراً إذا ضغط عليه المستخدم
+                for (let i = 0; i < 30; i++) { // ينام 5 دقائق مقسمة كل 10 ثواني
+                    if (campaign.isCancelled) break;
+                    await new Promise(r => setTimeout(r, 10000));
+                }
                 continue; 
             }
         }
+
+        if (campaign.isCancelled) break;
 
         // 2. سحب رقم وإرسال الرسالة
         const num = campaign.numbers.shift();
         const jid = `${num}@s.whatsapp.net`;
         campaign.status = `يتم الإرسال الآن للرقم: ${num}`;
-        if (io) io.to(userId).emit('campaign-status', campaign);
+        if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
 
         try {
             const wpCheck = await campaign.sock.onWhatsApp(jid);
@@ -94,33 +104,64 @@ async function processUserCampaign(userId) {
             await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
         }
 
-        if (io) io.to(userId).emit('campaign-status', campaign);
+        if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
 
-        // 3. تطبيق الفاصل الزمني (الوضع الآمن أو العادي) قبل الرقم التالي
-        if (campaign.numbers.length > 0) {
+        // 3. تطبيق الفاصل الزمني للوضع الآمن إذا تبقى أرقام ولم تلغَ الحملة
+        if (campaign.numbers.length > 0 && !campaign.isCancelled) {
             settings = await getSettings();
             let delayMs = 2000; // العادي ثانيتين
             let delayMsg = 'ثانيتين ⚡';
 
-            if (settings.isSafeMode) {
+            // إذا كان الوضع الآمن مفعل، وإجمالي أرقام الحملة أكبر من 1 (استثناء الرقم الواحد)
+            if (settings.isSafeMode && campaign.total > 1) {
                 const min = 3, max = 15;
                 const randomMins = Math.floor(Math.random() * (max - min + 1)) + min;
                 delayMs = randomMins * 60 * 1000;
                 delayMsg = `${randomMins} دقائق 🛡️`;
             }
 
-            campaign.status = `الوضع الآمن: انتظار ${delayMsg} للرقم التالي...`;
-            if (io) io.to(userId).emit('campaign-status', campaign);
+            campaign.status = `انتظار ${delayMsg}...`;
+            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
             
-            await new Promise(r => setTimeout(r, delayMs));
+            // تقسيم الانتظار لثواني معدودة لكي يستجيب لزر التوقف فوراً
+            const loops = delayMs / 2000;
+            for(let i = 0; i < loops; i++) {
+                if (campaign.isCancelled) break;
+                await new Promise(r => setTimeout(r, 2000));
+            }
         }
     }
 
-    // انتهت الحملة بالكامل
-    campaign.status = 'اكتملت الحملة بنجاح ✅';
-    if (io) io.to(userId).emit('campaign-status', campaign);
-    delete activeCampaigns[userId];
+    // تحديث الحالة النهائية
+    if (campaign.isCancelled) {
+        campaign.status = 'تم إلغاء الحملة 🛑';
+    } else {
+        campaign.status = 'مكتملة ✅';
+    }
+    
+    if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+    
+    // مسح الحملة من الشاشة بعد 20 ثانية من الانتهاء
+    setTimeout(() => {
+        if (activeCampaigns[userId] && activeCampaigns[userId][campaignId]) {
+            delete activeCampaigns[userId][campaignId];
+            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+        }
+    }, 20000);
 }
+
+// مسار جديد لإلغاء أي حملة
+app.post('/api/cancel-campaign', requireAuth, (req, res) => {
+    const { campaignId } = req.body;
+    const userId = req.session.userId.toString();
+    if (activeCampaigns[userId] && activeCampaigns[userId][campaignId]) {
+        activeCampaigns[userId][campaignId].isCancelled = true;
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: 'الحملة غير موجودة أو انتهت' });
+    }
+});
+
 
 async function sendSystemOTP(phone, message) {
     let sock = getSession(SYSTEM_ID);
@@ -292,8 +333,8 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     const isImpersonating = !!req.session.originalAdminId;
     const settings = await getSettings();
     
-    // سحب الحملة الحالية للعميل إن وجدت ليعرف حالتها
-    const activeCampaign = activeCampaigns[user._id.toString()] || null;
+    // سحب الحملات النشطة الخاصة بالعميل لإرسالها للواجهة
+    const myCampaigns = activeCampaigns[user._id.toString()] ? Object.values(activeCampaigns[user._id.toString()]) : [];
     
     const totalMessages = await MessageLog.countDocuments({ userId: user._id });
     const successMessages = await MessageLog.countDocuments({ userId: user._id, status: 'success' });
@@ -306,7 +347,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
         { $sort: { _id: 1 } }
     ]);
 
-    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings, activeCampaign });
+    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings, myCampaigns });
 });
 
 app.get('/api-guide', requireAuth, async (req, res) => {
@@ -421,7 +462,7 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
-// ================= الـ API (المحرك المطور) =================
+// ================= الـ API (محرك الحملات المتعددة) =================
 app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -437,13 +478,11 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
     }
 
     let sock = getSession(user._id.toString());
-    if (!sock) sock = await startWhatsAppSession(user._id.toString(), io);
-    if (!sock || !sock.user) return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
-
-    // التأكد أنه ليس لديه حملة نشطة حالياً
-    if (activeCampaigns[user._id.toString()]) {
-        return res.status(400).json({ error: 'لديك حملة قيد الإرسال حالياً. يرجى الانتظار حتى تنتهي.' });
+    if (!sock) {
+        startWhatsAppSession(user._id.toString(), io);
+        return res.status(503).json({ error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم.' });
     }
+    if (!sock.user) return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
 
     const to = req.body.to;
     const body = req.body.message || req.body.body;
@@ -457,27 +496,49 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
         mediaArray = req.body.media;
     }
 
-    // إنشاء طابور الحملة الخاص به وإطلاقه في الخلفية (بدون تأخير API)
-    activeCampaigns[user._id.toString()] = {
-        sock, numbers: [...numbers], body, media: mediaArray, 
-        total: numbers.length, sent: 0, failed: 0, status: 'جارِ التجهيز لبدء الحملة...'
+    const userIdStr = user._id.toString();
+    if (!activeCampaigns[userIdStr]) activeCampaigns[userIdStr] = {};
+
+    // إنشاء ID خاص بالحملة وبدئها بشكل مستقل تماماً
+    const campaignId = Date.now().toString();
+    activeCampaigns[userIdStr][campaignId] = {
+        id: campaignId,
+        sock, 
+        numbers: [...numbers], 
+        body, 
+        media: mediaArray, 
+        total: numbers.length, 
+        sent: 0, 
+        failed: 0, 
+        status: 'جارِ التجهيز لبدء الحملة...',
+        isCancelled: false
     };
     
-    processUserCampaign(user._id.toString()).catch(e => console.error(e));
-    res.json({ success: true, message: "تم إطلاق الحملة بنجاح، يمكنك متابعة الحالة المباشرة باللوحة." });
+    processUserCampaign(userIdStr, campaignId).catch(e => console.error(e));
+    res.json({ success: true, message: "تم إطلاق الحملة المستقلة بنجاح! راقبها من صندوق الحملات." });
 });
 
 app.get('/ping', (req, res) => res.send('pong'));
 
+// تعديل جوهري لإصلاح مشكلة تعارض وميض الباركود
 io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
     if (sessionUserId) {
         socket.join(sessionUserId);
-        startWhatsAppSession(sessionUserId, io).then(sock => { if (sock && sock.user) socket.emit('ready', 'WhatsApp is connected'); });
         
-        // إرسال حالة الحملة فور الدخول
+        // التحقق مما إذا كانت الجلسة موجودة مسبقاً قبل طلب جلسة جديدة
+        const sock = getSession(sessionUserId);
+        if (sock && sock.user) {
+            socket.emit('ready', 'WhatsApp is connected');
+        } else if (!sock) {
+            startWhatsAppSession(sessionUserId, io).then(s => { 
+                if (s && s.user) socket.emit('ready', 'WhatsApp is connected'); 
+            });
+        }
+        
+        // إرسال حالة الحملات فوراً عند الاتصال
         if (activeCampaigns[sessionUserId]) {
-            socket.emit('campaign-status', activeCampaigns[sessionUserId]);
+            socket.emit('campaigns-update', Object.values(activeCampaigns[sessionUserId]));
         }
     }
 });
