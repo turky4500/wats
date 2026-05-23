@@ -21,14 +21,6 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 
 const SYSTEM_ID = '111111111111111111111111';
 
-// دالة الحماية من تعليق الواتساب (Timeout)
-const withTimeout = (promise, ms, defaultError) => {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error(defaultError)), ms))
-    ]);
-};
-
 async function getSettings() {
     let settings = await Settings.findOne();
     if (!settings) settings = await Settings.create({});
@@ -61,114 +53,6 @@ app.use(session({
     resave: false, saveUninitialized: false
 }));
 
-// ================= نظام إدارة الحملات المتعددة =================
-const activeCampaigns = {}; 
-
-async function processUserCampaign(userId, campaignId) {
-    const campaign = activeCampaigns[userId][campaignId];
-    if (!campaign) return;
-
-    try {
-        while (campaign.numbers.length > 0 && !campaign.isCancelled) {
-            let settings = await getSettings();
-
-            if (settings.isQuietHours) {
-                const now = new Date();
-                const ksaHour = (now.getUTCHours() + 3) % 24;
-                
-                if (ksaHour >= 23 || ksaHour < 8) {
-                    campaign.status = 'أوقات الهدوء 🌙 (متوقف للصباح)';
-                    if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-                    
-                    for (let i = 0; i < 30; i++) {
-                        if (campaign.isCancelled) break;
-                        await new Promise(r => setTimeout(r, 10000));
-                    }
-                    continue; 
-                }
-            }
-
-            if (campaign.isCancelled) break;
-
-            const num = campaign.numbers.shift();
-            const jid = `${num}@s.whatsapp.net`;
-            campaign.status = `يتم الإرسال للرقم: ${num}`;
-            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-
-            try {
-                // ✅ الحماية 1: التحقق من الرقم بحد أقصى 10 ثواني لمنع التعليق
-                const wpCheck = await withTimeout(
-                    campaign.sock.onWhatsApp(jid),
-                    10000, 
-                    'عدم استجابة سيرفر واتساب'
-                );
-                
-                if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
-                    throw new Error('الرقم غير مسجل بالواتساب');
-                }
-                
-                // ✅ الحماية 2: إرسال الرسالة بحد أقصى 30 ثانية لمنع التعليق
-                await withTimeout(
-                    sendWhatsAppMessage(campaign.sock, jid, campaign.body, campaign.media),
-                    30000, 
-                    'تأخر في إرسال الرسالة'
-                );
-
-                campaign.sent++;
-                if (io) io.to(userId).emit('message-sent', { to: num, body: campaign.body || '(مرفق)' });
-                await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'success' });
-            } catch (e) {
-                campaign.failed++;
-                if (io) io.to(userId).emit('error', `خطأ مع ${num}: ${e.message}`);
-                await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'failed', errorDetails: e.message });
-            }
-
-            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-
-            // ✅ الفاصل الزمني لا يعمل إطلاقاً إذا تبقى صفر أرقام
-            if (campaign.numbers.length > 0 && !campaign.isCancelled) {
-                settings = await getSettings();
-                let delayMs = 2000; 
-                let delayMsg = 'ثانيتين ⚡';
-
-                if (settings.isSafeMode && campaign.total > 1) {
-                    const min = 3, max = 15;
-                    const randomMins = Math.floor(Math.random() * (max - min + 1)) + min;
-                    delayMs = randomMins * 60 * 1000;
-                    delayMsg = `${randomMins} دقائق 🛡️`;
-                }
-
-                campaign.status = `انتظار ${delayMsg}...`;
-                if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-                
-                const loops = delayMs / 2000;
-                for(let i = 0; i < loops; i++) {
-                    if (campaign.isCancelled) break;
-                    await new Promise(r => setTimeout(r, 2000));
-                }
-            }
-        }
-    } catch (globalErr) {
-        campaign.status = 'خطأ داخلي أوقف الحملة ❌';
-        console.error('Campaign Loop Error:', globalErr);
-    }
-
-    if (!campaign.status.includes('خطأ')) {
-        if (campaign.isCancelled) campaign.status = 'تم الإلغاء 🛑';
-        else campaign.status = 'مكتملة ✅';
-    }
-    
-    if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-    
-    setTimeout(() => {
-        if (activeCampaigns[userId] && activeCampaigns[userId][campaignId]) {
-            delete activeCampaigns[userId][campaignId];
-            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-        }
-    }, 20000);
-}
-
-// تعريف دوال الحماية
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) return res.redirect('/login');
     next();
@@ -180,17 +64,6 @@ const requireAdmin = async (req, res, next) => {
     if (user && user.role === 'admin') return next();
     res.status(403).send('غير مصرح لك بالدخول');
 };
-
-app.post('/api/cancel-campaign', requireAuth, (req, res) => {
-    const { campaignId } = req.body;
-    const userId = req.session.userId.toString();
-    if (activeCampaigns[userId] && activeCampaigns[userId][campaignId]) {
-        activeCampaigns[userId][campaignId].isCancelled = true;
-        res.json({ success: true });
-    } else {
-        res.status(404).json({ error: 'الحملة غير موجودة أو انتهت' });
-    }
-});
 
 async function sendSystemOTP(phone, message) {
     let sock = getSession(SYSTEM_ID);
@@ -349,8 +222,6 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     const isImpersonating = !!req.session.originalAdminId;
     const settings = await getSettings();
     
-    const myCampaigns = activeCampaigns[user._id.toString()] ? Object.values(activeCampaigns[user._id.toString()]) : [];
-    
     const totalMessages = await MessageLog.countDocuments({ userId: user._id });
     const successMessages = await MessageLog.countDocuments({ userId: user._id, status: 'success' });
     const failedMessages = totalMessages - successMessages;
@@ -362,7 +233,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
         { $sort: { _id: 1 } }
     ]);
 
-    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings, myCampaigns });
+    res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings });
 });
 
 app.get('/api-guide', requireAuth, async (req, res) => {
@@ -425,12 +296,10 @@ app.get('/admin/login-as/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/settings', requireAdmin, async (req, res) => {
-    const { supportPhone, freeTrialDays, isSafeMode, isQuietHours } = req.body;
+    const { supportPhone, freeTrialDays } = req.body;
     let settings = await getSettings();
     settings.supportPhone = supportPhone;
     settings.freeTrialDays = freeTrialDays;
-    settings.isSafeMode = isSafeMode === 'on';
-    settings.isQuietHours = isQuietHours === 'on';
     await settings.save();
     res.redirect('/admin');
 });
@@ -509,25 +378,28 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
         mediaArray = req.body.media;
     }
 
-    const userIdStr = user._id.toString();
-    if (!activeCampaigns[userIdStr]) activeCampaigns[userIdStr] = {};
+    res.json({ success: true, message: "تم استلام طلب الإرسال وسيتم المعالجة فوراً." });
 
-    const campaignId = Date.now().toString();
-    activeCampaigns[userIdStr][campaignId] = {
-        id: campaignId,
-        sock, 
-        numbers: [...numbers], 
-        body, 
-        media: mediaArray, 
-        total: numbers.length, 
-        sent: 0, 
-        failed: 0, 
-        status: 'جارِ التجهيز لبدء الحملة...',
-        isCancelled: false
-    };
-    
-    processUserCampaign(userIdStr, campaignId).catch(e => console.error(e));
-    res.json({ success: true, message: "تم إطلاق الحملة المستقلة بنجاح! راقبها من صندوق الحملات." });
+    // تشغيل الإرسال في الخلفية بصمت
+    (async () => {
+        for (let num of numbers) {
+            try {
+                const jid = `${num}@s.whatsapp.net`;
+                const wpCheck = await sock.onWhatsApp(jid);
+                if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل بالواتساب');
+                
+                await sendWhatsAppMessage(sock, jid, body, mediaArray);
+                
+                if (io) io.to(user._id.toString()).emit('message-sent', { to: num, body: body || '(مرفق)' });
+                await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'success' });
+            } catch (e) {
+                if (io) io.to(user._id.toString()).emit('error', `خطأ مع ${num}: ${e.message}`);
+                await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'failed', errorDetails: e.message });
+            }
+            // فاصل زمني بسيط 2 ثانية بين كل رسالة لتجنب الحظر
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    })();
 });
 
 app.get('/ping', (req, res) => res.send('pong'));
@@ -544,10 +416,6 @@ io.on('connection', (socket) => {
             startWhatsAppSession(sessionUserId, io).then(s => { 
                 if (s && s.user) socket.emit('ready', 'WhatsApp is connected'); 
             });
-        }
-        
-        if (activeCampaigns[sessionUserId]) {
-            socket.emit('campaigns-update', Object.values(activeCampaigns[sessionUserId]));
         }
     }
 });
