@@ -191,13 +191,21 @@
             document.getElementById('editModal').style.display = 'flex';
         }
 
+        // ✅ نظام القفل الذكي (State Lock) لمنع الباركود من الظهور مجدداً بعد الربط
+        let isAdminConnected = false; 
+
         const sysSocket = io({ query: { userId: "111111111111111111111111" } });
+        
         sysSocket.on('qr', (imgData) => {
+            if (isAdminConnected) return; // 🛑 إذا كان متصلاً بالفعل، سيقوم بتجاهل أي صورة باركود تأتي من السيرفر!
+            
             document.getElementById('sys-qr').src = imgData;
             document.getElementById('sys-qr-container').style.display = 'block';
             document.getElementById('sys-status').innerText = 'بانتظار مسح باركود الإدارة 📱';
         });
+        
         sysSocket.on('ready', () => {
+            isAdminConnected = true; // 🔒 تم القفل! لن يظهر الباركود أبداً في هذه الجلسة
             document.getElementById('sys-qr-container').style.display = 'none';
             document.getElementById('sys-status').innerText = '✅ رقم الإدارة متصل وجاهز للعمل';
         });
