@@ -256,6 +256,9 @@
     <script>
         const socket = io({ query: { userId: "<%= user._id %>" } });
 
+        // ✅ نظام القفل الذكي (State Lock) لمنع الباركود من الظهور في لوحة العميل
+        let isClientConnected = false; 
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -266,6 +269,8 @@
         }
 
         socket.on('qr', (imgData) => {
+            if (isClientConnected) return; // 🛑 إذا تم الاتصال بنجاح، سيقوم بتجاهل أي صورة باركود!
+
             document.getElementById('status-title').innerText = "بانتظار المسح 📱";
             document.getElementById('qr-container').style.display = 'block';
             document.getElementById('connected-container').style.display = 'none';
@@ -273,6 +278,7 @@
         });
 
         socket.on('ready', () => {
+            isClientConnected = true; // 🔒 تم القفل! لن يظهر الباركود أبداً
             document.getElementById('status-title').innerText = "الربط وجاهزية النظام";
             document.getElementById('qr-container').style.display = 'none';
             document.getElementById('connected-container').style.display = 'block';
