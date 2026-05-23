@@ -54,14 +54,13 @@ app.use(session({
     resave: false, saveUninitialized: false
 }));
 
-// ================= نظام إدارة الحملات المتعددة (Campaign Manager) =================
+// ================= نظام إدارة الحملات المتعددة =================
 const activeCampaigns = {}; // { userId: { campaignId1: {...}, campaignId2: {...} } }
 
 async function processUserCampaign(userId, campaignId) {
     const campaign = activeCampaigns[userId][campaignId];
     if (!campaign) return;
 
-    // الحلقة تستمر طالما يوجد أرقام ولم يقم المستخدم بإلغاء الحملة
     while (campaign.numbers.length > 0 && !campaign.isCancelled) {
         let settings = await getSettings();
 
@@ -74,8 +73,7 @@ async function processUserCampaign(userId, campaignId) {
                 campaign.status = 'أوقات الهدوء 🌙 (متوقف للصباح)';
                 if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
                 
-                // النوم المتقطع لكي نستجيب لزر الإلغاء فوراً إذا ضغط عليه المستخدم
-                for (let i = 0; i < 30; i++) { // ينام 5 دقائق مقسمة كل 10 ثواني
+                for (let i = 0; i < 30; i++) {
                     if (campaign.isCancelled) break;
                     await new Promise(r => setTimeout(r, 10000));
                 }
@@ -88,7 +86,7 @@ async function processUserCampaign(userId, campaignId) {
         // 2. سحب رقم وإرسال الرسالة
         const num = campaign.numbers.shift();
         const jid = `${num}@s.whatsapp.net`;
-        campaign.status = `يتم الإرسال الآن للرقم: ${num}`;
+        campaign.status = `يتم الإرسال للرقم: ${num}`;
         if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
 
         try {
@@ -96,23 +94,22 @@ async function processUserCampaign(userId, campaignId) {
             if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل بالواتساب');
             await sendWhatsAppMessage(campaign.sock, jid, campaign.body, campaign.media);
             campaign.sent++;
-            if (io) io.to(userId).emit('message-sent', { to: num, body: campaign.body || '(تم إرسال مرفق)' });
-            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(رسالة وسائط)', status: 'success' });
+            if (io) io.to(userId).emit('message-sent', { to: num, body: campaign.body || '(مرفق)' });
+            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'success' });
         } catch (e) {
             campaign.failed++;
-            if (io) io.to(userId).emit('error', `خطأ مع الرقم ${num}: ${e.message}`);
-            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(رسالة وسائط)', status: 'failed', errorDetails: e.message });
+            if (io) io.to(userId).emit('error', `خطأ مع ${num}: ${e.message}`);
+            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'failed', errorDetails: e.message });
         }
 
         if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
 
-        // 3. تطبيق الفاصل الزمني للوضع الآمن إذا تبقى أرقام ولم تلغَ الحملة
+        // 3. تطبيق الفاصل الزمني
         if (campaign.numbers.length > 0 && !campaign.isCancelled) {
             settings = await getSettings();
-            let delayMs = 2000; // العادي ثانيتين
+            let delayMs = 2000; 
             let delayMsg = 'ثانيتين ⚡';
 
-            // إذا كان الوضع الآمن مفعل، وإجمالي أرقام الحملة أكبر من 1 (استثناء الرقم الواحد)
             if (settings.isSafeMode && campaign.total > 1) {
                 const min = 3, max = 15;
                 const randomMins = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -123,7 +120,6 @@ async function processUserCampaign(userId, campaignId) {
             campaign.status = `انتظار ${delayMsg}...`;
             if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
             
-            // تقسيم الانتظار لثواني معدودة لكي يستجيب لزر التوقف فوراً
             const loops = delayMs / 2000;
             for(let i = 0; i < loops; i++) {
                 if (campaign.isCancelled) break;
@@ -132,16 +128,11 @@ async function processUserCampaign(userId, campaignId) {
         }
     }
 
-    // تحديث الحالة النهائية
-    if (campaign.isCancelled) {
-        campaign.status = 'تم إلغاء الحملة 🛑';
-    } else {
-        campaign.status = 'مكتملة ✅';
-    }
+    if (campaign.isCancelled) campaign.status = 'تم الإلغاء 🛑';
+    else campaign.status = 'مكتملة ✅';
     
     if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
     
-    // مسح الحملة من الشاشة بعد 20 ثانية من الانتهاء
     setTimeout(() => {
         if (activeCampaigns[userId] && activeCampaigns[userId][campaignId]) {
             delete activeCampaigns[userId][campaignId];
@@ -150,7 +141,20 @@ async function processUserCampaign(userId, campaignId) {
     }, 20000);
 }
 
-// مسار جديد لإلغاء أي حملة
+// تعريف دوال الحماية
+const requireAuth = (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/login');
+    next();
+};
+
+const requireAdmin = async (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/login');
+    const user = await User.findById(req.session.userId);
+    if (user && user.role === 'admin') return next();
+    res.status(403).send('غير مصرح لك بالدخول');
+};
+
+// مسار إلغاء الحملة
 app.post('/api/cancel-campaign', requireAuth, (req, res) => {
     const { campaignId } = req.body;
     const userId = req.session.userId.toString();
@@ -161,7 +165,6 @@ app.post('/api/cancel-campaign', requireAuth, (req, res) => {
         res.status(404).json({ error: 'الحملة غير موجودة أو انتهت' });
     }
 });
-
 
 async function sendSystemOTP(phone, message) {
     let sock = getSession(SYSTEM_ID);
@@ -177,18 +180,6 @@ async function createDefaultAdmin() {
     if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
 }
 createDefaultAdmin();
-
-const requireAuth = (req, res, next) => {
-    if (!req.session.userId) return res.redirect('/login');
-    next();
-};
-
-const requireAdmin = async (req, res, next) => {
-    if (!req.session.userId) return res.redirect('/login');
-    const user = await User.findById(req.session.userId);
-    if (user && user.role === 'admin') return next();
-    res.status(403).send('غير مصرح لك بالدخول');
-};
 
 async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     if (mediaArray && mediaArray.length > 0) {
@@ -326,14 +317,12 @@ app.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) => 
     res.redirect('back');
 });
 
-// ================= لوحة تحكم العميل المحدثة =================
 app.get('/dashboard', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
     const isImpersonating = !!req.session.originalAdminId;
     const settings = await getSettings();
     
-    // سحب الحملات النشطة الخاصة بالعميل لإرسالها للواجهة
     const myCampaigns = activeCampaigns[user._id.toString()] ? Object.values(activeCampaigns[user._id.toString()]) : [];
     
     const totalMessages = await MessageLog.countDocuments({ userId: user._id });
@@ -355,7 +344,6 @@ app.get('/api-guide', requireAuth, async (req, res) => {
     res.render('api-guide', { user, host: req.protocol + '://' + req.get('host') });
 });
 
-// ================= الإدارة =================
 app.get('/admin', requireAdmin, async (req, res) => {
     const users = await User.find({ role: 'user' }).sort({ createdAt: -1 });
     const totalSystemMessages = await MessageLog.countDocuments();
@@ -462,7 +450,6 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
-// ================= الـ API (محرك الحملات المتعددة) =================
 app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
@@ -499,7 +486,6 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
     const userIdStr = user._id.toString();
     if (!activeCampaigns[userIdStr]) activeCampaigns[userIdStr] = {};
 
-    // إنشاء ID خاص بالحملة وبدئها بشكل مستقل تماماً
     const campaignId = Date.now().toString();
     activeCampaigns[userIdStr][campaignId] = {
         id: campaignId,
@@ -520,13 +506,11 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
 
 app.get('/ping', (req, res) => res.send('pong'));
 
-// تعديل جوهري لإصلاح مشكلة تعارض وميض الباركود
 io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
     if (sessionUserId) {
         socket.join(sessionUserId);
         
-        // التحقق مما إذا كانت الجلسة موجودة مسبقاً قبل طلب جلسة جديدة
         const sock = getSession(sessionUserId);
         if (sock && sock.user) {
             socket.emit('ready', 'WhatsApp is connected');
@@ -536,7 +520,6 @@ io.on('connection', (socket) => {
             });
         }
         
-        // إرسال حالة الحملات فوراً عند الاتصال
         if (activeCampaigns[sessionUserId]) {
             socket.emit('campaigns-update', Object.values(activeCampaigns[sessionUserId]));
         }
