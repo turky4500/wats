@@ -61,7 +61,6 @@
                 <div id="sys-qr-container" style="display:none; text-align:center;">
                     <img id="sys-qr" src="">
                 </div>
-                <!-- زر فصل اتصال رقم الإدارة -->
                 <form action="/admin/disconnect-system-whatsapp" method="POST" style="margin-top: 15px;" onsubmit="return confirm('هل أنت متأكد أنك تريد فصل الرقم الإداري الحالي لربط رقم جديد؟');">
                     <button type="submit" class="btn btn-red" style="width: 100%; padding:12px; font-size:15px;">🔌 فصل الواتساب الإداري الحالي</button>
                 </form>
@@ -77,6 +76,19 @@
                     <label style="font-weight:bold; font-size:13px; color:#475569;">الأيام المجانية (تُعطى تلقائياً لأي عميل يسجل جديد):</label>
                     <input type="number" name="freeTrialDays" value="<%= settings.freeTrialDays %>" min="0" required>
                     
+                    <!-- التحديث الجديد: أزرار التحكم بالوضع الآمن والهدوء -->
+                    <div style="margin: 15px 0; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display:flex; align-items:center; gap:10px; font-weight:bold; font-size:14px; cursor:pointer; color:#1e3a8a;">
+                            <input type="checkbox" name="isSafeMode" <%= settings.isSafeMode ? 'checked' : '' %> style="width:20px; height:20px; cursor:pointer;">
+                            تفعيل الوضع الآمن (فاصل عشوائي 3 إلى 15 دقيقة لتفادي الحظر) 🛡️
+                        </label>
+                        <br>
+                        <label style="display:flex; align-items:center; gap:10px; font-weight:bold; font-size:14px; cursor:pointer; color:#1e3a8a; margin-top:10px;">
+                            <input type="checkbox" name="isQuietHours" <%= settings.isQuietHours ? 'checked' : '' %> style="width:20px; height:20px; cursor:pointer;">
+                            تفعيل أوقات الهدوء (تعليق الإرسال من 11م إلى 8ص بتوقيت السعودية) 🌙
+                        </label>
+                    </div>
+
                     <button type="submit" class="btn btn-blue" style="width: 100%;">💾 حفظ إعدادات النظام</button>
                 </form>
 
