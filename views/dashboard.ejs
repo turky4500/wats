@@ -23,6 +23,7 @@
         .btn-dark { background: #475569; color: white; }
         .btn-warning { background: var(--warning); color: white; }
         .btn-disabled { background: #cbd5e1 !important; color: white !important; cursor: not-allowed !important; transform: none !important; }
+        .btn-red { background: var(--danger); color: white; }
 
         .grid-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; align-items: start; }
         @media (max-width: 800px) { .grid-layout { grid-template-columns: 1fr; } }
@@ -38,7 +39,6 @@
         .input-group { display: flex; margin-bottom: 20px; }
         .input-group input { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 15px; outline: none; }
         .input-group button { background: white; color: var(--primary); border: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; border-radius: 0 6px 6px 0; padding: 0 20px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; }
-        .input-group button:hover { background: #f0fdf4; color: #16a34a; }
         
         .file-upload-styled { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; background: #f8fafc; }
         .recipients-list { width: 100%; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; background: #f8fafc; font-family: monospace; font-size: 15px; direction: ltr; text-align: left; resize: vertical; outline: none; box-sizing: border-box; }
@@ -52,9 +52,7 @@
         .toolbar-btn { background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 14px; font-weight: bold; color: #475569; font-family: inherit; }
         .message-textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 0 0 6px 6px; padding: 15px; min-height: 150px; resize: vertical; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; }
         .drag-drop-zone { border: 2px dashed #3b82f6; background: #eff6ff; padding: 40px 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .drag-drop-zone h4 { color: #1e3a8a; margin: 15px 0 5px; font-weight: 800; font-size: 18px; }
-        .drag-drop-zone p { color: #60a5fa; font-size: 13px; margin: 0; }
-
+        
         #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); font-weight: 600; border-right: 4px solid var(--primary); animation: slideIn 0.3s forwards; }
         .toast.error { border-right-color: var(--danger); }
@@ -71,6 +69,11 @@
         .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; }
         .stat-card .num { font-size: 28px; font-weight: 800; margin-top: 5px; }
+
+        /* ستايل جدول الحملات الجديد */
+        .campaigns-table { width: 100%; border-collapse: collapse; text-align: right; font-size: 14px; margin-top: 10px; }
+        .campaigns-table th, .campaigns-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .campaigns-table th { background: #eff6ff; color: #1e3a8a; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -131,55 +134,26 @@
             </div>
         </div>
 
-        <!-- التحديث الجديد: حالة الحملة المباشرة (تظهر تلقائياً عندما يبدأ الإرسال) -->
-        <div id="campaign-status-box" class="card hidden" style="margin-bottom: 25px; padding: 20px; border: 2px solid #3b82f6; background: #eff6ff;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin-top:0; color:#1e3a8a; font-size:16px;">🚀 مراقبة الحملة الحالية</h3>
-                <span id="camp-status-badge" style="background:#3b82f6; color:white; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">جاري الإرسال...</span>
-            </div>
-            
-            <p id="camp-status-text" style="font-weight:bold; color:#475569; font-size:14px; margin: 10px 0;">يرجى الانتظار...</p>
-            
-            <div style="display:flex; gap:15px; margin-top:15px; flex-wrap:wrap;">
-                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #bfdbfe; text-align:center;">
-                    <div style="font-size:12px; color:#64748b;">إجمالي القائمة</div>
-                    <div id="camp-total" style="font-size:20px; font-weight:800; color:#1e3a8a;">0</div>
-                </div>
-                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #bbf7d0; text-align:center;">
-                    <div style="font-size:12px; color:#64748b;">تم الإرسال</div>
-                    <div id="camp-sent" style="font-size:20px; font-weight:800; color:#10b981;">0</div>
-                </div>
-                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #fecaca; text-align:center;">
-                    <div style="font-size:12px; color:#64748b;">فشل</div>
-                    <div id="camp-failed" style="font-size:20px; font-weight:800; color:#ef4444;">0</div>
-                </div>
-                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #fde68a; text-align:center;">
-                    <div style="font-size:12px; color:#64748b;">بالانتظار (في الطابور)</div>
-                    <div id="camp-waiting" style="font-size:20px; font-weight:800; color:#d97706;">0</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 25px; padding: 20px;">
-            <h3 style="margin-top:0; font-size: 16px;">إحصائية الإرسال آخر 7 أيام 📈</h3>
-            <% 
-                let maxCount = 0;
-                dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; });
-                if (maxCount === 0) maxCount = 1;
-            %>
-            <div style="display: flex; align-items: flex-end; gap: 10px; height: 100px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-top: 10px;">
-                <% dailyStats.forEach(s => { 
-                    let heightPercent = (s.count / maxCount) * 100;
-                %>
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;"><%= s.count %></div>
-                    <div style="width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; transition: 0.5s; height: <%= heightPercent %>%;"></div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
-                </div>
-                <% }) %>
-                <% if(dailyStats.length === 0) { %>
-                    <p style="width:100%; text-align:center; color:#94a3b8; font-size: 13px;">لا توجد عمليات إرسال في آخر 7 أيام</p>
-                <% } %>
+        <!-- التحديث الجديد: صندوق مدير الحملات المتعددة -->
+        <div id="multi-campaigns-box" class="card hidden" style="margin-bottom: 25px; padding: 20px; border: 2px solid #3b82f6; background: white;">
+            <h3 style="margin-top:0; color:#1e3a8a; font-size:18px;">🚀 الحملات الجارية حالياً</h3>
+            <div style="overflow-x:auto;">
+                <table class="campaigns-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الحملة</th>
+                            <th>إجمالي الأرقام</th>
+                            <th>✅ تم الإرسال</th>
+                            <th>❌ فشل</th>
+                            <th>⏳ المتبقي</th>
+                            <th style="width: 35%;">الحالة المباشرة</th>
+                            <th>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaigns-tbody">
+                        <!-- تُضاف وتتحدث تلقائياً عبر السوكت -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -193,8 +167,8 @@
                 <div id="connected-container" class="hidden">
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0;">
                         <p style="color: var(--primary); font-size: 15px; font-weight: 700; margin:0;">✅ واتساب متصل وجاهز</p>
-                        <form action="/disconnect-whatsapp" method="POST" onsubmit="return confirm('هل أنت متأكد من فصل رقم الواتساب الحالي؟ ستحتاج لمسح الباركود برقم جديد للتفعيل.');" style="margin:0;">
-                            <button type="submit" class="btn btn-dark" style="background:#ef4444; padding: 6px 12px; font-size:12px; cursor:pointer; border:none; border-radius:4px; color:white; font-weight:bold;">🔌 فصل الرقم</button>
+                        <form action="/disconnect-whatsapp" method="POST" onsubmit="return confirm('هل أنت متأكد من فصل رقم الواتساب الحالي؟');" style="margin:0;">
+                            <button type="submit" class="btn btn-red" style="padding: 6px 12px; font-size:12px;">🔌 فصل الرقم</button>
                         </form>
                     </div>
                     <h4 style="font-size: 14px; margin-top: 25px;">إشعارات الإرسال المباشرة:</h4>
@@ -207,7 +181,7 @@
             <div>
                 <div id="step-1" class="form-step active">
                     <div class="card">
-                        <h3 class="section-title">إضافة المستلمين</h3>
+                        <h3 class="section-title">إضافة المستلمين (لإنشاء حملة جديدة)</h3>
                         <label>أدخل رقم الهاتف (مع رمز البلد)</label>
                         <div class="input-group">
                             <button onclick="addManualNumber()">+ أضف</button>
@@ -271,7 +245,7 @@
                             <% if (isExpired) { %>
                                 <button class="btn btn-disabled" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
                             <% } else { %>
-                                <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة</button>
+                                <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إطلاق حملة جديدة</button>
                             <% } %>
                         </div>
                     </div>
@@ -328,38 +302,80 @@
             msgs.scrollTop = msgs.scrollHeight;
         });
 
-        // التحديث الجديد: الاستماع لتحديثات الحملة المباشرة لعرضها في المربع الجديد
-        socket.on('campaign-status', (campaign) => {
-            const box = document.getElementById('campaign-status-box');
-            if (campaign.status === 'اكتملت الحملة بنجاح ✅') {
-                document.getElementById('camp-status-badge').innerText = 'مكتمل ✅';
-                document.getElementById('camp-status-badge').style.background = '#10b981';
-                setTimeout(() => { box.classList.add('hidden'); }, 10000); // إخفاء بعد 10 ثواني
-            } else {
-                box.classList.remove('hidden');
-                document.getElementById('camp-status-badge').innerText = 'قيد العمل ⏳';
-                document.getElementById('camp-status-badge').style.background = '#3b82f6';
+        // التحديث الأقوى: إدارة الحملات المتعددة في الجدول
+        function renderCampaignsTable(campaignsArray) {
+            const box = document.getElementById('multi-campaigns-box');
+            const tbody = document.getElementById('campaigns-tbody');
+            
+            if (!campaignsArray || campaignsArray.length === 0) {
+                box.classList.add('hidden');
+                return;
             }
             
-            document.getElementById('camp-status-text').innerText = campaign.status;
-            document.getElementById('camp-total').innerText = campaign.total;
-            document.getElementById('camp-sent').innerText = campaign.sent;
-            document.getElementById('camp-failed').innerText = campaign.failed;
-            document.getElementById('camp-waiting').innerText = campaign.numbers.length;
+            box.classList.remove('hidden');
+            tbody.innerHTML = '';
+
+            campaignsArray.forEach(camp => {
+                const tr = document.createElement('tr');
+                
+                let isFinished = camp.status.includes('مكتملة') || camp.status.includes('إلغاء');
+                
+                // زر الإيقاف (يظهر فقط إذا كانت الحملة شغالة)
+                let actionBtn = isFinished ? 
+                    `<span style="color:#94a3b8; font-size:12px;">انتهت</span>` : 
+                    `<button class="btn btn-red" style="padding:4px 8px; font-size:12px;" onclick="cancelCampaign('${camp.id}')">🛑 إيقاف</button>`;
+                
+                // لون الحالة
+                let statusColor = '#3b82f6';
+                if (camp.status.includes('مكتملة')) statusColor = '#10b981';
+                else if (camp.status.includes('إلغاء')) statusColor = '#ef4444';
+                else if (camp.status.includes('انتظار') || camp.status.includes('الهدوء')) statusColor = '#f59e0b';
+
+                tr.innerHTML = `
+                    <td style="font-family:monospace; font-size:12px; color:#64748b;">...${camp.id.slice(-5)}</td>
+                    <td style="font-weight:bold;">${camp.total}</td>
+                    <td style="color:#10b981; font-weight:bold;">${camp.sent}</td>
+                    <td style="color:#ef4444; font-weight:bold;">${camp.failed}</td>
+                    <td style="color:#d97706; font-weight:bold;">${camp.numbers.length}</td>
+                    <td style="color:${statusColor}; font-weight:bold; font-size:12px;">${camp.status}</td>
+                    <td>${actionBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        socket.on('campaigns-update', (campaignsArray) => {
+            renderCampaignsTable(campaignsArray);
         });
 
-        // تشغيل الصندوق المباشر إذا قام العميل بعمل تحديث للصفحة (Refresh) وهناك حملة بالخلفية
-        <% if (typeof activeCampaign !== 'undefined' && activeCampaign) { %>
-            const initialCamp = <%- JSON.stringify(activeCampaign) %>;
-            const statusBox = document.getElementById('campaign-status-box');
-            statusBox.classList.remove('hidden');
-            document.getElementById('camp-status-text').innerText = initialCamp.status;
-            document.getElementById('camp-total').innerText = initialCamp.total;
-            document.getElementById('camp-sent').innerText = initialCamp.sent;
-            document.getElementById('camp-failed').innerText = initialCamp.failed;
-            document.getElementById('camp-waiting').innerText = initialCamp.numbers.length;
+        // رندر الحملات إذا تم تحديث الصفحة (Server side pass)
+        <% if (typeof myCampaigns !== 'undefined' && myCampaigns.length > 0) { %>
+            renderCampaignsTable(<%- JSON.stringify(myCampaigns) %>);
         <% } %>
 
+        // دالة إلغاء الحملة
+        async function cancelCampaign(campaignId) {
+            if (!confirm('هل أنت متأكد من رغبتك في إيقاف وإلغاء هذه الحملة نهائياً؟')) return;
+            
+            try {
+                const response = await fetch('/api/cancel-campaign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ campaignId: campaignId })
+                });
+                const resData = await response.json();
+                if (resData.success) {
+                    showToast('تم إصدار أمر الإلغاء، ستتوقف الحملة فوراً.', 'success');
+                } else {
+                    showToast(resData.error || 'خطأ في الإلغاء', 'error');
+                }
+            } catch (err) {
+                showToast('خطأ في الاتصال بالسيرفر', 'error');
+            }
+        }
+
+
+        // إعداد المستلمين
         let recipientsSet = new Set();
         function addManualNumber() {
             const val = document.getElementById('manualPhone').value.trim();
@@ -469,7 +485,7 @@
             if (!body && fileInput.files.length === 0) return showToast("الرجاء كتابة رسالة أو إضافة مرفق!", "error");
             
             const btn = document.getElementById('send-btn');
-            btn.innerText = 'جاري الإرسال للطابور... ⏳';
+            btn.innerText = 'جاري تحضير الحملة... ⏳';
             btn.disabled = true;
 
             try {
@@ -483,7 +499,7 @@
                 });
 
                 const result = await response.json();
-                btn.innerText = '🚀 إرسال الحملة';
+                btn.innerText = '🚀 إطلاق حملة جديدة';
                 btn.disabled = false;
 
                 if (result.success) {
@@ -494,12 +510,13 @@
                     document.getElementById('mediaFilesNames').innerText = '';
                     updatePreview();
                     goToStep(1);
+                    // نافذة الحملات ستظهر تلقائياً عبر السوكت
                 } else {
                     showToast(result.error || "خطأ", "error");
                 }
             } catch(e) {
                 showToast("حدث خطأ أثناء التواصل مع السيرفر!", "error");
-                btn.innerText = '🚀 إرسال الحملة';
+                btn.innerText = '🚀 إطلاق حملة جديدة';
                 btn.disabled = false;
             }
         }
