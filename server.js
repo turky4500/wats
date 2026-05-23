@@ -21,7 +21,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 
 const SYSTEM_ID = '111111111111111111111111';
 
-// دالة جلب الإعدادات
+// دالة الحماية من تعليق الواتساب (Timeout)
+const withTimeout = (promise, ms, defaultError) => {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(defaultError)), ms))
+    ]);
+};
+
 async function getSettings() {
     let settings = await Settings.findOne();
     if (!settings) settings = await Settings.create({});
@@ -55,81 +62,101 @@ app.use(session({
 }));
 
 // ================= نظام إدارة الحملات المتعددة =================
-const activeCampaigns = {}; // { userId: { campaignId1: {...}, campaignId2: {...} } }
+const activeCampaigns = {}; 
 
 async function processUserCampaign(userId, campaignId) {
     const campaign = activeCampaigns[userId][campaignId];
     if (!campaign) return;
 
-    while (campaign.numbers.length > 0 && !campaign.isCancelled) {
-        let settings = await getSettings();
+    try {
+        while (campaign.numbers.length > 0 && !campaign.isCancelled) {
+            let settings = await getSettings();
 
-        // 1. فحص أوقات الهدوء (توقيت السعودية UTC+3)
-        if (settings.isQuietHours) {
-            const now = new Date();
-            const ksaHour = (now.getUTCHours() + 3) % 24;
-            
-            if (ksaHour >= 23 || ksaHour < 8) {
-                campaign.status = 'أوقات الهدوء 🌙 (متوقف للصباح)';
+            if (settings.isQuietHours) {
+                const now = new Date();
+                const ksaHour = (now.getUTCHours() + 3) % 24;
+                
+                if (ksaHour >= 23 || ksaHour < 8) {
+                    campaign.status = 'أوقات الهدوء 🌙 (متوقف للصباح)';
+                    if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+                    
+                    for (let i = 0; i < 30; i++) {
+                        if (campaign.isCancelled) break;
+                        await new Promise(r => setTimeout(r, 10000));
+                    }
+                    continue; 
+                }
+            }
+
+            if (campaign.isCancelled) break;
+
+            const num = campaign.numbers.shift();
+            const jid = `${num}@s.whatsapp.net`;
+            campaign.status = `يتم الإرسال للرقم: ${num}`;
+            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+
+            try {
+                // ✅ الحماية 1: التحقق من الرقم بحد أقصى 10 ثواني لمنع التعليق
+                const wpCheck = await withTimeout(
+                    campaign.sock.onWhatsApp(jid),
+                    10000, 
+                    'عدم استجابة سيرفر واتساب'
+                );
+                
+                if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
+                    throw new Error('الرقم غير مسجل بالواتساب');
+                }
+                
+                // ✅ الحماية 2: إرسال الرسالة بحد أقصى 30 ثانية لمنع التعليق
+                await withTimeout(
+                    sendWhatsAppMessage(campaign.sock, jid, campaign.body, campaign.media),
+                    30000, 
+                    'تأخر في إرسال الرسالة'
+                );
+
+                campaign.sent++;
+                if (io) io.to(userId).emit('message-sent', { to: num, body: campaign.body || '(مرفق)' });
+                await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'success' });
+            } catch (e) {
+                campaign.failed++;
+                if (io) io.to(userId).emit('error', `خطأ مع ${num}: ${e.message}`);
+                await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'failed', errorDetails: e.message });
+            }
+
+            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
+
+            // ✅ الفاصل الزمني لا يعمل إطلاقاً إذا تبقى صفر أرقام
+            if (campaign.numbers.length > 0 && !campaign.isCancelled) {
+                settings = await getSettings();
+                let delayMs = 2000; 
+                let delayMsg = 'ثانيتين ⚡';
+
+                if (settings.isSafeMode && campaign.total > 1) {
+                    const min = 3, max = 15;
+                    const randomMins = Math.floor(Math.random() * (max - min + 1)) + min;
+                    delayMs = randomMins * 60 * 1000;
+                    delayMsg = `${randomMins} دقائق 🛡️`;
+                }
+
+                campaign.status = `انتظار ${delayMsg}...`;
                 if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
                 
-                for (let i = 0; i < 30; i++) {
+                const loops = delayMs / 2000;
+                for(let i = 0; i < loops; i++) {
                     if (campaign.isCancelled) break;
-                    await new Promise(r => setTimeout(r, 10000));
+                    await new Promise(r => setTimeout(r, 2000));
                 }
-                continue; 
             }
         }
-
-        if (campaign.isCancelled) break;
-
-        // 2. سحب رقم وإرسال الرسالة
-        const num = campaign.numbers.shift();
-        const jid = `${num}@s.whatsapp.net`;
-        campaign.status = `يتم الإرسال للرقم: ${num}`;
-        if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-
-        try {
-            const wpCheck = await campaign.sock.onWhatsApp(jid);
-            if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل بالواتساب');
-            await sendWhatsAppMessage(campaign.sock, jid, campaign.body, campaign.media);
-            campaign.sent++;
-            if (io) io.to(userId).emit('message-sent', { to: num, body: campaign.body || '(مرفق)' });
-            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'success' });
-        } catch (e) {
-            campaign.failed++;
-            if (io) io.to(userId).emit('error', `خطأ مع ${num}: ${e.message}`);
-            await MessageLog.create({ userId: userId, to: num, body: campaign.body || '(مرفق)', status: 'failed', errorDetails: e.message });
-        }
-
-        if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-
-        // 3. تطبيق الفاصل الزمني
-        if (campaign.numbers.length > 0 && !campaign.isCancelled) {
-            settings = await getSettings();
-            let delayMs = 2000; 
-            let delayMsg = 'ثانيتين ⚡';
-
-            if (settings.isSafeMode && campaign.total > 1) {
-                const min = 3, max = 15;
-                const randomMins = Math.floor(Math.random() * (max - min + 1)) + min;
-                delayMs = randomMins * 60 * 1000;
-                delayMsg = `${randomMins} دقائق 🛡️`;
-            }
-
-            campaign.status = `انتظار ${delayMsg}...`;
-            if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
-            
-            const loops = delayMs / 2000;
-            for(let i = 0; i < loops; i++) {
-                if (campaign.isCancelled) break;
-                await new Promise(r => setTimeout(r, 2000));
-            }
-        }
+    } catch (globalErr) {
+        campaign.status = 'خطأ داخلي أوقف الحملة ❌';
+        console.error('Campaign Loop Error:', globalErr);
     }
 
-    if (campaign.isCancelled) campaign.status = 'تم الإلغاء 🛑';
-    else campaign.status = 'مكتملة ✅';
+    if (!campaign.status.includes('خطأ')) {
+        if (campaign.isCancelled) campaign.status = 'تم الإلغاء 🛑';
+        else campaign.status = 'مكتملة ✅';
+    }
     
     if (io) io.to(userId).emit('campaigns-update', Object.values(activeCampaigns[userId]));
     
@@ -154,7 +181,6 @@ const requireAdmin = async (req, res, next) => {
     res.status(403).send('غير مصرح لك بالدخول');
 };
 
-// مسار إلغاء الحملة
 app.post('/api/cancel-campaign', requireAuth, (req, res) => {
     const { campaignId } = req.body;
     const userId = req.session.userId.toString();
