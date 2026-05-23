@@ -67,7 +67,6 @@
         #qr-container img { width: 100%; max-width: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; margin-top: 15px; }
         .alert-box { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; }
 
-        /* ستايل الإحصائيات */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; }
@@ -117,7 +116,6 @@
             </div>
         <% } %>
 
-        <!-- قسم الإحصائيات -->
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>إجمالي إرسالك</h3>
@@ -130,6 +128,35 @@
             <div class="stat-card">
                 <h3>الرسائل الفاشلة</h3>
                 <div class="num" style="color: #ef4444;"><%= failedMessages %></div>
+            </div>
+        </div>
+
+        <!-- التحديث الجديد: حالة الحملة المباشرة (تظهر تلقائياً عندما يبدأ الإرسال) -->
+        <div id="campaign-status-box" class="card hidden" style="margin-bottom: 25px; padding: 20px; border: 2px solid #3b82f6; background: #eff6ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin-top:0; color:#1e3a8a; font-size:16px;">🚀 مراقبة الحملة الحالية</h3>
+                <span id="camp-status-badge" style="background:#3b82f6; color:white; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">جاري الإرسال...</span>
+            </div>
+            
+            <p id="camp-status-text" style="font-weight:bold; color:#475569; font-size:14px; margin: 10px 0;">يرجى الانتظار...</p>
+            
+            <div style="display:flex; gap:15px; margin-top:15px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #bfdbfe; text-align:center;">
+                    <div style="font-size:12px; color:#64748b;">إجمالي القائمة</div>
+                    <div id="camp-total" style="font-size:20px; font-weight:800; color:#1e3a8a;">0</div>
+                </div>
+                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #bbf7d0; text-align:center;">
+                    <div style="font-size:12px; color:#64748b;">تم الإرسال</div>
+                    <div id="camp-sent" style="font-size:20px; font-weight:800; color:#10b981;">0</div>
+                </div>
+                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #fecaca; text-align:center;">
+                    <div style="font-size:12px; color:#64748b;">فشل</div>
+                    <div id="camp-failed" style="font-size:20px; font-weight:800; color:#ef4444;">0</div>
+                </div>
+                <div style="flex:1; min-width:80px; background:white; padding:10px; border-radius:8px; border:1px solid #fde68a; text-align:center;">
+                    <div style="font-size:12px; color:#64748b;">بالانتظار (في الطابور)</div>
+                    <div id="camp-waiting" style="font-size:20px; font-weight:800; color:#d97706;">0</div>
+                </div>
             </div>
         </div>
 
@@ -163,12 +190,11 @@
                     <p style="font-size: 13px; color: var(--text-muted); margin:0;">امسح رمز QR لربط الجلسة:</p>
                     <div id="qr-img" style="text-align: center;"></div>
                 </div>
-                <!-- التحديث السحري: زر فصل الاتصال أضيف هنا -->
                 <div id="connected-container" class="hidden">
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0;">
                         <p style="color: var(--primary); font-size: 15px; font-weight: 700; margin:0;">✅ واتساب متصل وجاهز</p>
                         <form action="/disconnect-whatsapp" method="POST" onsubmit="return confirm('هل أنت متأكد من فصل رقم الواتساب الحالي؟ ستحتاج لمسح الباركود برقم جديد للتفعيل.');" style="margin:0;">
-                            <button type="submit" class="btn btn-dark" style="background:#ef4444; padding: 6px 12px; font-size:12px; cursor:pointer; border:none; border-radius:4px; color:white; font-weight:bold;">🔌 فصل الرقم وتغييره</button>
+                            <button type="submit" class="btn btn-dark" style="background:#ef4444; padding: 6px 12px; font-size:12px; cursor:pointer; border:none; border-radius:4px; color:white; font-weight:bold;">🔌 فصل الرقم</button>
                         </form>
                     </div>
                     <h4 style="font-size: 14px; margin-top: 25px;">إشعارات الإرسال المباشرة:</h4>
@@ -237,13 +263,11 @@
                         </div>
                         <input type="file" id="mediaFiles" multiple style="display:none;" onchange="handleMediaSelect()">
 
-                        <!-- حفظ التوكن للرفع الخفي -->
                         <input type="hidden" id="apiToken" value="<%= user.apiToken %>">
 
                         <div style="display: flex; justify-content: space-between; margin-top: 30px;">
                             <button class="btn btn-dark" onclick="goToStep(1)">→ عودة</button>
                             
-                            <!-- إخفاء زر الإرسال للمشترك المنتهي -->
                             <% if (isExpired) { %>
                                 <button class="btn btn-disabled" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
                             <% } else { %>
@@ -303,6 +327,38 @@
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
         });
+
+        // التحديث الجديد: الاستماع لتحديثات الحملة المباشرة لعرضها في المربع الجديد
+        socket.on('campaign-status', (campaign) => {
+            const box = document.getElementById('campaign-status-box');
+            if (campaign.status === 'اكتملت الحملة بنجاح ✅') {
+                document.getElementById('camp-status-badge').innerText = 'مكتمل ✅';
+                document.getElementById('camp-status-badge').style.background = '#10b981';
+                setTimeout(() => { box.classList.add('hidden'); }, 10000); // إخفاء بعد 10 ثواني
+            } else {
+                box.classList.remove('hidden');
+                document.getElementById('camp-status-badge').innerText = 'قيد العمل ⏳';
+                document.getElementById('camp-status-badge').style.background = '#3b82f6';
+            }
+            
+            document.getElementById('camp-status-text').innerText = campaign.status;
+            document.getElementById('camp-total').innerText = campaign.total;
+            document.getElementById('camp-sent').innerText = campaign.sent;
+            document.getElementById('camp-failed').innerText = campaign.failed;
+            document.getElementById('camp-waiting').innerText = campaign.numbers.length;
+        });
+
+        // تشغيل الصندوق المباشر إذا قام العميل بعمل تحديث للصفحة (Refresh) وهناك حملة بالخلفية
+        <% if (typeof activeCampaign !== 'undefined' && activeCampaign) { %>
+            const initialCamp = <%- JSON.stringify(activeCampaign) %>;
+            const statusBox = document.getElementById('campaign-status-box');
+            statusBox.classList.remove('hidden');
+            document.getElementById('camp-status-text').innerText = initialCamp.status;
+            document.getElementById('camp-total').innerText = initialCamp.total;
+            document.getElementById('camp-sent').innerText = initialCamp.sent;
+            document.getElementById('camp-failed').innerText = initialCamp.failed;
+            document.getElementById('camp-waiting').innerText = initialCamp.numbers.length;
+        <% } %>
 
         let recipientsSet = new Set();
         function addManualNumber() {
