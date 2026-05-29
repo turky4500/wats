@@ -575,6 +575,36 @@
             }, 5000);
         });
 
+        // ===== حالة إعادة الاتصال =====
+        socket.on('reconnecting', (msg) => {
+            isClientConnected = false;
+            document.getElementById('loading-container').style.display = 'none';
+            document.getElementById('connected-container').style.display = 'none';
+            document.getElementById('qr-container').style.display = 'none';
+            document.getElementById('status-title').innerText = '🔄 جاري إعادة الاتصال...';
+            document.getElementById('conn-dot').className = 'status-dot waiting';
+            // عرض حالة إعادة الاتصال
+            document.getElementById('qr-container').style.display = 'block';
+            document.getElementById('qr-img').innerHTML = '<div style="padding:30px;color:var(--gray);"><div style="font-size:35px;margin-bottom:10px;">🔄</div><p style="font-weight:700;">' + msg + '</p></div>';
+        });
+
+        // ===== الاتصال انقطع نهائياً =====
+        socket.on('disconnected', (msg) => {
+            isClientConnected = false;
+            document.getElementById('loading-container').style.display = 'none';
+            document.getElementById('connected-container').style.display = 'none';
+            document.getElementById('qr-container').style.display = 'block';
+            document.getElementById('status-title').innerText = '❌ غير متصل';
+            document.getElementById('conn-dot').className = 'status-dot offline';
+            document.getElementById('qr-img').innerHTML = '<div style="padding:30px;color:var(--danger);"><div style="font-size:35px;margin-bottom:10px;">🔌</div><p style="font-weight:700;">' + msg + '</p><p style="font-size:12px;color:var(--gray);margin-top:8px;">سيظهر باركود جديد خلال لحظات...</p></div>';
+        });
+
+        // ===== انقطاع السوكت نفسه =====
+        socket.on('disconnect', () => {
+            document.getElementById('status-title').innerText = '⚠️ انقطع الاتصال بالخادم';
+            document.getElementById('conn-dot').className = 'status-dot offline';
+        });
+
         socket.on('message-sent', (data) => {
             const msgs = document.getElementById('messages');
             const empty = msgs.querySelector('.log-empty');

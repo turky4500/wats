@@ -416,11 +416,34 @@
             document.getElementById('sys-status').style.color = '#059669';
         });
 
+        // ===== حالة إعادة الاتصال =====
+        sysSocket.on('reconnecting', (msg) => {
+            isAdminConnected = false;
+            document.getElementById('sys-qr-container').style.display = 'none';
+            document.getElementById('sys-status').innerHTML = '<span class="sys-dot off" style="background:#f59e0b;"></span> 🔄 ' + msg;
+            document.getElementById('sys-status').style.color = '#d97706';
+        });
+
+        // ===== انقطع نهائياً =====
+        sysSocket.on('disconnected', (msg) => {
+            isAdminConnected = false;
+            document.getElementById('sys-qr-container').style.display = 'none';
+            document.getElementById('sys-status').innerHTML = '<span class="sys-dot off"></span> ❌ ' + msg;
+            document.getElementById('sys-status').style.color = '#dc2626';
+        });
+
+        // ===== انقطاع السوكت =====
+        sysSocket.on('disconnect', () => {
+            document.getElementById('sys-status').innerHTML = '<span class="sys-dot off"></span> ⚠️ انقطع الاتصال بالخادم';
+            document.getElementById('sys-status').style.color = '#dc2626';
+        });
+
         // فحص سريع عند الاتصال
         sysSocket.on('connect', () => {
             setTimeout(() => {
                 if (!isAdminConnected && document.getElementById('sys-status').textContent.includes('بانتظار التحميل')) {
                     document.getElementById('sys-status').innerHTML = '<span class="sys-dot off"></span> غير متصل - اربط الرقم';
+                    document.getElementById('sys-status').style.color = '#dc2626';
                 }
             }, 4000);
         });
