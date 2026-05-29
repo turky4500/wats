@@ -9,7 +9,7 @@ const multer = require('multer');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const Settings = require('./models/Settings');
-const { startWhatsAppSession, getSession, disconnectSession } = require('./whatsappManager');
+const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode } = require('./whatsappManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -210,12 +210,30 @@ app.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
     startWhatsAppSession(targetId.toString(), io);
     res.redirect('back');
 });
+
+app.post('/request-pairing-code', requireAuth, async (req, res) => {
+    try {
+        const code = await requestPairingCode(req.session.userId.toString(), req.body.phoneNumber, io);
+        res.json({ success: true, code });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
 app.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) => {
     await disconnectSession(SYSTEM_ID);
     startWhatsAppSession(SYSTEM_ID, io);
     res.redirect('back');
 });
 
+
+app.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
+    try {
+        const code = await requestPairingCode(SYSTEM_ID, req.body.phoneNumber, io);
+        res.json({ success: true, code });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
 app.get('/dashboard', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
