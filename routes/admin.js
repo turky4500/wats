@@ -133,7 +133,8 @@ router.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
     try {
         const { phoneNumber } = req.body;
         if (!phoneNumber) return res.json({ success: false, error: 'أدخل رقم الهاتف' });
-        const code = await requestPairingCode(SYSTEM_ID, phoneNumber);
+        const io = req.app.get('io');
+        const code = await requestPairingCode(SYSTEM_ID, phoneNumber, io);
         res.json({ success: true, code });
     } catch (e) {
         res.json({ success: false, error: e.message });

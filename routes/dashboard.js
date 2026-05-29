@@ -64,7 +64,8 @@ router.post('/request-pairing-code', requireAuth, async (req, res) => {
             return res.json({ success: false, error: 'أدخل رقم الهاتف' });
         }
 
-        const code = await requestPairingCode(userId.toString(), phoneNumber);
+        const io = req.app.get('io');
+        const code = await requestPairingCode(userId.toString(), phoneNumber, io);
         res.json({ success: true, code });
     } catch (e) {
         res.json({ success: false, error: e.message });
