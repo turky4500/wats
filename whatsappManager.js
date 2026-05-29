@@ -4,7 +4,6 @@ const fs = require('fs');
 
 const sessions = {};
 
-// دالة فصل الواتساب ومسح الذاكرة
 async function disconnectSession(userId) {
     if (sessions[userId]) {
         try { await sessions[userId].logout(); } catch (e) { }
@@ -16,7 +15,6 @@ async function disconnectSession(userId) {
     }
 }
 
-// الجلسة الدائمة المستقرة (browser أصلي)
 async function startWhatsAppSession(userId, io) {
     const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
 
@@ -31,7 +29,7 @@ async function startWhatsAppSession(userId, io) {
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-        
+
         if (qr && io) {
             const QRCode = require('qrcode');
             QRCode.toDataURL(qr, (err, url) => {
@@ -55,13 +53,15 @@ async function startWhatsAppSession(userId, io) {
     return sock;
 }
 
-// ===== ربط بالرمز: جلسة مؤقتة منفصلة =====
+// ===== ربط بالرمز =====
+// جلسة مؤقتة بـ macOS لتوليد الرمز فقط
+// بعد نجاح الربط تصبح هي الجلسة الدائمة (بدون إعادة اتصال)
 async function requestPairingCode(userId, phoneNumber, io) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
     if (cleanNumber.length < 10) throw new Error('رقم غير صالح');
     if (sessions[userId] && sessions[userId].user) throw new Error('الرقم مرتبط بالفعل! افصل أولاً.');
 
-    // مسح أي جلسة قديمة
+    // مسح الجلسة القديمة
     await disconnectSession(userId);
 
     return new Promise(async (resolve, reject) => {
@@ -70,27 +70,24 @@ async function requestPairingCode(userId, phoneNumber, io) {
         }, 60000);
 
         try {
-            // جلسة مؤقتة بـ macOS فقط لتوليد الرمز
-            const tempAuthPath = `./auth_info_baileys/${userId}`;
-            const { state, saveCreds } = await useMultiFileAuthState(tempAuthPath);
+            const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
 
-            const tempSock = makeWASocket({
+            const sock = makeWASocket({
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
                 browser: Browsers.macOS("Chrome"),
             });
 
-            tempSock.ev.on('creds.update', saveCreds);
+            sock.ev.on('creds.update', saveCreds);
 
-            tempSock.ev.on('connection.update', async (update) => {
-                const { connection, qr } = update;
+            sock.ev.on('connection.update', async (update) => {
+                const { connection, lastDisconnect, qr } = update;
 
-                // عند ظهور QR = السوكت جاهز لطلب الرمز
                 if (qr) {
                     try {
                         const customCode = String(Math.floor(10000000 + Math.random() * 90000000));
-                        const code = await tempSock.requestPairingCode(cleanNumber, customCode);
+                        const code = await sock.requestPairingCode(cleanNumber, customCode);
                         clearTimeout(timeout);
                         resolve(code);
                     } catch (e) {
@@ -99,21 +96,19 @@ async function requestPairingCode(userId, phoneNumber, io) {
                     }
                 }
 
-                // عند نجاح الاتصال = الربط نجح!
+                // نجاح الربط - نحفظ الجلسة كجلسة دائمة (بدون إغلاق وإعادة فتح)
                 if (connection === 'open') {
-                    // إغلاق الجلسة المؤقتة
-                    try { tempSock.end(); } catch(e) {}
-
-                    // بدء الجلسة الدائمة المستقرة بالـ browser الأصلي
-                    // بيانات المصادقة محفوظة في الملفات، الجلسة الجديدة ستستخدمها
-                    setTimeout(() => {
-                        startWhatsAppSession(userId, io);
-                    }, 2000);
+                    sessions[userId] = sock;
+                    if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
                 }
 
                 if (connection === 'close') {
-                    // إذا انغلقت قبل النجاح - لا نعمل شيء
-                    // الجلسة الدائمة ستبدأ من startWhatsAppSession
+                    const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+                    delete sessions[userId];
+                    if (shouldReconnect) {
+                        // إعادة اتصال بنفس الـ browser الأصلي المستقر
+                        setTimeout(() => startWhatsAppSession(userId, io), 5000);
+                    }
                 }
             });
         } catch (e) {
