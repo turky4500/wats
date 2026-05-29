@@ -366,12 +366,28 @@
                                 </div>
                             </div>
 
-                            <!-- قسم الباركود -->
+                            <!-- قسم الربط -->
                             <div id="link-container" style="display:none;">
-                                <div id="qr-img" style="text-align:center;"></div>
-                                <p style="color:var(--gray); font-size:13px; margin-top:10px; text-align:center;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
-                                <button onclick="saveQR()" style="margin-top:12px; width:100%; padding:12px; background:var(--blue); color:white; border:none; border-radius:10px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;">💾 حفظ صورة الباركود</button>
-                                <p style="color:var(--gray-light); font-size:11px; margin-top:6px; text-align:center;">💡 على الجوال: احفظ الصورة ← افتح واتساب ← الأجهزة المرتبطة ← امسح من المعرض</p>
+                                <div style="display:flex; border-radius:10px; overflow:hidden; border:2px solid #e2e8f0; margin-bottom:15px;">
+                                    <button id="tabBtnQR" onclick="switchTab('qr')" style="flex:1; padding:10px; text-align:center; font-weight:700; font-size:13px; cursor:pointer; background:var(--primary); color:white; border:none; font-family:inherit;">📷 مسح باركود</button>
+                                    <button id="tabBtnCode" onclick="switchTab('code')" style="flex:1; padding:10px; text-align:center; font-weight:700; font-size:13px; cursor:pointer; background:white; color:var(--gray); border:none; font-family:inherit;">📱 ربط بالرقم</button>
+                                </div>
+
+                                <div id="tabQR">
+                                    <div id="qr-img" style="text-align:center;"></div>
+                                    <p style="color:var(--gray); font-size:13px; margin-top:10px; text-align:center;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
+                                    <button onclick="saveQR()" style="margin-top:10px; width:100%; padding:10px; background:var(--blue); color:white; border:none; border-radius:10px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer;">💾 حفظ صورة الباركود</button>
+                                </div>
+
+                                <div id="tabCode" style="display:none;">
+                                    <p style="font-size:13px; color:var(--gray); margin-bottom:12px; line-height:1.8;">أدخل رقمك مع رمز الدولة وسنولّد لك رمز ربط من 8 أرقام.</p>
+                                    <div style="display:flex; gap:8px;">
+                                        <input type="text" id="pairingPhone" placeholder="مثال: 966500000000" dir="ltr" style="flex:1; border:2px solid #e2e8f0; border-radius:10px; padding:12px; font-family:inherit; font-size:15px; outline:none; direction:ltr;">
+                                        <button id="pairingBtn" onclick="getPairingCode()" style="background:var(--primary); color:white; border:none; border-radius:10px; padding:12px 20px; font-weight:800; font-family:inherit; cursor:pointer; font-size:14px; white-space:nowrap;">🔑 توليد</button>
+                                    </div>
+                                    <div id="pairingResult"></div>
+                                    <p style="color:var(--gray-light); font-size:11px; margin-top:10px; line-height:1.8; text-align:center;">⚠️ تأكد أن عدد الأجهزة المرتبطة أقل من 4 قبل الربط</p>
+                                </div>
                             </div>
                         </div>
                     </div>

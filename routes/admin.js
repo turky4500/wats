@@ -5,7 +5,7 @@ const MessageLog = require('../models/MessageLog');
 const { requireAdmin } = require('../middleware/auth');
 const { getSettings, invalidateCache } = require('../utils/settingsCache');
 const { calculateSubscriptionDate } = require('../utils/helpers');
-const { startWhatsAppSession, disconnectSession } = require('../whatsappManager');
+const { startWhatsAppSession, disconnectSession, requestPairingCode } = require('../whatsappManager');
 
 const SYSTEM_ID = process.env.SYSTEM_ID || '111111111111111111111111';
 
@@ -125,6 +125,18 @@ router.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) 
     } catch (e) {
         console.error('خطأ في فصل واتساب الإدارة:', e);
         res.redirect('back');
+    }
+});
+
+router.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
+    try {
+        var phoneNumber = req.body.phoneNumber;
+        if (!phoneNumber) return res.json({ success: false, error: 'أدخل رقم الهاتف' });
+        var io = req.app.get('io');
+        var code = await requestPairingCode(SYSTEM_ID, phoneNumber, io);
+        res.json({ success: true, code: code });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
     }
 });
 

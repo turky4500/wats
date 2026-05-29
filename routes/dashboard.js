@@ -4,7 +4,7 @@ const User = require('../models/User');
 const MessageLog = require('../models/MessageLog');
 const { requireAuth } = require('../middleware/auth');
 const { getSettings } = require('../utils/settingsCache');
-const { startWhatsAppSession, getSession, disconnectSession } = require('../whatsappManager');
+const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode } = require('../whatsappManager');
 
 router.get('/dashboard', requireAuth, async (req, res) => {
     try {
@@ -24,7 +24,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
         ]);
         res.render('dashboard', { user, isImpersonating, totalMessages, successMessages, failedMessages, dailyStats, settings });
     } catch (e) {
-        console.error('خطأ في لوحة التحكم:', e);
+        console.error('خطأ:', e);
         res.status(500).render('error', { title: 'خطأ', message: 'حدث خطأ في تحميل لوحة التحكم', code: 500 });
     }
 });
@@ -37,13 +37,22 @@ router.get('/api-guide', requireAuth, async (req, res) => {
 router.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
     try {
         let targetId = req.session.userId;
-        if (req.session.originalAdminId) targetId = req.session.userId;
         await disconnectSession(targetId.toString());
         startWhatsAppSession(targetId.toString(), req.app.get('io'));
         res.redirect('back');
+    } catch (e) { res.redirect('back'); }
+});
+
+router.post('/request-pairing-code', requireAuth, async (req, res) => {
+    try {
+        var userId = req.session.userId;
+        var phoneNumber = req.body.phoneNumber;
+        if (!phoneNumber) return res.json({ success: false, error: 'أدخل رقم الهاتف' });
+        var io = req.app.get('io');
+        var code = await requestPairingCode(userId.toString(), phoneNumber, io);
+        res.json({ success: true, code: code });
     } catch (e) {
-        console.error('خطأ في فصل الواتساب:', e);
-        res.redirect('back');
+        res.json({ success: false, error: e.message });
     }
 });
 
