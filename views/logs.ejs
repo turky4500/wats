@@ -3,95 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل الإرسال</title>
+    <title>أرشيف الرسائل | واتساب تكوين</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; border-top: 4px solid #3b82f6;}
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;}
-        .btn { display: inline-block; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-family: inherit; cursor: pointer; border: none; font-size: 14px;}
-        .btn-dark { background: #475569; color: white; }
-        .btn-red { background: #ef4444; color: white; }
-        .btn-blue { background: #3b82f6; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px;}
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 15px; text-align: right; }
-        th { background-color: #f1f5f9; color: #64748b; }
-        .status-success { color: #10b981; font-weight: bold; background: #d1fae5; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
-        .status-failed { color: #ef4444; font-weight: bold; background: #fee2e2; padding: 4px 8px; border-radius: 12px; font-size: 12px;}
-        .err-msg { font-size: 12px; color: #ef4444; margin-top: 5px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #25d366; --primary-dark: #1da851; --primary-light: #dcfce7;
+            --accent: #6366f1; --accent-light: #eef2ff;
+            --blue: #3b82f6; --blue-light: #eff6ff;
+            --danger: #ef4444; --danger-light: #fef2f2;
+            --dark: #0f172a; --dark2: #1e293b; --gray: #64748b; --gray-light: #94a3b8;
+            --bg: #f1f5f9; --card: #ffffff;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
+
+        /* Top Bar */
+        .topbar { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); color: white; padding: 0 40px; display: flex; justify-content: space-between; align-items: center; height: 65px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .topbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 18px; }
+        .topbar-actions { display: flex; gap: 10px; }
+        .topbar-actions a { color: rgba(255,255,255,0.7); text-decoration: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .topbar-actions a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .topbar-actions .btn-back { background: rgba(255,255,255,0.1); color: white; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px 40px; }
+
+        /* Page Header */
+        .page-header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .page-header h1 { font-size: 26px; font-weight: 900; color: var(--dark); display: flex; align-items: center; gap: 10px; }
+        .page-header .subtitle { color: var(--gray); font-size: 14px; margin-top: 4px; }
+
+        /* Filter Card */
+        .filter-card { background: linear-gradient(135deg, var(--blue-light) 0%, #f0f7ff 100%); border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 22px 28px; margin-bottom: 25px; }
+        .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { flex: 1; min-width: 180px; }
+        .filter-group label { display: block; font-weight: 700; font-size: 13px; color: #1e40af; margin-bottom: 6px; }
+        .filter-group input { width: 100%; padding: 11px 14px; border: 2px solid #93c5fd; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
+        .filter-group input:focus { border-color: var(--blue); }
+        .filter-actions { display: flex; gap: 8px; }
+
+        /* Stats Row */
+        .log-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .log-stat { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; }
+        .log-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .log-stat-info .value { font-size: 24px; font-weight: 900; color: var(--dark); line-height: 1; }
+        .log-stat-info .label { font-size: 12px; color: var(--gray); font-weight: 600; }
+
+        /* Table Card */
+        .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; overflow: hidden; }
+        .table-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-header h3 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead th { background: #f8fafc; color: var(--gray); font-weight: 700; padding: 14px 20px; text-align: right; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+        tbody td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: #fafbff; }
+
+        .msg-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dark2); }
+        .phone-cell { font-weight: 800; color: var(--dark); direction: ltr; font-family: 'Courier New', monospace; font-size: 13px; }
+        .time-cell { color: var(--gray); font-size: 13px; direction: ltr; white-space: nowrap; }
+
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+        .badge-success { background: var(--primary-light); color: #059669; }
+        .badge-failed { background: var(--danger-light); color: #dc2626; }
+        .err-detail { font-size: 11px; color: var(--danger); margin-top: 4px; display: block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state .icon { font-size: 50px; margin-bottom: 15px; }
+        .empty-state h4 { color: var(--dark2); font-size: 18px; margin-bottom: 8px; }
+        .empty-state p { color: var(--gray-light); font-size: 14px; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; color: white; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-blue { background: var(--blue); }
+        .btn-red { background: var(--danger); }
+        .btn-dark { background: var(--dark2); }
+        .btn-outline { background: white; color: var(--dark2); border: 2px solid #e2e8f0; }
+        .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .topbar { padding: 0 20px; }
+            .container { padding: 20px; }
+            .filter-form { flex-direction: column; }
+            .filter-group { min-width: 100%; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .table-header { flex-direction: column; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-brand">
+            <span>📜</span>
+            <span>أرشيف الرسائل</span>
+            <% if(isAdminView) { %><span style="opacity:0.5; font-size:13px;">— <%= user.username %></span><% } %>
+        </div>
+        <div class="topbar-actions">
+            <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn-back">← العودة للوحة</a>
+        </div>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <h2 style="margin: 0;">سجل إرسال الحملات 📜 <%= isAdminView ? `(لعميل: ${user.username})` : '' %></h2>
+        <!-- Page Header -->
+        <div class="page-header">
             <div>
-                <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn btn-dark">العودة للوحة</a>
+                <h1>📋 سجل الإرسال</h1>
+                <p class="subtitle">
+                    <% if(isAdminView) { %>سجلات العميل: <strong><%= user.username %></strong><% } else { %>جميع رسائلك المرسلة<% } %>
+                    <% if(query.dateFrom) { %> — تصفية: <%= query.dateFrom %> إلى <%= query.dateTo %><% } %>
+                </p>
             </div>
         </div>
 
-        <!-- شريط البحث والتاريخ الجديد -->
-        <div class="card" style="background: #eff6ff; border: 1px solid #bfdbfe;">
-            <form method="GET" action="" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight:bold; font-size:14px; margin-bottom:8px; display:block; color:#1e3a8a;">من تاريخ:</label>
-                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-family:inherit; outline:none; box-sizing: border-box;">
+        <!-- Quick Stats -->
+        <%
+            let sCount = 0, fCount = 0;
+            logs.forEach(l => { if(l.status === 'success') sCount++; else fCount++; });
+        %>
+        <div class="log-stats">
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--blue-light); color: var(--blue);">📨</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= logs.length %></div>
+                    <div class="label">إجمالي (معروض)</div>
                 </div>
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="font-weight:bold; font-size:14px; margin-bottom:8px; display:block; color:#1e3a8a;">إلى تاريخ:</label>
-                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>" required style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-family:inherit; outline:none; box-sizing: border-box;">
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--primary-light); color: var(--primary);">✅</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= sCount %></div>
+                    <div class="label">ناجحة</div>
                 </div>
-                <div>
-                    <button type="submit" class="btn btn-blue" style="padding: 12px 25px;">🔍 بحث وتصفية</button>
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= fCount %></div>
+                    <div class="label">فاشلة</div>
+                </div>
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= logs.length > 0 ? Math.round((sCount/logs.length)*100) : 0 %>%</div>
+                    <div class="label">نسبة النجاح</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-card">
+            <form method="GET" action="" class="filter-form">
+                <div class="filter-group">
+                    <label>📅 من تاريخ</label>
+                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>" required>
+                </div>
+                <div class="filter-group">
+                    <label>📅 إلى تاريخ</label>
+                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>" required>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-blue">🔍 بحث</button>
                     <% if(query.dateFrom) { %>
-                        <a href="?" class="btn btn-dark" style="padding: 12px 25px;">إلغاء الفلتر</a>
+                        <a href="?" class="btn btn-outline">✕ إلغاء</a>
                     <% } %>
                 </div>
             </form>
         </div>
 
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin:0;">أرشيف الرسائل</h3>
-                <form action="/logs/delete" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف الأرشيف؟ لا يمكن التراجع!');">
+        <!-- Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>📄 قائمة الرسائل</h3>
+                <form action="/logs/delete" method="POST" onsubmit="return confirm('⚠️ هل أنت متأكد من حذف جميع السجلات؟ لا يمكن التراجع!');" style="margin:0;">
                     <% if(isAdminView) { %>
                         <input type="hidden" name="targetUserId" value="<%= user._id %>">
                     <% } %>
                     <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف</button>
                 </form>
             </div>
-            
-            <div style="overflow-x: auto;">
-                <table>
-                    <tr>
-                        <th>الوقت والتاريخ</th>
-                        <th>المستلم</th>
-                        <th>محتوى الرسالة</th>
-                        <th>الحالة</th>
-                    </tr>
-                    <% logs.forEach(log => { %>
-                    <tr>
-                        <td dir="ltr" style="text-align: right;"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
-                        <td dir="ltr" style="text-align: right; font-weight:bold;"><%= log.to %></td>
-                        <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= log.body %>"><%= log.body %></td>
-                        <td>
-                            <% if (log.status === 'success') { %>
-                                <span class="status-success">✅ ناجح</span>
-                            <% } else { %>
-                                <span class="status-failed">❌ فاشل</span>
-                                <% if (log.errorDetails) { %>
-                                    <div class="err-msg"><%= log.errorDetails %></div>
-                                <% } %>
-                            <% } %>
-                        </td>
-                    </tr>
-                    <% }) %>
-                    <% if(logs.length === 0) { %>
-                        <tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">لا توجد سجلات مطابقة للبحث في الأرشيف.</td></tr>
-                    <% } %>
-                </table>
-            </div>
+
+            <% if(logs.length === 0) { %>
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <h4>لا توجد سجلات</h4>
+                    <p>لم يتم العثور على رسائل مطابقة للبحث</p>
+                </div>
+            <% } else { %>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>التاريخ والوقت</th>
+                                <th>المستلم</th>
+                                <th>محتوى الرسالة</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% logs.forEach((log, idx) => { %>
+                            <tr>
+                                <td style="color: var(--gray-light); font-weight: 700;"><%= idx + 1 %></td>
+                                <td class="time-cell"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                                <td class="phone-cell"><%= log.to %></td>
+                                <td class="msg-cell" title="<%= log.body %>"><%= log.body %></td>
+                                <td>
+                                    <% if (log.status === 'success') { %>
+                                        <span class="badge badge-success">✅ ناجح</span>
+                                    <% } else { %>
+                                        <span class="badge badge-failed">❌ فاشل</span>
+                                        <% if (log.errorDetails) { %>
+                                            <span class="err-detail" title="<%= log.errorDetails %>"><%= log.errorDetails %></span>
+                                        <% } %>
+                                    <% } %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
         </div>
     </div>
 </body>

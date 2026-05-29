@@ -182,6 +182,41 @@
 
         .step-buttons { display: flex; justify-content: space-between; margin-top: 25px; gap: 10px; }
 
+
+        /* ===== Number Chips ===== */
+        .chips-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; background: #fafbfc; border: 2px solid #e2e8f0; border-radius: 12px; min-height: 80px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 6px 8px 6px 14px; font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; direction: ltr; color: var(--dark2); transition: all 0.2s; animation: chipIn 0.3s ease; }
+        .chip:hover { border-color: var(--danger); background: var(--danger-light); }
+        .chip .chip-remove { width: 20px; height: 20px; border-radius: 50%; background: #f1f5f9; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gray); transition: all 0.15s; }
+        .chip .chip-remove:hover { background: var(--danger); color: white; }
+        @keyframes chipIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        .chips-empty { color: var(--gray-light); font-size: 13px; padding: 15px; text-align: center; width: 100%; }
+
+        /* ===== Progress Bar ===== */
+        .send-progress { margin-top: 20px; display: none; }
+        .send-progress.active { display: block; animation: fadeIn 0.5s ease; }
+        .progress-bar-bg { width: 100%; height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #16a34a 100%); border-radius: 6px; transition: width 0.5s ease; width: 0%; }
+        .progress-stats { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; font-weight: 700; }
+        .progress-stats .p-success { color: var(--primary); }
+        .progress-stats .p-failed { color: var(--danger); }
+        .progress-stats .p-total { color: var(--gray); }
+
+        /* ===== Summary Card ===== */
+        .summary-box { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 2px solid #e2e8f0; border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+        .summary-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+        .summary-row:last-child { border: none; }
+        .summary-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .summary-label { font-size: 13px; color: var(--gray); }
+        .summary-value { font-weight: 800; font-size: 15px; color: var(--dark); }
+
+        /* Multi number input */
+        .multi-input { display: flex; gap: 8px; margin-bottom: 12px; }
+        .multi-input input { flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-family: inherit; font-size: 15px; outline: none; transition: border 0.2s; direction: ltr; }
+        .multi-input input:focus { border-color: var(--primary); }
+        .multi-input button { background: var(--primary); color: white; border: none; border-radius: 10px; padding: 0 22px; font-weight: 800; font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 16px; white-space: nowrap; }
+        .multi-input button:hover { background: var(--primary-dark); }
+
         /* ===== Toast ===== */
         #toast-container { position: fixed; bottom: 25px; left: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: var(--card); padding: 15px 22px; border-radius: 12px; box-shadow: var(--shadow-lg); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-right: 4px solid var(--primary); }
@@ -387,27 +422,29 @@
 
                             <!-- Step 1: Recipients -->
                             <div class="form-step active" id="step-1">
-                                <label class="form-label">أدخل رقم الهاتف (مع رمز البلد)</label>
-                                <div class="form-input-group">
-                                    <input type="text" id="manualPhone" placeholder="مثال: 9665xxxxxxxx" dir="ltr">
+                                <label class="form-label">📱 أدخل أرقام المستلمين</label>
+                                <div class="multi-input">
+                                    <input type="text" id="manualPhone" placeholder="أدخل الرقم مع رمز البلد: 9665xxxxxxxx" dir="ltr">
                                     <button onclick="addManualNumber()">+ أضف</button>
                                 </div>
 
-                                <div class="file-row">
-                                    <span class="file-label" id="txtFileLabel">رفع ملف أرقام (TXT)</span>
+                                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
                                     <input type="file" id="txtFileInput" accept=".txt" class="hidden" onchange="handleTxtUpload(event)">
-                                    <button class="file-btn" onclick="document.getElementById('txtFileInput').click()">📄 اختر ملف</button>
+                                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('txtFileInput').click()" style="flex:1;">📄 رفع ملف TXT</button>
+                                    <button class="btn btn-outline btn-sm" onclick="pasteNumbers()" style="flex:1;">📋 لصق أرقام</button>
                                 </div>
 
                                 <div class="recipients-header">
-                                    <span class="form-label" style="margin:0;">قائمة المستلمين <span class="count-badge" id="recipientsCount">0</span></span>
+                                    <span class="form-label" style="margin:0;">المستلمين <span class="count-badge" id="recipientsCount">0</span></span>
                                     <button class="clear-btn" onclick="clearRecipients()">🗑️ مسح الكل</button>
                                 </div>
-                                <textarea class="recipients-area" id="recipientsList" readonly placeholder="ستظهر الأرقام هنا..."></textarea>
+                                <div class="chips-container" id="chipsContainer">
+                                    <div class="chips-empty" id="chipsEmpty">📭 لم تتم إضافة أرقام بعد</div>
+                                </div>
 
                                 <div class="step-buttons">
                                     <div></div>
-                                    <button class="btn btn-primary" onclick="goToStep(2)">التالي: الرسالة ←</button>
+                                    <button class="btn btn-primary" onclick="goToStep(2)">التالي: كتابة الرسالة ←</button>
                                 </div>
                             </div>
 
@@ -439,6 +476,34 @@
                                 </div>
                                 <input type="file" id="mediaFiles" multiple class="hidden" onchange="handleMediaSelect()">
                                 <div class="media-info" id="mediaFilesNames"></div>
+
+                                <!-- ملخص قبل الإرسال -->
+                                <div class="summary-box" id="sendSummary">
+                                    <div class="summary-row">
+                                        <div class="summary-icon" style="background:var(--accent-light);color:var(--accent);">👥</div>
+                                        <div><div class="summary-label">عدد المستلمين</div><div class="summary-value" id="summaryCount">0 رقم</div></div>
+                                    </div>
+                                    <div class="summary-row">
+                                        <div class="summary-icon" style="background:var(--blue-light);color:var(--blue);">💬</div>
+                                        <div><div class="summary-label">الرسالة</div><div class="summary-value" id="summaryMsg" style="font-size:13px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</div></div>
+                                    </div>
+                                    <div class="summary-row">
+                                        <div class="summary-icon" style="background:var(--primary-light);color:var(--primary);">📎</div>
+                                        <div><div class="summary-label">المرفقات</div><div class="summary-value" id="summaryMedia">بدون مرفقات</div></div>
+                                    </div>
+                                </div>
+
+                                <!-- عداد تقدم الإرسال -->
+                                <div class="send-progress" id="sendProgress">
+                                    <div class="progress-bar-bg">
+                                        <div class="progress-bar-fill" id="progressFill"></div>
+                                    </div>
+                                    <div class="progress-stats">
+                                        <span class="p-success" id="pSuccess">✅ 0</span>
+                                        <span class="p-total" id="pTotal">📨 0 / 0</span>
+                                        <span class="p-failed" id="pFailed">❌ 0</span>
+                                    </div>
+                                </div>
 
                                 <div class="step-buttons">
                                     <button class="btn btn-outline" onclick="goToStep(1)">→ رجوع</button>
@@ -519,6 +584,11 @@
             el.innerHTML = `<span class="log-icon">✅</span> أُرسلت لـ <span dir="ltr" style="font-weight:800; margin-right:5px;">${data.to}</span>`;
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
+
+            // تحديث عداد التقدم
+            sendSuccessCount++;
+            updateProgress(sendSuccessCount, sendFailCount, sendTotal);
+            checkSendComplete();
         });
 
         socket.on('error', (err) => {
@@ -530,36 +600,102 @@
             el.innerHTML = `<span class="log-icon">❌</span> ${err}`;
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
+
+            // تحديث عداد التقدم
+            sendFailCount++;
+            updateProgress(sendSuccessCount, sendFailCount, sendTotal);
+            checkSendComplete();
         });
 
+        function checkSendComplete() {
+            if ((sendSuccessCount + sendFailCount) >= sendTotal && sendTotal > 0) {
+                const btn = document.getElementById('send-btn');
+                btn.innerHTML = '🚀 إرسال الحملة الآن';
+                btn.disabled = false;
+                btn.classList.remove('btn-disabled');
+                showToast(`✅ اكتملت الحملة: ${sendSuccessCount} ناجحة, ${sendFailCount} فاشلة`, sendFailCount > 0 ? 'error' : 'success');
+
+                // إعادة تعيين بعد 3 ثواني
+                setTimeout(() => {
+                    clearRecipients();
+                    document.getElementById('msg').value = '';
+                    document.getElementById('mediaFiles').value = '';
+                    document.getElementById('mediaFilesNames').innerText = '';
+                    updatePreview();
+                    goToStep(1);
+                    document.getElementById('sendProgress').classList.remove('active');
+                }, 4000);
+            }
+        }
+
         let recipientsSet = new Set();
+        let sendSuccessCount = 0, sendFailCount = 0, sendTotal = 0;
+
         function addManualNumber() {
-            const val = document.getElementById('manualPhone').value.trim();
-            if(val) { recipientsSet.add(val); document.getElementById('manualPhone').value = ''; updateRecipientsUI(); }
+            const input = document.getElementById('manualPhone');
+            const val = input.value.trim();
+            if(val) {
+                // دعم لصق أرقام متعددة مفصولة بفاصلة أو سطر جديد
+                val.split(/[,\n\r]+/).forEach(n => {
+                    const num = n.trim().replace(/[^0-9+]/g, '');
+                    if(num.length >= 8) recipientsSet.add(num);
+                });
+                input.value = '';
+                updateRecipientsUI();
+            }
         }
         document.getElementById('manualPhone').addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); addManualNumber(); } });
+
+        function pasteNumbers() {
+            navigator.clipboard.readText().then(text => {
+                text.split(/[,\n\r]+/).forEach(n => {
+                    const num = n.trim().replace(/[^0-9+]/g, '');
+                    if(num.length >= 8) recipientsSet.add(num);
+                });
+                updateRecipientsUI();
+                showToast('تم لصق الأرقام بنجاح', 'success');
+            }).catch(() => showToast('لا يمكن الوصول للحافظة', 'error'));
+        }
 
         function handleTxtUpload(e) {
             const file = e.target.files[0];
             if(!file) return;
-            document.getElementById('txtFileLabel').innerText = `📄 ${file.name}`;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                evt.target.result.split(/\r?\n/).forEach(line => { const num = line.trim(); if(num) recipientsSet.add(num); });
+                evt.target.result.split(/\r?\n/).forEach(line => {
+                    const num = line.trim().replace(/[^0-9+]/g, '');
+                    if(num.length >= 8) recipientsSet.add(num);
+                });
                 updateRecipientsUI();
+                showToast(`تم رفع ${file.name} بنجاح`, 'success');
             };
             reader.readAsText(file);
         }
 
+        function removeNumber(num) {
+            recipientsSet.delete(num);
+            updateRecipientsUI();
+        }
+
         function updateRecipientsUI() {
             const arr = Array.from(recipientsSet);
-            document.getElementById('recipientsList').value = arr.join('\n');
+            const container = document.getElementById('chipsContainer');
+            const empty = document.getElementById('chipsEmpty');
             document.getElementById('recipientsCount').innerText = arr.length;
+            document.getElementById('summaryCount').innerText = arr.length + ' رقم';
+
+            if(arr.length === 0) {
+                container.innerHTML = '<div class="chips-empty" id="chipsEmpty">📭 لم تتم إضافة أرقام بعد</div>';
+                return;
+            }
+
+            container.innerHTML = arr.map(num =>
+                `<div class="chip"><span>${num}</span><button class="chip-remove" onclick="removeNumber('${num}')">✕</button></div>`
+            ).join('');
         }
 
         function clearRecipients() {
             recipientsSet.clear(); updateRecipientsUI();
-            document.getElementById('txtFileLabel').innerText = 'رفع ملف أرقام (TXT)';
             document.getElementById('txtFileInput').value = '';
         }
 
@@ -567,10 +703,9 @@
             if(step === 2 && recipientsSet.size === 0) return showToast("أضف مستلمين أولاً!", "error");
             document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
-            // Update step indicators
             document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active', 'done'));
             document.getElementById(`step-ind-${step}`).classList.add('active');
-            if(step === 2) document.getElementById('step-ind-1').classList.add('done');
+            if(step === 2) { document.getElementById('step-ind-1').classList.add('done'); updateSummary(); }
         }
 
         function insertFormat(char) {
@@ -628,6 +763,21 @@
             });
         }
 
+        function updateSummary() {
+            const body = document.getElementById('msg').value;
+            const files = document.getElementById('mediaFiles').files;
+            document.getElementById('summaryMsg').innerText = body || '— لا توجد رسالة نصية';
+            document.getElementById('summaryMedia').innerText = files.length > 0 ? files.length + ' مرفق' : 'بدون مرفقات';
+        }
+
+        function updateProgress(success, failed, total) {
+            const pct = total > 0 ? Math.round(((success + failed) / total) * 100) : 0;
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('pSuccess').innerText = '✅ ' + success;
+            document.getElementById('pFailed').innerText = '❌ ' + failed;
+            document.getElementById('pTotal').innerText = '📨 ' + (success + failed) + ' / ' + total;
+        }
+
         async function sendCampaign() {
             const numbersArr = Array.from(recipientsSet);
             const body = document.getElementById('msg').value;
@@ -635,9 +785,18 @@
             const token = document.getElementById('apiToken').value;
             if (!body && fileInput.files.length === 0) return showToast("اكتب رسالة أو أضف مرفق!", "error");
 
+            // تحديث الملخص
+            updateSummary();
+
             const btn = document.getElementById('send-btn');
             btn.innerHTML = '<span style="animation:spin 1s linear infinite; display:inline-block;">⏳</span> جاري الإرسال...';
             btn.disabled = true; btn.classList.add('btn-disabled');
+
+            // إظهار عداد التقدم
+            sendSuccessCount = 0; sendFailCount = 0; sendTotal = numbersArr.length;
+            const progressEl = document.getElementById('sendProgress');
+            progressEl.classList.add('active');
+            updateProgress(0, 0, sendTotal);
 
             try {
                 const mediaArray = [];
@@ -649,19 +808,18 @@
                     body: JSON.stringify({ to: numbersArr, body, media: mediaArray })
                 });
                 const result = await response.json();
-                btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
 
                 if (result.success) {
-                    showToast(result.message, "success");
-                    clearRecipients(); document.getElementById('msg').value = '';
-                    fileInput.value = ''; document.getElementById('mediaFilesNames').innerText = '';
-                    updatePreview(); goToStep(1);
+                    showToast('🚀 تم استلام الطلب! تتبع التقدم أدناه', 'success');
                 } else {
                     showToast(result.error || "خطأ", "error");
+                    btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
+                    progressEl.classList.remove('active');
                 }
             } catch(e) {
                 showToast("خطأ في التواصل مع السيرفر!", "error");
                 btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
+                progressEl.classList.remove('active');
             }
         }
     </script>
