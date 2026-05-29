@@ -217,36 +217,17 @@
                         </div>
                     </div>
 
-                    <!-- قسم الربط -->
+                    <!-- قسم الباركود -->
                     <div id="sys-link-section" style="display:none;">
-                        <div style="display:flex; border-radius:8px; overflow:hidden; border:2px solid #bbf7d0; margin-bottom:12px;">
-                            <button id="sysTabQR" onclick="switchSysTab('qr')" style="flex:1; padding:8px; font-weight:700; font-size:12px; cursor:pointer; background:var(--green); color:white; border:none; font-family:inherit;">📷 باركود</button>
-                            <button id="sysTabCode" onclick="switchSysTab('code')" style="flex:1; padding:8px; font-weight:700; font-size:12px; cursor:pointer; background:white; color:var(--gray); border:none; font-family:inherit;">📱 ربط بالرقم</button>
-                        </div>
-                        <div id="sysQRTab">
-                            <div id="sys-qr-container" style="text-align:center;">
-                                <img id="sys-qr" src="">
-                                <p style="color:var(--gray); font-size:11px; margin-top:6px;">امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
-                            </div>
-                        </div>
-                        <div id="sysCodeTab" style="display:none;">
-                            <p style="font-size:11px; color:var(--gray); margin-bottom:8px; line-height:1.7;">أدخل رقم الإدارة مع رمز الدولة:</p>
-                            <div style="display:flex; gap:6px;">
-                                <input type="text" id="adminPairingPhone" placeholder="966500000000" dir="ltr" style="flex:1; border:2px solid #d1fae5; border-radius:8px; padding:9px 12px; font-family:inherit; font-size:13px; outline:none; direction:ltr;">
-                                <button id="adminPairingBtn" onclick="getAdminPairingCode()" style="background:var(--green); color:white; border:none; border-radius:8px; padding:9px 14px; font-weight:800; font-family:inherit; cursor:pointer; font-size:12px;">🔑 توليد</button>
-                            </div>
-                            <div id="adminPairingResult"></div>
+                        <div id="sys-qr-container" style="text-align:center;">
+                            <img id="sys-qr" src="">
+                            <p style="color:var(--gray); font-size:12px; margin-top:8px;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
                         </div>
                     </div>
 
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <form action="/admin/disconnect-system-whatsapp" method="POST" style="flex:1;" onsubmit="return confirm('سيتم فصل الرقم ومسح بيانات الجلسة نهائياً');">
-                            <button type="submit" class="btn btn-red btn-full">🔌 فصل نهائي</button>
-                        </form>
-                        <form action="/admin/start-system-whatsapp" method="POST" style="flex:1;">
-                            <button type="submit" class="btn btn-green btn-full">🔗 ربط جديد</button>
-                        </form>
-                    </div>
+                    <form action="/admin/disconnect-system-whatsapp" method="POST" style="margin-top:15px;" onsubmit="return confirm('هل تريد فصل الرقم الإداري وربط رقم جديد؟');">
+                        <button type="submit" class="btn btn-red btn-full">🔌 فصل وإعادة ربط</button>
+                    </form>
                 </div>
             </div>
 
@@ -432,53 +413,6 @@
             document.getElementById('modalTitle').innerText = '⚙️ تعديل: ' + username;
             document.getElementById('editForm').action = '/admin/edit-user/' + id;
             document.getElementById('editModal').classList.add('show');
-        }
-
-        // ===== تبويبات ربط الإدارة =====
-        function switchSysTab(tab) {
-            if (tab === 'qr') {
-                document.getElementById('sysQRTab').style.display = 'block';
-                document.getElementById('sysCodeTab').style.display = 'none';
-                document.getElementById('sysTabQR').style.background = 'var(--green)';
-                document.getElementById('sysTabQR').style.color = 'white';
-                document.getElementById('sysTabCode').style.background = 'white';
-                document.getElementById('sysTabCode').style.color = 'var(--gray)';
-            } else {
-                document.getElementById('sysQRTab').style.display = 'none';
-                document.getElementById('sysCodeTab').style.display = 'block';
-                document.getElementById('sysTabCode').style.background = 'var(--green)';
-                document.getElementById('sysTabCode').style.color = 'white';
-                document.getElementById('sysTabQR').style.background = 'white';
-                document.getElementById('sysTabQR').style.color = 'var(--gray)';
-            }
-        }
-
-        function getAdminPairingCode() {
-            var phone = document.getElementById('adminPairingPhone').value.trim();
-            if (!phone || phone.length < 10) { alert('أدخل رقم صحيح'); return; }
-            var btn = document.getElementById('adminPairingBtn');
-            btn.disabled = true; btn.innerText = '⏳';
-
-            fetch('/admin/request-pairing-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: phone })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    var formatted = data.code.match(/.{1,4}/g).join(' - ');
-                    document.getElementById('adminPairingResult').innerHTML =
-                        '<div style="background:white; border:2px solid #86efac; border-radius:10px; padding:15px; text-align:center; margin-top:10px;">' +
-                        '<div style="font-size:28px; font-weight:900; letter-spacing:6px; color:#166534; font-family:monospace; direction:ltr;">' + formatted + '</div>' +
-                        '<div style="font-size:11px; color:#4ade80; margin-top:6px;">أدخل الرمز في واتساب ← الأجهزة المرتبطة ← ربط بالرقم</div>' +
-                        '</div>';
-                } else {
-                    document.getElementById('adminPairingResult').innerHTML = '<p style="color:var(--red);font-weight:700;margin-top:8px;font-size:13px;">❌ ' + data.error + '</p>';
-                }
-                btn.disabled = false; btn.innerText = '🔑 توليد';
-            })
-            .catch(function() { alert('خطأ'); btn.disabled = false; btn.innerText = '🔑 توليد'; });
         }
 
         // ===== حالات الاتصال =====

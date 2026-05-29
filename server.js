@@ -66,7 +66,7 @@ app.use(errorHandler);
 // ===== الاتصال بقاعدة البيانات =====
 const User = require('./models/User');
 const { getSettings } = require('./utils/settingsCache');
-const { startWhatsAppSession, getSession, isSessionConnected } = require('./whatsappManager');
+const { startWhatsAppSession, getSession } = require('./whatsappManager');
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
@@ -118,22 +118,13 @@ io.on('connection', (socket) => {
     if (sessionUserId) {
         socket.join(sessionUserId);
 
-        // إرسال الحالة الحقيقية فوراً عند فتح الصفحة
-        if (isSessionConnected(sessionUserId)) {
-            // الجلسة موجودة ومتصلة فعلاً
+        const sock = getSession(sessionUserId);
+        if (sock && sock.user) {
             socket.emit('ready', 'WhatsApp is connected');
-        } else {
-            const sock = getSession(sessionUserId);
-            if (sock) {
-                // الجلسة موجودة لكن غير متصلة بعد (في مرحلة الاتصال)
-                socket.emit('reconnecting', 'جاري الاتصال...');
-            } else {
-                // لا توجد جلسة - نبدأ واحدة جديدة (ستظهر QR)
-                socket.emit('reconnecting', 'جاري تحميل الجلسة...');
-                startWhatsAppSession(sessionUserId, io).then(s => {
-                    if (s && s.user) socket.emit('ready', 'WhatsApp is connected');
-                });
-            }
+        } else if (!sock) {
+            startWhatsAppSession(sessionUserId, io).then(s => {
+                if (s && s.user) socket.emit('ready', 'WhatsApp is connected');
+            });
         }
     }
 });

@@ -342,14 +342,9 @@
                     <div class="connection-card">
                         <div class="connection-header">
                             <h3><span id="conn-dot" class="status-dot waiting"></span> <span id="status-title">جاري الاتصال...</span></h3>
-                            <div style="display:flex; gap:6px;">
-                                <form action="/disconnect-whatsapp" method="POST" style="margin:0;">
-                                    <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('سيتم فصل الرقم ومسح الجلسة نهائياً')" style="font-size:11px; padding:6px 12px;">🔌 فصل</button>
-                                </form>
-                                <form action="/start-whatsapp" method="POST" style="margin:0;">
-                                    <button type="submit" class="btn btn-sm" style="font-size:11px; padding:6px 12px; background:var(--primary); color:white;">🔗 ربط</button>
-                                </form>
-                            </div>
+                            <form action="/disconnect-whatsapp" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('هل تريد فصل الرقم وإعادة الربط؟')" style="font-size:12px;">🔌 فصل</button>
+                            </form>
                         </div>
                         <div class="connection-body">
                             <!-- حالة متصل -->
@@ -371,28 +366,11 @@
                                 </div>
                             </div>
 
-                            <!-- قسم الربط -->
+                            <!-- قسم الباركود -->
                             <div id="link-container" style="display:none;">
-                                <div style="display:flex; border-radius:10px; overflow:hidden; border:2px solid #e2e8f0; margin-bottom:15px;">
-                                    <button id="tabBtnQR" onclick="switchTab('qr')" style="flex:1; padding:10px; text-align:center; font-weight:700; font-size:13px; cursor:pointer; background:var(--primary); color:white; border:none; font-family:inherit;">📷 مسح باركود</button>
-                                    <button id="tabBtnCode" onclick="switchTab('code')" style="flex:1; padding:10px; text-align:center; font-weight:700; font-size:13px; cursor:pointer; background:white; color:var(--gray); border:none; font-family:inherit;">📱 ربط بالرقم</button>
-                                </div>
-
-                                <div id="tabQR">
-                                    <div id="qr-img" style="text-align:center;"></div>
-                                    <p style="color:var(--gray); font-size:13px; margin-top:10px; text-align:center;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
-                                    <button onclick="saveQR()" style="margin-top:10px; width:100%; padding:10px; background:var(--blue); color:white; border:none; border-radius:10px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer;">💾 حفظ صورة الباركود</button>
-                                </div>
-
-                                <div id="tabCode" style="display:none;">
-                                    <p style="font-size:13px; color:var(--gray); margin-bottom:12px; line-height:1.8;">أدخل رقمك مع رمز الدولة وسنولّد لك رمز ربط من 8 أرقام.</p>
-                                    <div style="display:flex; gap:8px;">
-                                        <input type="text" id="pairingPhone" placeholder="مثال: 966500000000" dir="ltr" style="flex:1; border:2px solid #e2e8f0; border-radius:10px; padding:12px; font-family:inherit; font-size:15px; outline:none; direction:ltr;">
-                                        <button id="pairingBtn" onclick="getPairingCode()" style="background:var(--primary); color:white; border:none; border-radius:10px; padding:12px 20px; font-weight:800; font-family:inherit; cursor:pointer; font-size:14px; white-space:nowrap;">🔑 توليد</button>
-                                    </div>
-                                    <div id="pairingResult"></div>
-                                    <p style="color:var(--gray-light); font-size:11px; margin-top:10px; line-height:1.8; text-align:center;">⚠️ تأكد أن عدد الأجهزة المرتبطة أقل من 4 قبل الربط</p>
-                                </div>
+                                <div id="qr-img" style="text-align:center;"></div>
+                                <p style="color:var(--gray); font-size:13px; margin-top:10px; text-align:center;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
+                                <button onclick="saveQR()" style="margin-top:10px; width:100%; padding:10px; background:var(--blue); color:white; border:none; border-radius:10px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer;">💾 حفظ صورة الباركود</button>
                             </div>
                         </div>
                     </div>
