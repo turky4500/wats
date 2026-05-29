@@ -1,15 +1,10 @@
 {
   "name": "whatsapp-saas",
-  "version": "2.0.0",
-  "description": "واتساب تكوين - منصة SaaS لإرسال رسائل الواتساب الجماعية مع نظام اشتراكات وAPI برمجي",
+  "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
-  "keywords": ["whatsapp", "saas", "bulk-messaging", "nodejs", "baileys"],
-  "author": "turky4500",
-  "license": "MIT",
   "dependencies": {
     "@whiskeysockets/baileys": "github:WhiskeySockets/Baileys",
     "bcryptjs": "^2.4.3",

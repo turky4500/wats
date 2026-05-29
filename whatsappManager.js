@@ -1,41 +1,23 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
-const { useMongoDBAuthState } = require('./models/Session');
 
 const sessions = {};
 
+// دالة جديدة لفصل الواتساب ومسح الذاكرة
 async function disconnectSession(userId) {
     if (sessions[userId]) {
         try { await sessions[userId].logout(); } catch (e) { }
         delete sessions[userId];
     }
-    // مسح من الملفات
-    const authPath = './auth_info_baileys/' + userId;
+    const authPath = `./auth_info_baileys/${userId}`;
     if (fs.existsSync(authPath)) {
         fs.rmSync(authPath, { recursive: true, force: true });
     }
-    // مسح من MongoDB
-    try {
-        const { AuthSession } = require('./models/Session');
-        await AuthSession.deleteMany({ userId });
-    } catch (e) { }
 }
 
 async function startWhatsAppSession(userId, io) {
-    var state, saveCreds;
-
-    // محاولة MongoDB أولاً، وإذا فشل نستخدم الملفات
-    try {
-        var mongoAuth = await useMongoDBAuthState(userId);
-        state = mongoAuth.state;
-        saveCreds = mongoAuth.saveCreds;
-    } catch (e) {
-        console.log('⚠️ MongoDB auth فشل، استخدام الملفات:', e.message);
-        var fileAuth = await useMultiFileAuthState('./auth_info_baileys/' + userId);
-        state = fileAuth.state;
-        saveCreds = fileAuth.saveCreds;
-    }
+    const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
 
     const sock = makeWASocket({
         auth: state,
@@ -48,7 +30,7 @@ async function startWhatsAppSession(userId, io) {
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-
+        
         if (qr && io) {
             const QRCode = require('qrcode');
             QRCode.toDataURL(qr, (err, url) => {
@@ -76,9 +58,4 @@ function getSession(userId) {
     return sessions[userId];
 }
 
-function isSessionConnected(userId) {
-    const sock = sessions[userId];
-    return !!(sock && sock.user);
-}
-
-module.exports = { startWhatsAppSession, getSession, disconnectSession, isSessionConnected };
+module.exports = { startWhatsAppSession, getSession, disconnectSession };

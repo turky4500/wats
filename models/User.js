@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true, trim: true },
-    phone: { type: String, sparse: true, trim: true },
+    username: { type: String, required: true, unique: true },
+    phone: { type: String, sparse: true }, // رقم الجوال (مطلوب للـ OTP)
     password: { type: String, required: true },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
     isActive: { type: Boolean, default: true },
@@ -11,20 +11,12 @@ const userSchema = new mongoose.Schema({
     subscriptionEndsAt: { type: Date },
     
     // نظام الـ OTP والتفعيل
-    isVerified: { type: Boolean, default: true },
+    isVerified: { type: Boolean, default: true }, // افتراضي true للقدامى، والجدد سيكون false حتى يفعلوا
     otpCode: { type: String },
     otpExpires: { type: Date },
 
-    // حقول جديدة
-    lastLoginAt: { type: Date },
-
     createdAt: { type: Date, default: Date.now }
 });
-
-// فهارس
-userSchema.index({ phone: 1 });
-userSchema.index({ apiToken: 1 });
-userSchema.index({ role: 1, isActive: 1 });
 
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
