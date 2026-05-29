@@ -895,7 +895,6 @@
                 progressEl.classList.remove('active');
             }
         }
-    </script>
         // ===== Tabs للربط =====
         function switchLinkTab(tab) {
             document.querySelectorAll('.link-tab').forEach(t => t.classList.remove('active'));
@@ -922,19 +921,17 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    // عرض الرمز بشكل جميل
                     const formatted = data.code.match(/.{1,4}/g).join(' - ');
-                    document.getElementById('pairingResult').innerHTML = `
-                        <div class="pairing-code-display">
-                            <div style="font-size:20px;">🔑</div>
-                            <div class="code">${formatted}</div>
-                            <div class="hint">
-                                افتح <strong>واتساب</strong> على جوالك ←<br>
-                                <strong>الأجهزة المرتبطة</strong> ← <strong>ربط جهاز</strong> ←<br>
-                                <strong>الربط برقم الهاتف بدلاً من ذلك</strong><br>
-                                ثم أدخل هذا الرمز
-                            </div>
-                        </div>`;
+                    document.getElementById('pairingResult').innerHTML =
+                        '<div class="pairing-code-display">' +
+                        '<div style="font-size:20px;">🔑</div>' +
+                        '<div class="code">' + formatted + '</div>' +
+                        '<div class="hint">' +
+                        'افتح <strong>واتساب</strong> على جوالك ←<br>' +
+                        '<strong>الأجهزة المرتبطة</strong> ← <strong>ربط جهاز</strong> ←<br>' +
+                        '<strong>الربط برقم الهاتف بدلاً من ذلك</strong><br>' +
+                        'ثم أدخل هذا الرمز' +
+                        '</div></div>';
                     showToast('تم توليد رمز الربط! أدخله في واتساب', 'success');
                 } else {
                     showToast(data.error, 'error');
