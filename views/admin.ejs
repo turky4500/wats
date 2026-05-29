@@ -74,23 +74,6 @@
         @keyframes gpulse { 0%,100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.2); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0.05); } }
 
 
-        /* ===== Link Tabs (Admin) ===== */
-        .admin-link-tabs { display: flex; border-radius: 10px; overflow: hidden; border: 2px solid #bbf7d0; margin-bottom: 15px; }
-        .admin-link-tab { flex: 1; padding: 9px; text-align: center; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; background: white; color: var(--gray); border: none; font-family: inherit; }
-        .admin-link-tab.active { background: var(--green); color: white; }
-        .admin-link-tab:not(.active):hover { background: #f0fdf4; }
-        .admin-tab-content { display: none; }
-        .admin-tab-content.active { display: block; }
-        .admin-pairing-row { display: flex; gap: 8px; margin-top: 10px; }
-        .admin-pairing-row input { flex: 1; border: 2px solid #d1fae5; border-radius: 10px; padding: 10px 14px; font-family: inherit; font-size: 14px; outline: none; direction: ltr; }
-        .admin-pairing-row input:focus { border-color: var(--green); }
-        .admin-pairing-row button { background: var(--green); color: white; border: none; border-radius: 10px; padding: 10px 18px; font-weight: 800; font-family: inherit; cursor: pointer; font-size: 13px; white-space: nowrap; }
-        .admin-pairing-row button:disabled { background: #cbd5e1; cursor: wait; }
-        .admin-pairing-result { margin-top: 15px; }
-        .admin-code-box { background: white; border: 2px solid #86efac; border-radius: 12px; padding: 20px; text-align: center; }
-        .admin-code-box .code { font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #166534; font-family: 'Courier New', monospace; direction: ltr; margin: 8px 0; }
-        .admin-code-box .hint { font-size: 12px; color: #4ade80; line-height: 1.8; }
-
         /* ===== Settings Card ===== */
         .settings-card { border: 1px solid #e2e8f0; }
         .form-group { margin-bottom: 18px; }
@@ -227,36 +210,18 @@
                     </div>
 
                     <!-- حالة متصل -->
-                    <div id="sys-connected" style="display:none; background:var(--green-light); border-radius:12px; padding:18px; margin-bottom:15px; display:none;">
+                    <div id="sys-connected" style="display:none; background:var(--green-light); border-radius:12px; padding:18px; margin-bottom:15px;">
                         <div style="display:flex; align-items:center; gap:12px;">
                             <div style="width:44px;height:44px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0;">✓</div>
                             <div><strong style="color:#166534;">رقم الإدارة متصل وجاهز</strong><br><span style="font-size:12px;color:#4ade80;">يعمل لإرسال أكواد التفعيل</span></div>
                         </div>
                     </div>
 
-                    <!-- قسم الربط -->
+                    <!-- قسم الباركود -->
                     <div id="sys-link-section" style="display:none;">
-                        <div class="admin-link-tabs">
-                            <button class="admin-link-tab active" onclick="switchAdminTab('qr', this)">📷 باركود</button>
-                            <button class="admin-link-tab" onclick="switchAdminTab('code', this)">📱 ربط بالرمز</button>
-                        </div>
-
-                        <div class="admin-tab-content active" id="admin-tab-qr">
-                            <div id="sys-qr-container" style="text-align:center;">
-                                <img id="sys-qr" src="">
-                                <p style="color:var(--gray); font-size:12px; margin-top:8px;">امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
-                            </div>
-                        </div>
-
-                        <div class="admin-tab-content" id="admin-tab-code">
-                            <p style="font-size:12px; color:var(--gray); margin-bottom:10px; line-height:1.7;">
-                                أدخل رقم الإدارة مع رمز الدولة. سيتم توليد رمز أدخله في واتساب ← الأجهزة المرتبطة ← ربط بالرقم.
-                            </p>
-                            <div class="admin-pairing-row">
-                                <input type="text" id="adminPairingPhone" placeholder="مثال: 966500000000" dir="ltr">
-                                <button id="adminPairingBtn" onclick="getAdminPairingCode()">🔑 توليد</button>
-                            </div>
-                            <div class="admin-pairing-result" id="adminPairingResult"></div>
+                        <div id="sys-qr-container" style="text-align:center;">
+                            <img id="sys-qr" src="">
+                            <p style="color:var(--gray); font-size:12px; margin-top:8px;">📱 امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
                         </div>
                     </div>
 
@@ -445,55 +410,6 @@
             document.getElementById('modalTitle').innerText = '⚙️ تعديل: ' + username;
             document.getElementById('editForm').action = '/admin/edit-user/' + id;
             document.getElementById('editModal').classList.add('show');
-        }
-
-        // ===== تبويبات الربط =====
-        function switchAdminTab(tab, btn) {
-            document.querySelectorAll('.admin-link-tab').forEach(function(t) { t.classList.remove('active'); });
-            document.querySelectorAll('.admin-tab-content').forEach(function(t) { t.classList.remove('active'); });
-            btn.classList.add('active');
-            document.getElementById('admin-tab-' + tab).classList.add('active');
-        }
-
-        // ===== طلب رمز الربط للأدمن =====
-        function getAdminPairingCode() {
-            var phone = document.getElementById('adminPairingPhone').value.trim();
-            if (!phone || phone.length < 10) { alert('أدخل رقم صحيح مع رمز الدولة'); return; }
-
-            var btn = document.getElementById('adminPairingBtn');
-            btn.disabled = true;
-            btn.innerText = '⏳ جاري...';
-
-            fetch('/admin/request-pairing-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: phone })
-            })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    var formatted = data.code.match(/.{1,4}/g).join(' - ');
-                    document.getElementById('adminPairingResult').innerHTML =
-                        '<div class="admin-code-box">' +
-                        '<div style="font-size:18px;">🔑</div>' +
-                        '<div class="code">' + formatted + '</div>' +
-                        '<div class="hint">' +
-                        'افتح <strong>واتساب</strong> ← <strong>الأجهزة المرتبطة</strong><br>' +
-                        '← <strong>ربط جهاز</strong> ← <strong>الربط برقم الهاتف</strong><br>' +
-                        'ثم أدخل هذا الرمز' +
-                        '</div></div>';
-                } else {
-                    document.getElementById('adminPairingResult').innerHTML =
-                        '<p style="color:var(--red);font-weight:700;margin-top:10px;">❌ ' + data.error + '</p>';
-                }
-                btn.disabled = false;
-                btn.innerText = '🔑 توليد';
-            })
-            .catch(function() {
-                alert('خطأ في الاتصال بالخادم');
-                btn.disabled = false;
-                btn.innerText = '🔑 توليد';
-            });
         }
 
         // ===== حالات الاتصال =====

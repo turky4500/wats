@@ -5,7 +5,7 @@ const MessageLog = require('../models/MessageLog');
 const { requireAdmin } = require('../middleware/auth');
 const { getSettings, invalidateCache } = require('../utils/settingsCache');
 const { calculateSubscriptionDate } = require('../utils/helpers');
-const { startWhatsAppSession, disconnectSession, requestPairingCode } = require('../whatsappManager');
+const { startWhatsAppSession, disconnectSession } = require('../whatsappManager');
 
 const SYSTEM_ID = process.env.SYSTEM_ID || '111111111111111111111111';
 
@@ -125,19 +125,6 @@ router.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) 
     } catch (e) {
         console.error('خطأ في فصل واتساب الإدارة:', e);
         res.redirect('back');
-    }
-});
-
-// ===== طلب رمز الربط لرقم الإدارة =====
-router.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
-    try {
-        const { phoneNumber } = req.body;
-        if (!phoneNumber) return res.json({ success: false, error: 'أدخل رقم الهاتف' });
-        const io = req.app.get('io');
-        const code = await requestPairingCode(SYSTEM_ID, phoneNumber, io);
-        res.json({ success: true, code });
-    } catch (e) {
-        res.json({ success: false, error: e.message });
     }
 });
 
