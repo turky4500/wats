@@ -4,7 +4,7 @@ const User = require('../models/User');
 const MessageLog = require('../models/MessageLog');
 const { requireAuth } = require('../middleware/auth');
 const { getSettings } = require('../utils/settingsCache');
-const { startWhatsAppSession, getSession, disconnectSession } = require('../whatsappManager');
+const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode } = require('../whatsappManager');
 
 // ===== لوحة التحكم =====
 router.get('/dashboard', requireAuth, async (req, res) => {
@@ -51,6 +51,23 @@ router.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
     } catch (e) {
         console.error('خطأ في فصل الواتساب:', e);
         res.redirect('back');
+    }
+});
+
+// ===== طلب رمز الربط (Pairing Code) =====
+router.post('/request-pairing-code', requireAuth, async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const { phoneNumber } = req.body;
+        
+        if (!phoneNumber) {
+            return res.json({ success: false, error: 'أدخل رقم الهاتف' });
+        }
+
+        const code = await requestPairingCode(userId.toString(), phoneNumber);
+        res.json({ success: true, code });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
     }
 });
 

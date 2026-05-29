@@ -3,6 +3,7 @@ const pino = require('pino');
 const { useMongoDBAuthState } = require('./models/Session');
 
 const sessions = {};
+const pendingSockets = {}; // سوكتات في انتظار الربط (لم تتصل بعد)
 const MAX_SESSIONS = parseInt(process.env.MAX_CONCURRENT_SESSIONS) || 50;
 
 // ===== فصل الجلسة ومسح بياناتها =====
@@ -11,6 +12,7 @@ async function disconnectSession(userId) {
         try { await sessions[userId].logout(); } catch (e) { }
         delete sessions[userId];
     }
+    delete pendingSockets[userId];
     // مسح بيانات الجلسة من MongoDB
     try {
         const { AuthSession } = require('./models/Session');
@@ -22,7 +24,6 @@ async function disconnectSession(userId) {
 
 // ===== بدء جلسة واتساب =====
 async function startWhatsAppSession(userId, io) {
-    // التحقق من الحد الأقصى للجلسات
     const activeCount = Object.keys(sessions).length;
     if (activeCount >= MAX_SESSIONS) {
         console.warn(`⚠️ تم الوصول للحد الأقصى للجلسات (${MAX_SESSIONS})`);
@@ -39,6 +40,9 @@ async function startWhatsAppSession(userId, io) {
             logger: pino({ level: 'silent' }),
             browser: ['Chrome (Windows)', 'Desktop', '1.0.0']
         });
+
+        // حفظ السوكت المؤقت للاستخدام في Pairing Code
+        pendingSockets[userId] = sock;
 
         sock.ev.on('creds.update', saveCreds);
 
@@ -58,25 +62,23 @@ async function startWhatsAppSession(userId, io) {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                 
-                // ⚡ حذف الجلسة من الذاكرة فوراً عند أي انقطاع
                 delete sessions[userId];
+                delete pendingSockets[userId];
                 
                 if (shouldReconnect) {
-                    // إبلاغ الواجهة أن الاتصال انقطع ويحاول إعادة الاتصال
                     if (io) io.to(userId).emit('reconnecting', 'انقطع الاتصال... جاري إعادة المحاولة');
                     console.log(`🔄 إعادة اتصال: ${userId} (السبب: ${statusCode})`);
-                    
                     const delay = Math.min(5000 + (Math.random() * 5000), 30000);
                     setTimeout(() => startWhatsAppSession(userId, io), delay);
                 } else {
-                    // المستخدم سجّل خروج من الواتساب
-                    if (io) io.to(userId).emit('disconnected', 'تم فصل الواتساب. يرجى إعادة الربط بمسح الباركود.');
-                    console.log(`🔌 تم فصل الواتساب: ${userId} (تسجيل خروج)`);
+                    if (io) io.to(userId).emit('disconnected', 'تم فصل الواتساب. يرجى إعادة الربط.');
+                    console.log(`🔌 تم فصل الواتساب: ${userId}`);
                 }
             
             // ===== الاتصال نجح =====
             } else if (connection === 'open') {
                 sessions[userId] = sock;
+                delete pendingSockets[userId];
                 if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
                 console.log(`✅ واتساب متصل: ${userId}`);
             }
@@ -85,9 +87,38 @@ async function startWhatsAppSession(userId, io) {
         return sock;
     } catch (e) {
         console.error(`❌ خطأ في بدء جلسة ${userId}:`, e.message);
-        // إبلاغ الواجهة بالخطأ
         if (io) io.to(userId).emit('disconnected', 'حدث خطأ في الاتصال');
         return null;
+    }
+}
+
+// ===== طلب رمز الربط (Pairing Code) =====
+async function requestPairingCode(userId, phoneNumber) {
+    // جلب السوكت (إما متصل أو في الانتظار)
+    let sock = pendingSockets[userId] || sessions[userId];
+    
+    if (!sock) {
+        throw new Error('لا توجد جلسة نشطة. يرجى الانتظار حتى يظهر الباركود أو تحديث الصفحة.');
+    }
+
+    // التحقق أن الجلسة لم تُسجّل بعد
+    if (sock.authState?.creds?.registered) {
+        throw new Error('الرقم مرتبط بالفعل! افصل أولاً ثم أعد الربط.');
+    }
+
+    // تنظيف الرقم
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    if (cleanNumber.length < 10) {
+        throw new Error('رقم غير صالح. أدخل الرقم مع رمز الدولة (مثال: 966500000000)');
+    }
+
+    try {
+        const code = await sock.requestPairingCode(cleanNumber);
+        console.log(`🔑 رمز الربط لـ ${userId}: ${code}`);
+        return code;
+    } catch (e) {
+        console.error(`❌ خطأ في طلب رمز الربط:`, e.message);
+        throw new Error('فشل في توليد رمز الربط. تأكد من الرقم وحاول مرة أخرى.');
     }
 }
 
@@ -96,15 +127,17 @@ function getSession(userId) {
     return sessions[userId];
 }
 
-// ===== التحقق من أن الجلسة متصلة فعلاً =====
+// ===== التحقق من الاتصال =====
 function isSessionConnected(userId) {
     const sock = sessions[userId];
     return !!(sock && sock.user);
 }
 
-// ===== عدد الجلسات النشطة =====
 function getActiveSessionsCount() {
     return Object.keys(sessions).length;
 }
 
-module.exports = { startWhatsAppSession, getSession, disconnectSession, getActiveSessionsCount, isSessionConnected };
+module.exports = { 
+    startWhatsAppSession, getSession, disconnectSession, 
+    getActiveSessionsCount, isSessionConnected, requestPairingCode 
+};
