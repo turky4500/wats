@@ -20,33 +20,50 @@ async function disconnectSession(userId) {
     } catch (e) { console.error('خطأ مسح الجلسة:', e); }
 }
 
-async function startWhatsAppSession(userId, io) {
+// ===== بدء جلسة بـ browser مخصص =====
+async function createSocket(userId, browserType) {
+    const { state, saveCreds } = await useMongoDBAuthState(userId);
+    var browser;
+    if (browserType === 'pairing') {
+        // macOS مطلوب فقط لتوليد رمز الربط
+        browser = Browsers.macOS("Chrome");
+    } else {
+        // browser مستقر للاتصال الدائم
+        browser = ['Chrome (Windows)', 'Desktop', '1.0.0'];
+    }
+    var sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false,
+        logger: pino({ level: 'silent' }),
+        browser: browser,
+    });
+    return { sock, saveCreds };
+}
+
+async function startWhatsAppSession(userId, io, browserType) {
     if (Object.keys(sessions).length >= MAX_SESSIONS) {
         if (io) io.to(userId).emit('error', 'الخادم مشغول.');
         return null;
     }
     try {
-        const { state, saveCreds } = await useMongoDBAuthState(userId);
-        const sock = makeWASocket({
-            auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'silent' }),
-            browser: Browsers.macOS("Chrome"),
-        });
+        var bt = browserType || 'stable';
+        var { sock, saveCreds } = await createSocket(userId, bt);
 
         pendingSockets[userId] = sock;
         sock.ev.on('creds.update', saveCreds);
 
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect, qr } = update;
+        sock.ev.on('connection.update', async function(update) {
+            var connection = update.connection;
+            var lastDisconnect = update.lastDisconnect;
+            var qr = update.qr;
 
             if (qr && io) {
-                const QRCode = require('qrcode');
-                QRCode.toDataURL(qr, (err, url) => {
+                var QRCode = require('qrcode');
+                QRCode.toDataURL(qr, function(err, url) {
                     if (!err) io.to(userId).emit('qr', url);
                 });
 
-                // إذا المستخدم طلب ربط بالرمز
+                // إذا طلب ربط بالرمز
                 if (pairingRequests[userId] && !sock.authState.creds.registered) {
                     try {
                         var phone = pairingRequests[userId].phone;
@@ -65,14 +82,15 @@ async function startWhatsAppSession(userId, io) {
             }
 
             if (connection === 'close') {
-                var statusCode = lastDisconnect?.error?.output?.statusCode;
+                var statusCode = lastDisconnect && lastDisconnect.error && lastDisconnect.error.output ? lastDisconnect.error.output.statusCode : 0;
                 var shouldReconnect = statusCode !== DisconnectReason.loggedOut;
                 delete sessions[userId];
                 delete pendingSockets[userId];
                 if (shouldReconnect) {
                     if (io) io.to(userId).emit('reconnecting', 'انقطع الاتصال... جاري إعادة المحاولة');
                     var delay = Math.min(5000 + (Math.random() * 5000), 30000);
-                    setTimeout(function() { startWhatsAppSession(userId, io); }, delay);
+                    // عند إعادة الاتصال دائماً نستخدم browser المستقر
+                    setTimeout(function() { startWhatsAppSession(userId, io, 'stable'); }, delay);
                 } else {
                     if (io) io.to(userId).emit('disconnected', 'تم فصل الواتساب. يرجى إعادة الربط.');
                 }
@@ -100,28 +118,11 @@ async function requestPairingCode(userId, phoneNumber, io) {
     return new Promise(async function(resolve, reject) {
         pairingRequests[userId] = { phone: cleanNumber, resolve: resolve, reject: reject };
 
-        var existingSock = pendingSockets[userId];
-        if (existingSock && existingSock.authState && !existingSock.authState.creds.registered) {
-            try {
-                var customCode = String(Math.floor(10000000 + Math.random() * 90000000));
-                var code = await existingSock.requestPairingCode(cleanNumber, customCode);
-                delete pairingRequests[userId];
-                resolve(code);
-                return;
-            } catch (e) {
-                await disconnectSession(userId);
-                pairingRequests[userId] = { phone: cleanNumber, resolve: resolve, reject: reject };
-                startWhatsAppSession(userId, io);
-            }
-        } else if (!existingSock) {
-            await disconnectSession(userId);
-            pairingRequests[userId] = { phone: cleanNumber, resolve: resolve, reject: reject };
-            startWhatsAppSession(userId, io);
-        } else {
-            delete pairingRequests[userId];
-            reject(new Error('الرقم مرتبط بالفعل! افصل أولاً.'));
-            return;
-        }
+        // حذف الجلسة القديمة وبدء جلسة جديدة بـ browser خاص بالربط
+        await disconnectSession(userId);
+        pairingRequests[userId] = { phone: cleanNumber, resolve: resolve, reject: reject };
+        // نستخدم pairing browser لتوليد الرمز
+        startWhatsAppSession(userId, io, 'pairing');
 
         setTimeout(function() {
             if (pairingRequests[userId]) {
