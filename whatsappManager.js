@@ -61,7 +61,9 @@ async function startWhatsAppSession(userId, io) {
                 if (pairingRequests[userId] && !sock.authState.creds.registered) {
                     try {
                         const phoneNumber = pairingRequests[userId].phone;
-                        const code = await sock.requestPairingCode(phoneNumber);
+                        // توليد رمز رقمي مخصص من 8 أرقام
+                        const customCode = String(Math.floor(10000000 + Math.random() * 90000000));
+                        const code = await sock.requestPairingCode(phoneNumber, customCode);
                         console.log('🔑 رمز الربط لـ ' + userId + ': ' + code);
                         
                         // إرسال الرمز للواجهة عبر Socket
@@ -139,7 +141,8 @@ async function requestPairingCode(userId, phoneNumber, io) {
         } else if (existingSock.authState && existingSock.authState.creds && !existingSock.authState.creds.registered) {
             // سوكت موجود لكن غير مسجل - نحاول طلب الرمز مباشرة
             try {
-                const code = await existingSock.requestPairingCode(cleanNumber);
+                const customCode = String(Math.floor(10000000 + Math.random() * 90000000));
+                const code = await existingSock.requestPairingCode(cleanNumber, customCode);
                 console.log('🔑 رمز الربط لـ ' + userId + ': ' + code);
                 delete pairingRequests[userId];
                 resolve(code);
