@@ -4,247 +4,451 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>واتساب تكوين - لوحة التحكم</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
-        :root { --primary: #25d366; --primary-hover: #22c35e; --secondary: #3b82f6; --dark: #1e293b; --text-main: #334155; --text-muted: #94a3b8; --bg-color: #f8fafc; --card-bg: #ffffff; --danger: #ef4444; --warning: #f59e0b; }
-        body { font-family: 'Tajawal', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; }
-        .container { max-width: 1300px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); margin-bottom: 25px; border-top: 4px solid var(--primary); flex-wrap: wrap; gap:10px;}
-        .header h2 { margin: 0; font-weight: 800; color: var(--dark); display:flex; align-items:center; gap:15px; }
-        
-        .subscription-badge { font-size: 14px; padding: 5px 12px; border-radius: 20px; color: white; font-weight: bold; }
-        .active-sub { background: var(--primary); }
-        .expired-sub { background: var(--danger); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #25d366; --primary-dark: #1da851; --primary-light: #dcfce7;
+            --accent: #6366f1; --accent-light: #eef2ff;
+            --blue: #3b82f6; --blue-light: #eff6ff;
+            --danger: #ef4444; --danger-light: #fef2f2;
+            --warning: #f59e0b; --warning-light: #fffbeb;
+            --dark: #0f172a; --dark2: #1e293b; --gray: #64748b; --gray-light: #94a3b8;
+            --bg: #f1f5f9; --card: #ffffff;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 5px 10px -5px rgba(0,0,0,0.04);
+            --radius: 16px;
+        }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
 
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; border: none; border-radius: 6px; font-family: 'Tajawal', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: 0.2s; white-space: nowrap; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        .btn-secondary { background: var(--secondary); color: white; }
-        .btn-dark { background: #475569; color: white; }
-        .btn-warning { background: var(--warning); color: white; }
-        .btn-disabled { background: #cbd5e1 !important; color: white !important; cursor: not-allowed !important; transform: none !important; }
+        /* ===== Sidebar ===== */
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 280px; background: linear-gradient(180deg, var(--dark) 0%, var(--dark2) 100%);
+            color: white; padding: 30px 20px; display: flex; flex-direction: column;
+            position: fixed; top: 0; right: 0; height: 100vh; z-index: 100;
+        }
+        .sidebar-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 35px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-brand span { font-size: 20px; font-weight: 900; }
+        .sidebar-brand .logo-circle { width: 42px; height: 42px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .sidebar-user { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; margin-bottom: 25px; }
+        .sidebar-user .name { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+        .sidebar-user .sub-badge { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+        .sub-active { background: var(--primary); color: white; }
+        .sub-expired { background: var(--danger); color: white; }
 
-        .grid-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; align-items: start; }
-        @media (max-width: 800px) { .grid-layout { grid-template-columns: 1fr; } }
-        
-        .card { background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
-        .section-title { font-weight: 800; margin-top: 0; margin-bottom: 20px; font-size: 20px; color: var(--dark); }
-        
-        .form-step { display: none; animation: fadeIn 0.4s ease; }
+        .sidebar-nav { flex: 1; }
+        .sidebar-nav a { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.65); text-decoration: none; padding: 12px 15px; border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.2s; margin-bottom: 4px; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,0.1); color: white; }
+        .sidebar-nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+        .sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        .sidebar-footer a { color: rgba(255,255,255,0.5); }
+        .sidebar-footer a:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+        /* ===== Main ===== */
+        .main { flex: 1; margin-right: 280px; padding: 30px; }
+
+        /* ===== Header ===== */
+        .page-header { margin-bottom: 30px; }
+        .page-header h1 { font-size: 28px; font-weight: 900; color: var(--dark); margin-bottom: 5px; }
+        .page-header p { color: var(--gray); font-size: 15px; }
+
+        /* ===== Alert ===== */
+        .alert-expired { background: linear-gradient(135deg, #fef2f2, #fff1f2); border: 1px solid #fecaca; color: var(--danger); padding: 18px 25px; border-radius: var(--radius); margin-bottom: 25px; font-weight: 700; display: flex; align-items: center; gap: 12px; font-size: 15px; }
+
+        /* ===== Stats Cards ===== */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--card); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #e2e8f0; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .stat-card .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 15px; }
+        .stat-card .stat-label { font-size: 13px; color: var(--gray); font-weight: 600; margin-bottom: 5px; }
+        .stat-card .stat-value { font-size: 32px; font-weight: 900; color: var(--dark); }
+        .stat-card .stat-bg { position: absolute; top: -10px; left: -10px; font-size: 80px; opacity: 0.04; }
+
+        /* ===== Connection Card ===== */
+        .connection-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; margin-bottom: 25px; overflow: hidden; }
+        .connection-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+        .connection-header h3 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .connection-body { padding: 25px; text-align: center; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .status-dot.online { background: var(--primary); box-shadow: 0 0 0 3px rgba(37,211,102,0.2); animation: pulse 2s infinite; }
+        .status-dot.offline { background: var(--danger); }
+        .status-dot.waiting { background: var(--warning); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(37,211,102,0.2); } 50% { box-shadow: 0 0 0 8px rgba(37,211,102,0.05); } }
+
+        .connected-box { display: flex; align-items: center; gap: 15px; background: var(--primary-light); border-radius: 12px; padding: 20px; }
+        .connected-box .check { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; flex-shrink: 0; }
+        .connected-box .info h4 { color: #166534; font-size: 16px; margin-bottom: 3px; }
+        .connected-box .info p { color: #4ade80; font-size: 13px; }
+
+        #qr-container img { max-width: 220px; border-radius: 16px; border: 3px solid #e2e8f0; padding: 8px; background: white; }
+        .qr-waiting { color: var(--gray); font-size: 14px; margin-top: 10px; }
+
+        /* ===== Chart Card ===== */
+        .chart-card { background: var(--card); border-radius: var(--radius); padding: 25px; box-shadow: var(--shadow); border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        .chart-card h3 { font-weight: 800; margin-bottom: 15px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+        .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; padding-top: 10px; border-bottom: 2px solid #f1f5f9; }
+        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+        .bar { width: 100%; background: linear-gradient(180deg, var(--primary) 0%, #16a34a 100%); border-radius: 6px 6px 0 0; transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); min-height: 4px; }
+        .bar-label { font-size: 11px; color: var(--gray-light); margin-top: 6px; }
+        .bar-value { font-size: 11px; font-weight: 800; color: var(--dark2); }
+
+        /* ===== Live Feed ===== */
+        .live-feed { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; margin-bottom: 25px; overflow: hidden; }
+        .live-feed-header { padding: 15px 20px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+        .live-feed-header h3 { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .live-dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: pulse-red 1.5s infinite; }
+        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .live-feed-body { max-height: 220px; overflow-y: auto; padding: 15px; }
+        .log-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+        .log-item.success { background: #f0fdf4; color: #166534; }
+        .log-item.error { background: #fef2f2; color: #991b1b; }
+        .log-item .log-icon { font-size: 16px; flex-shrink: 0; }
+        .log-empty { text-align: center; color: var(--gray-light); padding: 30px; font-size: 14px; }
+
+        /* ===== Campaign Builder ===== */
+        .campaign-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; overflow: hidden; }
+        .campaign-header { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); color: white; padding: 22px 28px; }
+        .campaign-header h3 { font-size: 20px; font-weight: 900; margin-bottom: 5px; }
+        .campaign-header p { color: rgba(255,255,255,0.6); font-size: 13px; }
+        .campaign-body { padding: 28px; }
+
+        /* Steps Indicator */
+        .steps-indicator { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 30px; }
+        .step-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .step-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: var(--gray-light); transition: all 0.3s; background: white; }
+        .step-label { font-size: 13px; font-weight: 700; color: var(--gray-light); transition: all 0.3s; }
+        .step-item.active .step-circle { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 0 4px rgba(37,211,102,0.15); }
+        .step-item.active .step-label { color: var(--dark); }
+        .step-item.done .step-circle { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+        .step-line { width: 60px; height: 2px; background: #e2e8f0; margin: 0 10px; }
+
+        .form-step { display: none; animation: fadeIn 0.5s ease; }
         .form-step.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        label { display: block; font-weight: 700; margin-bottom: 8px; color: #475569; font-size: 14px; }
-        .input-group { display: flex; margin-bottom: 20px; }
-        .input-group input { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 15px; outline: none; }
-        .input-group button { background: white; color: var(--primary); border: 1px solid #cbd5e1; border-left: 1px solid #cbd5e1; border-radius: 0 6px 6px 0; padding: 0 20px; font-weight: bold; font-family: inherit; cursor: pointer; transition: 0.2s; }
-        .input-group button:hover { background: #f0fdf4; color: #16a34a; }
-        
-        .file-upload-styled { flex: 1; border: 1px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; padding: 12px 15px; font-family: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; background: #f8fafc; }
-        .recipients-list { width: 100%; min-height: 120px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; background: #f8fafc; font-family: monospace; font-size: 15px; direction: ltr; text-align: left; resize: vertical; outline: none; box-sizing: border-box; }
-        .counter-badge { background: var(--primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; }
+        /* Form Controls */
+        .form-label { display: block; font-weight: 700; margin-bottom: 8px; color: var(--dark2); font-size: 14px; }
+        .form-input-group { display: flex; margin-bottom: 15px; }
+        .form-input-group input { flex: 1; border: 2px solid #e2e8f0; border-left: none; border-radius: 0 10px 10px 0; padding: 12px 16px; font-family: inherit; font-size: 15px; outline: none; transition: border 0.2s; }
+        .form-input-group input:focus { border-color: var(--primary); }
+        .form-input-group button { background: var(--primary); color: white; border: 2px solid var(--primary); border-radius: 10px 0 0 10px; padding: 0 20px; font-weight: 800; font-family: inherit; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .form-input-group button:hover { background: var(--primary-dark); }
 
-        .preview-box { background: #e5ddd5; padding: 20px; border-radius: 8px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px; }
-        .preview-bubble { background: #dcf8c5; padding: 12px 15px; border-radius: 10px; border-top-right-radius: 0; max-width: 80%; align-self: flex-start; position: relative; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; color: #111; }
+        .file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .file-label { flex: 1; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--gray); cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .file-btn { background: var(--blue); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 13px; white-space: nowrap; }
+
+        .recipients-area { width: 100%; min-height: 100px; border: 2px solid #e2e8f0; border-radius: 10px; padding: 14px; background: #fafbfc; font-family: 'Courier New', monospace; font-size: 14px; direction: ltr; text-align: left; resize: vertical; outline: none; transition: border 0.2s; }
+        .recipients-area:focus { border-color: var(--primary); }
+        .recipients-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .count-badge { background: var(--accent); color: white; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 800; }
+        .clear-btn { background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--gray); cursor: pointer; font-family: inherit; font-weight: 600; }
+        .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+        /* Message Editor */
+        .preview-container { background: linear-gradient(135deg, #e5ddd5 0%, #d9cfbe 100%); padding: 25px; border-radius: 12px; margin-bottom: 20px; position: relative; }
+        .preview-container::before { content: ''; position: absolute; inset: 0; border-radius: 12px; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+        .preview-bubble { background: #dcf8c5; padding: 14px 18px; border-radius: 12px; border-top-right-radius: 0; max-width: 85%; position: relative; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,0.1); z-index: 1; }
         .preview-bubble::after { content: ''; position: absolute; top: 0; right: -8px; border-width: 0 8px 8px 0; border-style: solid; border-color: transparent #dcf8c5 transparent transparent; }
-        
-        .editor-toolbar { border: 1px solid #cbd5e1; border-bottom: none; border-radius: 6px 6px 0 0; background: #f8fafc; padding: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
-        .toolbar-btn { background: white; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 14px; font-weight: bold; color: #475569; font-family: inherit; }
-        .message-textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 0 0 6px 6px; padding: 15px; min-height: 150px; resize: vertical; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; }
-        .drag-drop-zone { border: 2px dashed #3b82f6; background: #eff6ff; padding: 40px 20px; text-align: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-        .drag-drop-zone h4 { color: #1e3a8a; margin: 15px 0 5px; font-weight: 800; font-size: 18px; }
-        .drag-drop-zone p { color: #60a5fa; font-size: 13px; margin: 0; }
+        .preview-label { position: absolute; top: 8px; left: 12px; font-size: 11px; color: rgba(0,0,0,0.3); font-weight: 700; z-index: 1; }
 
-        #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); font-weight: 600; border-right: 4px solid var(--primary); animation: slideIn 0.3s forwards; }
+        .editor-toolbar { border: 2px solid #e2e8f0; border-bottom: 1px solid #f1f5f9; border-radius: 10px 10px 0 0; background: #fafbfc; padding: 8px 12px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+        .toolbar-btn { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--dark2); font-family: inherit; transition: all 0.15s; }
+        .toolbar-btn:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark); }
+        .toolbar-sep { width: 1px; height: 24px; background: #e2e8f0; margin: 0 6px; }
+        .msg-textarea { width: 100%; border: 2px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px; padding: 16px; min-height: 140px; resize: vertical; font-family: inherit; font-size: 15px; outline: none; transition: border 0.2s; line-height: 1.8; }
+        .msg-textarea:focus { border-color: var(--primary); }
+
+        /* Drag & Drop */
+        .drop-zone { border: 2px dashed var(--blue); background: var(--blue-light); padding: 35px 20px; text-align: center; border-radius: 12px; cursor: pointer; transition: all 0.3s; margin-top: 20px; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-light); transform: scale(1.01); }
+        .drop-zone .dz-icon { font-size: 40px; margin-bottom: 8px; }
+        .drop-zone h4 { color: var(--dark2); font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+        .drop-zone p { color: var(--gray); font-size: 12px; }
+        .media-info { margin-top: 10px; font-size: 13px; color: var(--gray); font-weight: 600; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; box-shadow: 0 4px 6px rgba(37,211,102,0.25); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(37,211,102,0.35); }
+        .btn-outline { background: white; color: var(--dark2); border: 2px solid #e2e8f0; }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-disabled { background: #cbd5e1 !important; color: white !important; cursor: not-allowed !important; transform: none !important; box-shadow: none !important; }
+        .btn-send { width: 100%; padding: 16px; font-size: 17px; font-weight: 900; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+        .step-buttons { display: flex; justify-content: space-between; margin-top: 25px; gap: 10px; }
+
+        /* ===== Toast ===== */
+        #toast-container { position: fixed; bottom: 25px; left: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: var(--card); padding: 15px 22px; border-radius: 12px; box-shadow: var(--shadow-lg); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-right: 4px solid var(--primary); }
         .toast.error { border-right-color: var(--danger); }
-        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes slideIn { from { transform: translateX(-120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        .chat-sidebar-box { height: 250px; overflow-y: auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 13px; }
-        .log-msg { background: #e0f2fe; color: #0369a1; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
-        
-        #qr-container img { width: 100%; max-width: 260px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; background: white; margin-top: 15px; }
-        .alert-box { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center; }
+        /* ===== Grid Layout ===== */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .grid-sidebar { display: grid; grid-template-columns: 340px 1fr; gap: 25px; align-items: start; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; }
-        .stat-card .num { font-size: 28px; font-weight: 800; margin-top: 5px; }
+        /* ===== Responsive ===== */
+        @media (max-width: 1100px) { .grid-sidebar { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main { margin-right: 0; }
+            .mobile-header { display: flex !important; }
+        }
+        @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } .grid-2 { grid-template-columns: 1fr; } }
+
+        /* Mobile Header */
+        .mobile-header { display: none; background: var(--dark); color: white; padding: 15px 20px; position: sticky; top: 0; z-index: 90; justify-content: space-between; align-items: center; }
+        .mobile-header .logo { font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+
+        /* Hidden input */
+        input[type="file"].hidden { display: none; }
     </style>
 </head>
 <body>
     <div id="toast-container"></div>
 
-    <% 
+    <%
         let daysRemaining = 0;
-        let isExpired = true; 
-        
+        let isExpired = true;
         if (user.subscriptionEndsAt) {
             const diffTime = new Date(user.subscriptionEndsAt) - new Date();
             daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             if (daysRemaining > 0) isExpired = false;
             else daysRemaining = 0;
         }
-
-        if (user.role === 'admin') {
-            isExpired = false;
-            daysRemaining = '∞';
-        }
+        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; }
     %>
 
-    <div class="container">
-        <div class="header">
-            <h2>مرحباً، <%= user.username %> 👋 
-                <span class="subscription-badge <%= isExpired ? 'expired-sub' : 'active-sub' %>">
-                    <%= isExpired ? 'اشتراك منتهي' : `متبقي ${daysRemaining} أيام` %>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <div class="logo">💬 واتساب تكوين</div>
+        <a href="/logout" style="color:white; text-decoration:none; font-size:14px;">خروج</a>
+    </div>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-circle">💬</div>
+                <span>واتساب تكوين</span>
+            </div>
+            <div class="sidebar-user">
+                <div class="name"><%= user.username %></div>
+                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
+                    <%= isExpired ? '⛔ منتهي' : `✅ متبقي ${daysRemaining} يوم` %>
                 </span>
-            </h2>
-            <div style="display: flex; gap: 10px; flex-wrap:wrap;">
+            </div>
+            <div class="sidebar-nav">
+                <a href="/dashboard" class="active"><span class="icon">📊</span> لوحة التحكم</a>
+                <a href="/logs"><span class="icon">📜</span> سجل الرسائل</a>
+                <a href="/api-guide"><span class="icon">🔌</span> دليل الـ API</a>
                 <% if (isImpersonating) { %>
-                    <a href="/return-to-admin" class="btn btn-warning">👑 العودة للإدارة</a>
-                <% } %>
-                <a href="/api-guide" class="btn" style="background: #8b5cf6; color:white;">🔌 دليل الـ API</a>
-                <a href="/logs" class="btn btn-secondary">سجل الرسائل 📜</a>
-                <a href="/logout" class="btn btn-dark">تسجيل خروج</a>
-            </div>
-        </div>
-        
-        <% if (isExpired) { %>
-            <div class="alert-box">
-                ⚠️ عذراً اشتراكك منتهي، لا يمكنك إرسال أي حملات. الرجاء التواصل مع الدعم الفني: <%= settings ? settings.supportPhone : '966598686902' %>
-            </div>
-        <% } %>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>إجمالي إرسالك</h3>
-                <div class="num" style="color: #3b82f6;"><%= totalMessages %></div>
-            </div>
-            <div class="stat-card">
-                <h3>الرسائل الناجحة</h3>
-                <div class="num" style="color: #10b981;"><%= successMessages %></div>
-            </div>
-            <div class="stat-card">
-                <h3>الرسائل الفاشلة</h3>
-                <div class="num" style="color: #ef4444;"><%= failedMessages %></div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-bottom: 25px; padding: 20px;">
-            <h3 style="margin-top:0; font-size: 16px;">إحصائية الإرسال آخر 7 أيام 📈</h3>
-            <% 
-                let maxCount = 0;
-                dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; });
-                if (maxCount === 0) maxCount = 1;
-            %>
-            <div style="display: flex; align-items: flex-end; gap: 10px; height: 100px; padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-top: 10px;">
-                <% dailyStats.forEach(s => { 
-                    let heightPercent = (s.count / maxCount) * 100;
-                %>
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-                    <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;"><%= s.count %></div>
-                    <div style="width: 100%; background: #3b82f6; border-radius: 4px 4px 0 0; transition: 0.5s; height: <%= heightPercent %>%;"></div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 5px;"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
-                </div>
-                <% }) %>
-                <% if(dailyStats.length === 0) { %>
-                    <p style="width:100%; text-align:center; color:#94a3b8; font-size: 13px;">لا توجد عمليات إرسال في آخر 7 أيام</p>
+                    <a href="/return-to-admin" style="color: #f59e0b;"><span class="icon">👑</span> العودة للإدارة</a>
                 <% } %>
             </div>
+            <div class="sidebar-footer">
+                <a href="/logout"><span class="icon">🚪</span> تسجيل الخروج</a>
+            </div>
         </div>
 
-        <div class="grid-layout">
-            <div class="card" style="padding: 20px;">
-                <h3 class="section-title" id="status-title" style="font-size: 16px;">حالة الاتصال ⏳</h3>
-                <!-- الباركود -->
-                <div id="qr-container" style="display: none;">
-                    <p style="font-size: 13px; color: var(--text-muted); margin:0;">امسح رمز QR لربط الجلسة:</p>
-                    <div id="qr-img" style="text-align: center;"></div>
+        <!-- Main Content -->
+        <div class="main">
+            <div class="page-header">
+                <h1>مرحباً، <%= user.username %> 👋</h1>
+                <p>أدِر حملاتك وتابع إحصائياتك من هنا</p>
+            </div>
+
+            <% if (isExpired) { %>
+                <div class="alert-expired">
+                    ⚠️ اشتراكك منتهي، لا يمكنك إرسال حملات. تواصل مع الدعم: <%= settings ? settings.supportPhone : '' %>
                 </div>
-                <!-- المتصل -->
-                <div id="connected-container" style="display: none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0;">
-                        <p style="color: var(--primary); font-size: 15px; font-weight: 700; margin:0;">✅ واتساب متصل وجاهز</p>
-                        <form action="/disconnect-whatsapp" method="POST" onsubmit="return confirm('هل أنت متأكد من فصل رقم الواتساب الحالي؟ ستحتاج لمسح الباركود برقم جديد للتفعيل.');" style="margin:0;">
-                            <button type="submit" class="btn btn-dark" style="background:#ef4444; padding: 6px 12px; font-size:12px; cursor:pointer; border:none; border-radius:4px; color:white; font-weight:bold;">🔌 فصل الرقم</button>
-                        </form>
-                    </div>
-                    <h4 style="font-size: 14px; margin-top: 25px;">إشعارات الإرسال المباشرة:</h4>
-                    <div class="chat-sidebar-box" id="messages">
-                        <div style="color: #94a3b8; text-align: center; margin-top: 20px;">لا يوجد إرسال حالياً...</div>
-                    </div>
+            <% } %>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-bg">📨</div>
+                    <div class="stat-icon" style="background: var(--blue-light); color: var(--blue);">📨</div>
+                    <div class="stat-label">إجمالي الإرسال</div>
+                    <div class="stat-value"><%= totalMessages %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">✅</div>
+                    <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">✅</div>
+                    <div class="stat-label">ناجحة</div>
+                    <div class="stat-value" style="color: var(--primary);"><%= successMessages %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">❌</div>
+                    <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
+                    <div class="stat-label">فاشلة</div>
+                    <div class="stat-value" style="color: var(--danger);"><%= failedMessages %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">📈</div>
+                    <div class="stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
+                    <div class="stat-label">نسبة النجاح</div>
+                    <div class="stat-value" style="color: var(--accent);"><%= totalMessages > 0 ? Math.round((successMessages/totalMessages)*100) : 0 %>%</div>
                 </div>
             </div>
 
-            <div>
-                <div id="step-1" class="form-step active">
-                    <div class="card">
-                        <h3 class="section-title">إضافة المستلمين</h3>
-                        <label>أدخل رقم الهاتف (مع رمز البلد)</label>
-                        <div class="input-group">
-                            <button onclick="addManualNumber()">+ أضف</button>
-                            <input type="text" id="manualPhone" placeholder="مثال: 966551234567 (اضغط إنتر للإضافة)" dir="ltr">
+            <div class="grid-sidebar">
+                <!-- Right Column: Connection + Chart + Live -->
+                <div>
+                    <!-- Connection Status -->
+                    <div class="connection-card">
+                        <div class="connection-header">
+                            <h3><span id="conn-dot" class="status-dot waiting"></span> <span id="status-title">جاري الاتصال...</span></h3>
+                            <form action="/disconnect-whatsapp" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('هل تريد فصل الرقم وإعادة الربط؟')" style="font-size:12px;">🔌 فصل</button>
+                            </form>
                         </div>
-
-                        <label>أو تحميل أرقام من ملف (TXT)</label>
-                        <div class="input-group" onclick="document.getElementById('txtFileInput').click()">
-                            <button>+ رفع</button>
-                            <div class="file-upload-styled" id="txtFileLabel">لم يتم اختيار أي ملف</div>
-                            <input type="file" id="txtFileInput" accept=".txt" style="display:none;" onchange="handleTxtUpload(event)">
-                        </div>
-
-                        <label style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px;">
-                            <span>قائمة المستلمين <span class="counter-badge" id="recipientsCount">0</span></span>
-                            <span style="font-size: 13px; color: var(--danger); cursor: pointer;" onclick="clearRecipients()">مسح القائمة</span>
-                        </label>
-                        <textarea id="recipientsList" class="recipients-list" placeholder="الأرقام المضافة ستظهر هنا..." readonly></textarea>
-                        
-                        <div style="display: flex; justify-content: flex-end; margin-top: 25px;">
-                            <button class="btn btn-primary" onclick="goToStep(2)">التالي ←</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="step-2" class="form-step">
-                    <div class="card">
-                        <h3 class="section-title">الرسالة والمرفقات</h3>
-                        <label>معاينة الرسائل</label>
-                        <div class="preview-box"><div class="preview-bubble" id="livePreview">ستظهر رسالتك هنا...</div></div>
-
-                        <label>محتوى الرسالة</label>
-                        <div>
-                            <div class="editor-toolbar">
-                                <button class="toolbar-btn" onclick="insertFormat('*')"><b>B</b></button>
-                                <button class="toolbar-btn" onclick="insertFormat('_')"><i>I</i></button>
-                                <button class="toolbar-btn" onclick="insertFormat('~')"><s>S</s></button>
-                                <button class="toolbar-btn" onclick="insertText('😊')">😀</button>
-                                <div style="flex:1;"></div>
-                                <button class="toolbar-btn" onclick="insertDate('اليوم')">اليوم</button>
-                                <button class="toolbar-btn" onclick="insertDate('ميلادي')">ميلادي</button>
-                                <button class="toolbar-btn" onclick="insertDate('هجري')">هجري</button>
+                        <div class="connection-body">
+                            <div id="qr-container" style="display:none;">
+                                <div id="qr-img"></div>
+                                <p class="qr-waiting">📱 امسح الباركود من تطبيق واتساب</p>
                             </div>
-                            <textarea id="msg" class="message-textarea" placeholder="اكتب رسالتك هنا..." onkeyup="updatePreview()"></textarea>
+                            <div id="connected-container" style="display:none;">
+                                <div class="connected-box">
+                                    <div class="check">✓</div>
+                                    <div class="info">
+                                        <h4>واتساب متصل وجاهز ✅</h4>
+                                        <p>رقمك مرتبط بالنظام ويعمل بنجاح</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="loading-container">
+                                <div style="padding: 20px; color: var(--gray);">
+                                    <div style="font-size: 30px; margin-bottom: 10px;">⏳</div>
+                                    جاري التحقق من حالة الاتصال...
+                                </div>
+                            </div>
                         </div>
+                    </div>
 
-                        <label style="margin-top:25px; display:block;">أضف الوسائط (اختياري)</label>
-                        <div class="drag-drop-zone" id="dropZone" onclick="document.getElementById('mediaFiles').click()">
-                            <div style="font-size:50px; color:#3b82f6;">☁️</div>
-                            <h4>انقر لتحديد الوسائط</h4>
-                            <p>أو سحب الملف وإسقاطه هنا (الحد الأقصى 15 ميجابايت)</p>
-                            <div id="mediaFilesNames" style="margin-top:15px; color:#1e3a8a; font-weight:bold;"></div>
+                    <!-- Chart -->
+                    <div class="chart-card">
+                        <h3>📈 آخر 7 أيام</h3>
+                        <%
+                            let maxCount = 0;
+                            dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; });
+                            if (maxCount === 0) maxCount = 1;
+                        %>
+                        <div class="bar-chart">
+                            <% dailyStats.forEach(s => { let hp = (s.count / maxCount) * 100; %>
+                            <div class="bar-col">
+                                <div class="bar-value"><%= s.count %></div>
+                                <div class="bar" style="height: <%= hp %>%;"></div>
+                                <div class="bar-label"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
+                            </div>
+                            <% }) %>
+                            <% if(dailyStats.length === 0) { %><p style="width:100%; text-align:center; color:var(--gray-light); padding:30px 0;">لا توجد بيانات بعد</p><% } %>
                         </div>
-                        <input type="file" id="mediaFiles" multiple style="display:none;" onchange="handleMediaSelect()">
+                    </div>
 
-                        <input type="hidden" id="apiToken" value="<%= user.apiToken %>">
+                    <!-- Live Feed -->
+                    <div class="live-feed">
+                        <div class="live-feed-header">
+                            <h3><span class="live-dot"></span> البث المباشر</h3>
+                        </div>
+                        <div class="live-feed-body" id="messages">
+                            <div class="log-empty">💤 لا يوجد إرسال حالياً</div>
+                        </div>
+                    </div>
+                </div>
 
-                        <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-                            <button class="btn btn-dark" onclick="goToStep(1)">→ عودة</button>
-                            
-                            <% if (isExpired) { %>
-                                <button class="btn btn-disabled" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
-                            <% } else { %>
-                                <button class="btn btn-primary" id="send-btn" onclick="sendCampaign()">🚀 إرسال الآن</button>
-                            <% } %>
+                <!-- Left Column: Campaign Builder -->
+                <div>
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <h3>🚀 إنشاء حملة جديدة</h3>
+                            <p>أضف الأرقام، اكتب رسالتك، ثم أرسل</p>
+                        </div>
+                        <div class="campaign-body">
+                            <!-- Steps -->
+                            <div class="steps-indicator">
+                                <div class="step-item active" id="step-ind-1" onclick="goToStep(1)">
+                                    <div class="step-circle">1</div>
+                                    <div class="step-label">المستلمين</div>
+                                </div>
+                                <div class="step-line"></div>
+                                <div class="step-item" id="step-ind-2" onclick="goToStep(2)">
+                                    <div class="step-circle">2</div>
+                                    <div class="step-label">الرسالة</div>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="apiToken" value="<%= user.apiToken %>">
+
+                            <!-- Step 1: Recipients -->
+                            <div class="form-step active" id="step-1">
+                                <label class="form-label">أدخل رقم الهاتف (مع رمز البلد)</label>
+                                <div class="form-input-group">
+                                    <input type="text" id="manualPhone" placeholder="مثال: 9665xxxxxxxx" dir="ltr">
+                                    <button onclick="addManualNumber()">+ أضف</button>
+                                </div>
+
+                                <div class="file-row">
+                                    <span class="file-label" id="txtFileLabel">رفع ملف أرقام (TXT)</span>
+                                    <input type="file" id="txtFileInput" accept=".txt" class="hidden" onchange="handleTxtUpload(event)">
+                                    <button class="file-btn" onclick="document.getElementById('txtFileInput').click()">📄 اختر ملف</button>
+                                </div>
+
+                                <div class="recipients-header">
+                                    <span class="form-label" style="margin:0;">قائمة المستلمين <span class="count-badge" id="recipientsCount">0</span></span>
+                                    <button class="clear-btn" onclick="clearRecipients()">🗑️ مسح الكل</button>
+                                </div>
+                                <textarea class="recipients-area" id="recipientsList" readonly placeholder="ستظهر الأرقام هنا..."></textarea>
+
+                                <div class="step-buttons">
+                                    <div></div>
+                                    <button class="btn btn-primary" onclick="goToStep(2)">التالي: الرسالة ←</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Message -->
+                            <div class="form-step" id="step-2">
+                                <div class="preview-container">
+                                    <div class="preview-label">معاينة</div>
+                                    <div class="preview-bubble" id="livePreview">ستظهر رسالتك هنا...</div>
+                                </div>
+
+                                <label class="form-label">محتوى الرسالة</label>
+                                <div class="editor-toolbar">
+                                    <button class="toolbar-btn" onclick="insertFormat('*')" title="عريض"><b>B</b></button>
+                                    <button class="toolbar-btn" onclick="insertFormat('_')" title="مائل"><i>I</i></button>
+                                    <button class="toolbar-btn" onclick="insertFormat('~')" title="يتوسطه خط"><s>S</s></button>
+                                    <button class="toolbar-btn" onclick="insertFormat('```')" title="كود">‎</>‎</button>
+                                    <button class="toolbar-btn" onclick="insertText('😀')">😀</button>
+                                    <div class="toolbar-sep"></div>
+                                    <button class="toolbar-btn" onclick="insertDate('اليوم')">📅 اليوم</button>
+                                    <button class="toolbar-btn" onclick="insertDate('ميلادي')">📆 ميلادي</button>
+                                    <button class="toolbar-btn" onclick="insertDate('هجري')">🌙 هجري</button>
+                                </div>
+                                <textarea class="msg-textarea" id="msg" placeholder="اكتب رسالتك هنا..." oninput="updatePreview()"></textarea>
+
+                                <div class="drop-zone" id="dropZone" onclick="document.getElementById('mediaFiles').click()">
+                                    <div class="dz-icon">☁️</div>
+                                    <h4>انقر أو اسحب لإضافة مرفقات</h4>
+                                    <p>صور، فيديو، مستندات (الحد: 15 ميجابايت)</p>
+                                </div>
+                                <input type="file" id="mediaFiles" multiple class="hidden" onchange="handleMediaSelect()">
+                                <div class="media-info" id="mediaFilesNames"></div>
+
+                                <div class="step-buttons">
+                                    <button class="btn btn-outline" onclick="goToStep(1)">→ رجوع</button>
+                                    <% if (isExpired) { %>
+                                        <button class="btn btn-disabled btn-send" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
+                                    <% } else { %>
+                                        <button class="btn btn-primary btn-send" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة الآن</button>
+                                    <% } %>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -255,9 +459,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io({ query: { userId: "<%= user._id %>" } });
-
-        // ✅ نظام القفل الذكي (State Lock) لمنع الباركود من الظهور في لوحة العميل
-        let isClientConnected = false; 
+        let isClientConnected = false;
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -265,43 +467,67 @@
             toast.className = `toast ${type}`;
             toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
             container.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 8000);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 6000);
+        }
+
+        // ===== إصلاح مشكلة تأخر اختفاء الباركود =====
+        function setConnected() {
+            isClientConnected = true;
+            document.getElementById('loading-container').style.display = 'none';
+            document.getElementById('qr-container').style.display = 'none';
+            document.getElementById('connected-container').style.display = 'block';
+            document.getElementById('status-title').innerText = 'متصل وجاهز';
+            document.getElementById('conn-dot').className = 'status-dot online';
+        }
+
+        function setWaitingQR(imgData) {
+            document.getElementById('loading-container').style.display = 'none';
+            document.getElementById('connected-container').style.display = 'none';
+            document.getElementById('qr-container').style.display = 'block';
+            document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`;
+            document.getElementById('status-title').innerText = 'بانتظار المسح 📱';
+            document.getElementById('conn-dot').className = 'status-dot waiting';
         }
 
         socket.on('qr', (imgData) => {
-            if (isClientConnected) return; // 🛑 إذا تم الاتصال بنجاح، سيقوم بتجاهل أي صورة باركود!
-
-            document.getElementById('status-title').innerText = "بانتظار المسح 📱";
-            document.getElementById('qr-container').style.display = 'block';
-            document.getElementById('connected-container').style.display = 'none';
-            document.getElementById('qr-img').innerHTML = `<img src="${imgData}">`; 
+            if (isClientConnected) return;
+            setWaitingQR(imgData);
         });
 
         socket.on('ready', () => {
-            isClientConnected = true; // 🔒 تم القفل! لن يظهر الباركود أبداً
-            document.getElementById('status-title').innerText = "الربط وجاهزية النظام";
-            document.getElementById('qr-container').style.display = 'none';
-            document.getElementById('connected-container').style.display = 'block';
+            setConnected();
+        });
+
+        // فحص فوري عند الاتصال بالسوكت
+        socket.on('connect', () => {
+            // الخادم سيرسل 'ready' تلقائياً إذا كان الواتساب متصل
+            // نضع timeout قصير - إذا ما جاء qr ولا ready خلال 3 ثواني = متصل
+            setTimeout(() => {
+                if (!isClientConnected && document.getElementById('loading-container').style.display !== 'none') {
+                    // لا زال loading → ربما متصل لكن ما وصلت الإشارة
+                    document.getElementById('loading-container').style.display = 'none';
+                }
+            }, 5000);
         });
 
         socket.on('message-sent', (data) => {
             const msgs = document.getElementById('messages');
-            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = '';
+            const empty = msgs.querySelector('.log-empty');
+            if (empty) empty.remove();
             const el = document.createElement('div');
-            el.className = 'log-msg';
-            el.innerText = `✅ أُرسلت لـ ${data.to}`;
+            el.className = 'log-item success';
+            el.innerHTML = `<span class="log-icon">✅</span> أُرسلت لـ <span dir="ltr" style="font-weight:800; margin-right:5px;">${data.to}</span>`;
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
         });
 
         socket.on('error', (err) => {
             const msgs = document.getElementById('messages');
-            if(msgs.innerHTML.includes('لا يوجد إرسال')) msgs.innerHTML = '';
+            const empty = msgs.querySelector('.log-empty');
+            if (empty) empty.remove();
             const el = document.createElement('div');
-            el.className = 'log-msg';
-            el.style.backgroundColor = '#fee2e2';
-            el.style.color = '#b91c1c';
-            el.innerText = `❌ ${err}`;
+            el.className = 'log-item error';
+            el.innerHTML = `<span class="log-icon">❌</span> ${err}`;
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
         });
@@ -311,18 +537,15 @@
             const val = document.getElementById('manualPhone').value.trim();
             if(val) { recipientsSet.add(val); document.getElementById('manualPhone').value = ''; updateRecipientsUI(); }
         }
-        document.getElementById('manualPhone').addEventListener('keypress', function (e) { if (e.key === 'Enter') addManualNumber(); });
+        document.getElementById('manualPhone').addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); addManualNumber(); } });
 
         function handleTxtUpload(e) {
             const file = e.target.files[0];
             if(!file) return;
-            document.getElementById('txtFileLabel').innerText = file.name;
+            document.getElementById('txtFileLabel').innerText = `📄 ${file.name}`;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                evt.target.result.split(/\r?\n/).forEach(line => {
-                    const num = line.trim();
-                    if(num) recipientsSet.add(num);
-                });
+                evt.target.result.split(/\r?\n/).forEach(line => { const num = line.trim(); if(num) recipientsSet.add(num); });
                 updateRecipientsUI();
             };
             reader.readAsText(file);
@@ -336,41 +559,41 @@
 
         function clearRecipients() {
             recipientsSet.clear(); updateRecipientsUI();
-            document.getElementById('txtFileLabel').innerText = 'لم يتم اختيار أي ملف';
+            document.getElementById('txtFileLabel').innerText = 'رفع ملف أرقام (TXT)';
             document.getElementById('txtFileInput').value = '';
         }
 
         function goToStep(step) {
-            if(step === 2 && recipientsSet.size === 0) return showToast("الرجاء إضافة مستلمين أولاً!", "error");
+            if(step === 2 && recipientsSet.size === 0) return showToast("أضف مستلمين أولاً!", "error");
             document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
+            // Update step indicators
+            document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active', 'done'));
+            document.getElementById(`step-ind-${step}`).classList.add('active');
+            if(step === 2) document.getElementById('step-ind-1').classList.add('done');
         }
 
         function insertFormat(char) {
-            const txtArea = document.getElementById('msg');
-            const start = txtArea.selectionStart, end = txtArea.selectionEnd, text = txtArea.value;
-            let sel = text.substring(start, end);
-            if (!sel) sel = "نص";
-            txtArea.value = text.substring(0, start) + `${char}${sel}${char}` + text.substring(end);
-            updatePreview();
+            const t = document.getElementById('msg');
+            const s = t.selectionStart, e = t.selectionEnd;
+            let sel = t.value.substring(s, e) || "نص";
+            t.value = t.value.substring(0, s) + `${char}${sel}${char}` + t.value.substring(e);
+            updatePreview(); t.focus();
         }
-
         function insertText(str) {
-            const txtArea = document.getElementById('msg');
-            const start = txtArea.selectionStart;
-            txtArea.value = txtArea.value.substring(0, start) + str + txtArea.value.substring(start);
-            updatePreview();
+            const t = document.getElementById('msg');
+            const s = t.selectionStart;
+            t.value = t.value.substring(0, s) + str + t.value.substring(s);
+            updatePreview(); t.focus();
         }
-
         function insertDate(type) {
             const now = new Date();
             let str = '';
             if(type === 'اليوم') str = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][now.getDay()];
             else if(type === 'ميلادي') str = now.toLocaleDateString('en-GB');
-            else if(type === 'هجري') str = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {day: 'numeric', month: 'long', year : 'numeric'}).format(now);
+            else if(type === 'هجري') str = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {day:'numeric',month:'long',year:'numeric'}).format(now);
             insertText(str);
         }
-
         function updatePreview() {
             let text = document.getElementById('msg').value || "ستظهر رسالتك هنا...";
             text = text.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<i>$1</i>').replace(/~(.*?)~/g, '<s>$1</s>');
@@ -378,21 +601,20 @@
         }
 
         const dropZone = document.getElementById('dropZone');
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = '#2563eb'; dropZone.style.background = '#dbeafe'; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#3b82f6'; dropZone.style.background = '#eff6ff'; });
-        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = '#3b82f6'; dropZone.style.background = '#eff6ff'; document.getElementById('mediaFiles').files = e.dataTransfer.files; handleMediaSelect(); });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); document.getElementById('mediaFiles').files = e.dataTransfer.files; handleMediaSelect(); });
 
         function handleMediaSelect() {
             const files = document.getElementById('mediaFiles').files;
             if(files.length > 0) {
-                let size = 0;
-                for(let f of files) size += f.size;
+                let size = 0; for(let f of files) size += f.size;
                 const mb = (size/(1024*1024)).toFixed(2);
                 if (mb > 15) {
-                    document.getElementById('mediaFilesNames').innerHTML = `<span style="color:red;">❌ الحجم (${mb} MB) يتجاوز الحد (15 MB)</span>`;
+                    document.getElementById('mediaFilesNames').innerHTML = `<span style="color:var(--danger);">❌ الحجم (${mb} MB) يتجاوز الحد (15 MB)</span>`;
                     document.getElementById('mediaFiles').value = '';
                 } else {
-                    document.getElementById('mediaFilesNames').innerText = `تم تحديد ${files.length} مرفقات (${mb} MB).`;
+                    document.getElementById('mediaFilesNames').innerHTML = `✅ تم تحديد <strong>${files.length}</strong> مرفق (${mb} MB)`;
                 }
             }
         }
@@ -411,12 +633,11 @@
             const body = document.getElementById('msg').value;
             const fileInput = document.getElementById('mediaFiles');
             const token = document.getElementById('apiToken').value;
-            
-            if (!body && fileInput.files.length === 0) return showToast("الرجاء كتابة رسالة أو إضافة مرفق!", "error");
-            
+            if (!body && fileInput.files.length === 0) return showToast("اكتب رسالة أو أضف مرفق!", "error");
+
             const btn = document.getElementById('send-btn');
-            btn.innerText = 'جاري المعالجة... ⏳';
-            btn.disabled = true;
+            btn.innerHTML = '<span style="animation:spin 1s linear infinite; display:inline-block;">⏳</span> جاري الإرسال...';
+            btn.disabled = true; btn.classList.add('btn-disabled');
 
             try {
                 const mediaArray = [];
@@ -425,30 +646,25 @@
                 const response = await fetch('/api/send-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ to: numbersArr, body: body, media: mediaArray })
+                    body: JSON.stringify({ to: numbersArr, body, media: mediaArray })
                 });
-
                 const result = await response.json();
-                btn.innerText = '🚀 إرسال الآن';
-                btn.disabled = false;
+                btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
 
                 if (result.success) {
                     showToast(result.message, "success");
-                    clearRecipients();
-                    document.getElementById('msg').value = '';
-                    fileInput.value = '';
-                    document.getElementById('mediaFilesNames').innerText = '';
-                    updatePreview();
-                    goToStep(1);
+                    clearRecipients(); document.getElementById('msg').value = '';
+                    fileInput.value = ''; document.getElementById('mediaFilesNames').innerText = '';
+                    updatePreview(); goToStep(1);
                 } else {
                     showToast(result.error || "خطأ", "error");
                 }
             } catch(e) {
-                showToast("حدث خطأ أثناء التواصل مع السيرفر!", "error");
-                btn.innerText = '🚀 إرسال الآن';
-                btn.disabled = false;
+                showToast("خطأ في التواصل مع السيرفر!", "error");
+                btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
             }
         }
     </script>
+    <style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
 </body>
 </html>
