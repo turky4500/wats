@@ -140,4 +140,28 @@ router.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
     }
 });
 
+
+// ===== حذف عميل نهائياً =====
+router.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).send('المستخدم غير موجود');
+        if (user.role === 'admin') return res.status(403).send('لا يمكن حذف حساب الأدمن');
+        
+        // حذف سجلات الرسائل
+        await MessageLog.deleteMany({ userId: user._id });
+        
+        // فصل الواتساب إذا متصل
+        try { await disconnectSession(user._id.toString()); } catch(e) {}
+        
+        // حذف المستخدم
+        await User.findByIdAndDelete(req.params.id);
+        
+        res.redirect('/admin');
+    } catch (e) {
+        console.error('خطأ في حذف المستخدم:', e);
+        res.status(400).send('حدث خطأ في الحذف');
+    }
+});
+
 module.exports = router;

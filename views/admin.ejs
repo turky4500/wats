@@ -381,6 +381,9 @@
                                         <%= u.isActive ? '⛔' : '✅' %>
                                     </button>
                                 </form>
+                                <form action="/admin/delete-user/<%= u._id %>" method="POST" style="display:inline;">
+                                    <button type="submit" class="action-btn red" onclick="return confirm('⚠️ حذف نهائي لحساب <%= u.username %> وجميع سجلاته؟ لا يمكن التراجع!')">🗑️</button>
+                                </form>
                             </div>
                         </td>
                     </tr>
