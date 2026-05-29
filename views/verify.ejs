@@ -27,13 +27,17 @@
         <h2>توثيق الحساب</h2>
         <p>لقد أرسلنا كود التفعيل (4 أرقام) إلى رقمك عبر الواتساب، الرجاء إدخاله هنا.</p>
         <% if (error) { %><div class="error">⚠️ <%= error %></div><% } %>
+        <% if (success) { %><div style="background:#f0fdf4;color:#16a34a;padding:12px;border-radius:10px;font-size:14px;margin-bottom:20px;font-weight:bold;border:1px solid #bbf7d0;"><%= success %></div><% } %>
         <form action="/verify" method="POST">
             <div class="input-group">
                 <input type="text" name="otp" placeholder="----" maxlength="4" required inputmode="numeric" pattern="[0-9]{4}" autofocus>
             </div>
             <button type="submit" class="btn">تأكيد الدخول ✅</button>
         </form>
-        <div class="timer">⏱️ الرمز صالح لمدة 10 دقائق</div>
+        <form action="/resend-otp" method="POST" style="margin-top:15px;">
+            <button type="submit" style="background:none;border:2px solid #e2e8f0;border-radius:10px;padding:10px;width:100%;font-family:inherit;font-weight:700;font-size:14px;color:#64748b;cursor:pointer;transition:all 0.2s;">🔄 إعادة إرسال الرمز</button>
+        </form>
+        <div class="timer" style="margin-top:10px;">⏱️ الرمز صالح لمدة 10 دقائق</div>
     </div>
 </body>
 </html>

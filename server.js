@@ -66,12 +66,17 @@ const requireAdmin = async (req, res, next) => {
 };
 
 async function sendSystemOTP(phone, message) {
+    console.log('📤 محاولة إرسال OTP إلى:', phone);
     let sock = getSession(SYSTEM_ID);
-    if (!sock || !sock.user) throw new Error('رقم الإدارة غير متصل! تواصل مع الدعم الفني.');
+    if (!sock || !sock.user) {
+        console.log('❌ رقم الإدارة غير متصل! sessions:', Object.keys(sessions));
+        throw new Error('رقم الإدارة غير متصل! تواصل مع الدعم الفني.');
+    }
     const jid = `${phone}@s.whatsapp.net`;
     const wpCheck = await sock.onWhatsApp(jid);
     if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم الذي أدخلته غير موجود في الواتساب.');
     await sock.sendMessage(jid, { text: message });
+    console.log('✅ تم إرسال OTP بنجاح إلى:', phone);
 }
 
 async function createDefaultAdmin() {
@@ -128,25 +133,48 @@ app.post('/register', async (req, res) => {
         await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
         req.session.verifyUserId = user._id;
         res.redirect('/verify');
-    } catch (e) { res.render('register', { error: e.message }); }
+    } catch (e) {
+        console.error('❌ خطأ في التسجيل:', e.message);
+        res.render('register', { error: e.message });
+    }
 });
 
 app.get('/verify', (req, res) => {
     if (!req.session.verifyUserId) return res.redirect('/register');
-    res.render('verify', { error: null });
+    res.render('verify', { error: null, success: null });
 });
 app.post('/verify', async (req, res) => {
     try {
         const user = await User.findById(req.session.verifyUserId);
         if (!user) return res.redirect('/register');
-        if (user.otpCode !== req.body.otp || new Date() > user.otpExpires) return res.render('verify', { error: 'الرمز غير صحيح أو منتهي الصلاحية' });
+        if (user.otpCode !== req.body.otp || new Date() > user.otpExpires) return res.render('verify', { error: 'الرمز غير صحيح أو منتهي الصلاحية', success: null });
 
         user.isVerified = true; user.otpCode = null; user.otpExpires = null;
         await user.save();
         req.session.userId = user._id;
         req.session.verifyUserId = null;
         res.redirect('/dashboard');
-    } catch (e) { res.render('verify', { error: 'حدث خطأ' }); }
+    } catch (e) { res.render('verify', { error: 'حدث خطأ', success: null }); }
+});
+
+
+app.post('/resend-otp', async (req, res) => {
+    try {
+        if (!req.session.verifyUserId) return res.redirect('/register');
+        const user = await User.findById(req.session.verifyUserId);
+        if (!user) return res.redirect('/register');
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpExp = new Date(); otpExp.setMinutes(otpExp.getMinutes() + 10);
+        user.otpCode = otp; user.otpExpires = otpExp;
+        await user.save();
+
+        await sendSystemOTP(user.phone, `رمز التفعيل الجديد: *${otp}*\n(صالح لمدة 10 دقائق)`);
+        res.render('verify', { error: null, success: 'تم إعادة إرسال الرمز بنجاح ✅' });
+    } catch (e) {
+        console.error('❌ خطأ إعادة إرسال OTP:', e.message);
+        res.render('verify', { error: 'فشل إعادة الإرسال: ' + e.message, success: null });
+    }
 });
 
 app.get('/forgot-password', (req, res) => res.render('forgot-password', { error: null }));
