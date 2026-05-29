@@ -2,47 +2,68 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>إنشاء حساب جديد</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب جديد | واتساب تكوين</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .auth-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; border-top: 4px solid #3b82f6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .auth-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 420px; text-align: center; border-top: 4px solid #3b82f6; }
+        .auth-card .logo { font-size: 40px; margin-bottom: 10px; }
         .auth-card h2 { margin-top: 0; color: #1e293b; font-weight: 800; font-size: 24px; margin-bottom: 5px; }
-        .auth-card p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
-        .input-group { margin-bottom: 15px; text-align: right; }
-        .input-group label { display: block; font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 5px; }
-        .input-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; }
+        .auth-card p { color: #64748b; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
+        .input-group { margin-bottom: 18px; text-align: right; }
+        .input-group label { display: block; font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 6px; }
+        .input-group input { width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 15px; box-sizing: border-box; outline: none; transition: all 0.3s; }
         .input-group input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        .btn { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; font-family: inherit; cursor: pointer; margin-top: 10px; }
-        .btn:hover { background: #2563eb; }
-        .error { background: #fef2f2; color: #ef4444; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; font-weight: bold; }
+        .input-hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .btn { width: 100%; padding: 13px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; font-family: inherit; cursor: pointer; margin-top: 10px; transition: all 0.3s; }
+        .btn:hover { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); }
+        .error { background: #fef2f2; color: #ef4444; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; font-weight: bold; border: 1px solid #fecaca; }
         .links { margin-top: 20px; font-size: 14px; }
         .links a { color: #3b82f6; text-decoration: none; font-weight: bold; }
+        .links a:hover { color: #1d4ed8; }
+        .password-strength { height: 4px; border-radius: 2px; margin-top: 6px; transition: all 0.3s; }
     </style>
 </head>
 <body>
     <div class="auth-card">
-        <h2>حساب جديد 🚀</h2>
+        <div class="logo">🚀</div>
+        <h2>حساب جديد</h2>
         <p>انضم إلينا وابدأ حملاتك الإعلانية بسهولة</p>
-        <% if (error) { %><div class="error"><%= error %></div><% } %>
+        <% if (error) { %><div class="error">⚠️ <%= error %></div><% } %>
         <form action="/register" method="POST">
             <div class="input-group">
                 <label>اسم المستخدم (لتسجيل الدخول)</label>
-                <input type="text" name="username" required>
+                <input type="text" name="username" placeholder="مثال: ahmed_store" required autocomplete="username" minlength="3">
             </div>
             <div class="input-group">
                 <label>رقم الواتساب (للتفعيل)</label>
-                <input type="text" name="phone" placeholder="مثال: 9665..." dir="ltr" required>
+                <input type="text" name="phone" placeholder="مثال: 9665xxxxxxxx" dir="ltr" required>
+                <div class="input-hint">أدخل الرقم مع رمز الدولة بدون + أو 00</div>
             </div>
             <div class="input-group">
                 <label>كلمة المرور</label>
-                <input type="password" name="password" required>
+                <input type="password" name="password" id="password" required minlength="6" autocomplete="new-password">
+                <div class="input-hint">6 أحرف على الأقل</div>
+                <div class="password-strength" id="strength"></div>
             </div>
-            <button type="submit" class="btn">تسجيل وحصول على يومين مجاناً</button>
+            <button type="submit" class="btn">تسجيل وحصول على يومين مجاناً ✨</button>
         </form>
         <div class="links">
             <a href="/login">لديك حساب بالفعل؟ تسجيل الدخول</a>
         </div>
     </div>
+    <script>
+        document.getElementById('password').addEventListener('input', function() {
+            const bar = document.getElementById('strength');
+            const len = this.value.length;
+            if (len === 0) { bar.style.width = '0'; bar.style.background = 'transparent'; }
+            else if (len < 6) { bar.style.width = '33%'; bar.style.background = '#ef4444'; }
+            else if (len < 10) { bar.style.width = '66%'; bar.style.background = '#f59e0b'; }
+            else { bar.style.width = '100%'; bar.style.background = '#10b981'; }
+        });
+    </script>
 </body>
 </html>

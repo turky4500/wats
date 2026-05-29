@@ -1,61 +1,92 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
-const fs = require('fs');
+const { useMongoDBAuthState } = require('./models/Session');
 
 const sessions = {};
+const MAX_SESSIONS = parseInt(process.env.MAX_CONCURRENT_SESSIONS) || 50;
 
-// دالة جديدة لفصل الواتساب ومسح الذاكرة
+// ===== فصل الجلسة ومسح بياناتها =====
 async function disconnectSession(userId) {
     if (sessions[userId]) {
         try { await sessions[userId].logout(); } catch (e) { }
         delete sessions[userId];
     }
-    const authPath = `./auth_info_baileys/${userId}`;
-    if (fs.existsSync(authPath)) {
-        fs.rmSync(authPath, { recursive: true, force: true });
+    // مسح بيانات الجلسة من MongoDB
+    try {
+        const { AuthSession } = require('./models/Session');
+        await AuthSession.deleteMany({ userId });
+    } catch (e) {
+        console.error('خطأ في مسح بيانات الجلسة:', e);
     }
 }
 
+// ===== بدء جلسة واتساب =====
 async function startWhatsAppSession(userId, io) {
-    const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
+    // التحقق من الحد الأقصى للجلسات
+    const activeCount = Object.keys(sessions).length;
+    if (activeCount >= MAX_SESSIONS) {
+        console.warn(`⚠️ تم الوصول للحد الأقصى للجلسات (${MAX_SESSIONS})`);
+        if (io) io.to(userId).emit('error', 'الخادم مشغول. يرجى المحاولة لاحقاً.');
+        return null;
+    }
 
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: false,
-        logger: pino({ level: 'silent' }),
-        browser: ['Chrome (Windows)', 'Desktop', '1.0.0']
-    });
+    try {
+        // استخدام MongoDB لتخزين بيانات الجلسة بدلاً من الملفات
+        const { state, saveCreds } = await useMongoDBAuthState(userId);
 
-    sock.ev.on('creds.update', saveCreds);
+        const sock = makeWASocket({
+            auth: state,
+            printQRInTerminal: false,
+            logger: pino({ level: 'silent' }),
+            browser: ['Chrome (Windows)', 'Desktop', '1.0.0']
+        });
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (qr && io) {
-            const QRCode = require('qrcode');
-            QRCode.toDataURL(qr, (err, url) => {
-                if (!err) io.to(userId).emit('qr', url);
-            });
-        }
+        sock.ev.on('creds.update', saveCreds);
 
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) {
-                setTimeout(() => startWhatsAppSession(userId, io), 5000);
-            } else {
-                delete sessions[userId];
+        sock.ev.on('connection.update', (update) => {
+            const { connection, lastDisconnect, qr } = update;
+
+            if (qr && io) {
+                const QRCode = require('qrcode');
+                QRCode.toDataURL(qr, (err, url) => {
+                    if (!err) io.to(userId).emit('qr', url);
+                });
             }
-        } else if (connection === 'open') {
-            sessions[userId] = sock;
-            if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
-        }
-    });
 
-    return sock;
+            if (connection === 'close') {
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                
+                if (shouldReconnect) {
+                    // إعادة الاتصال مع backoff تدريجي
+                    const delay = Math.min(5000 + (Math.random() * 5000), 30000);
+                    setTimeout(() => startWhatsAppSession(userId, io), delay);
+                } else {
+                    delete sessions[userId];
+                    if (io) io.to(userId).emit('disconnected', 'تم تسجيل الخروج من الواتساب');
+                }
+            } else if (connection === 'open') {
+                sessions[userId] = sock;
+                if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
+                console.log(`✅ واتساب متصل: ${userId}`);
+            }
+        });
+
+        return sock;
+    } catch (e) {
+        console.error(`❌ خطأ في بدء جلسة ${userId}:`, e.message);
+        return null;
+    }
 }
 
+// ===== الحصول على جلسة =====
 function getSession(userId) {
     return sessions[userId];
 }
 
-module.exports = { startWhatsAppSession, getSession, disconnectSession };
+// ===== عدد الجلسات النشطة =====
+function getActiveSessionsCount() {
+    return Object.keys(sessions).length;
+}
+
+module.exports = { startWhatsAppSession, getSession, disconnectSession, getActiveSessionsCount };
