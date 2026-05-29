@@ -1,23 +1,41 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
+const { useMongoDBAuthState } = require('./models/Session');
 
 const sessions = {};
 
-// فصل الواتساب ومسح البيانات
 async function disconnectSession(userId) {
     if (sessions[userId]) {
         try { await sessions[userId].logout(); } catch (e) { }
         delete sessions[userId];
     }
-    const authPath = `./auth_info_baileys/${userId}`;
+    // مسح من الملفات
+    const authPath = './auth_info_baileys/' + userId;
     if (fs.existsSync(authPath)) {
         fs.rmSync(authPath, { recursive: true, force: true });
     }
+    // مسح من MongoDB
+    try {
+        const { AuthSession } = require('./models/Session');
+        await AuthSession.deleteMany({ userId });
+    } catch (e) { }
 }
 
 async function startWhatsAppSession(userId, io) {
-    const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
+    var state, saveCreds;
+
+    // محاولة MongoDB أولاً، وإذا فشل نستخدم الملفات
+    try {
+        var mongoAuth = await useMongoDBAuthState(userId);
+        state = mongoAuth.state;
+        saveCreds = mongoAuth.saveCreds;
+    } catch (e) {
+        console.log('⚠️ MongoDB auth فشل، استخدام الملفات:', e.message);
+        var fileAuth = await useMultiFileAuthState('./auth_info_baileys/' + userId);
+        state = fileAuth.state;
+        saveCreds = fileAuth.saveCreds;
+    }
 
     const sock = makeWASocket({
         auth: state,
@@ -44,7 +62,6 @@ async function startWhatsAppSession(userId, io) {
                 setTimeout(() => startWhatsAppSession(userId, io), 5000);
             } else {
                 delete sessions[userId];
-                if (io) io.to(userId).emit('disconnected', 'تم فصل الواتساب');
             }
         } else if (connection === 'open') {
             sessions[userId] = sock;
