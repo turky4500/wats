@@ -38,7 +38,9 @@ router.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
     try {
         let targetId = req.session.userId;
         await disconnectSession(targetId.toString());
-        startWhatsAppSession(targetId.toString(), req.app.get('io'));
+        // لا نعيد التشغيل - ننتظر المستخدم يضغط "ربط جديد"
+        var io = req.app.get('io');
+        if (io) io.to(targetId.toString()).emit('disconnected', 'تم الفصل. اضغط ربط جديد.');
         res.redirect('back');
     } catch (e) { res.redirect('back'); }
 });
@@ -54,6 +56,14 @@ router.post('/request-pairing-code', requireAuth, async (req, res) => {
     } catch (e) {
         res.json({ success: false, error: e.message });
     }
+});
+
+router.post('/start-whatsapp', requireAuth, async (req, res) => {
+    try {
+        var targetId = req.session.userId;
+        startWhatsAppSession(targetId.toString(), req.app.get('io'));
+        res.redirect('back');
+    } catch (e) { res.redirect('back'); }
 });
 
 module.exports = router;

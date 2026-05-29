@@ -4,6 +4,7 @@ const { useMongoDBAuthState } = require('./models/Session');
 
 const sessions = {};
 const pairingRequests = {};
+const reconnectAttempts = {};
 const MAX_SESSIONS = parseInt(process.env.MAX_CONCURRENT_SESSIONS) || 50;
 
 async function disconnectSession(userId) {
@@ -12,6 +13,7 @@ async function disconnectSession(userId) {
         delete sessions[userId];
     }
     delete pairingRequests[userId];
+    delete reconnectAttempts[userId];
     try {
         const { AuthSession } = require('./models/Session');
         await AuthSession.deleteMany({ userId });
@@ -65,6 +67,7 @@ async function startWhatsAppSession(userId, io) {
                         }
                     }
                     delete pairingRequests[userId];
+    delete reconnectAttempts[userId];
                 }
             }
 
@@ -75,16 +78,27 @@ async function startWhatsAppSession(userId, io) {
                 delete sessions[userId];
 
                 if (shouldReconnect) {
-                    if (io) io.to(userId).emit('reconnecting', 'جاري إعادة الاتصال...');
-                    var delay = Math.min(3000 + (Math.random() * 3000), 15000);
-                    // إعادة الاتصال بدون pairing (browser مستقر دائماً)
-                    setTimeout(function() { startWhatsAppSession(userId, io); }, delay);
+                    // عدّاد محاولات لمنع الدورة اللانهائية
+                    if (!reconnectAttempts[userId]) reconnectAttempts[userId] = 0;
+                    reconnectAttempts[userId]++;
+                    
+                    if (reconnectAttempts[userId] <= 3) {
+                        if (io) io.to(userId).emit('reconnecting', 'محاولة إعادة الاتصال (' + reconnectAttempts[userId] + '/3)...');
+                        var delay = reconnectAttempts[userId] * 5000;
+                        setTimeout(function() { startWhatsAppSession(userId, io); }, delay);
+                    } else {
+                        // توقف بعد 3 محاولات
+                        reconnectAttempts[userId] = 0;
+                        if (io) io.to(userId).emit('disconnected', 'فشل الاتصال. اضغط فصل نهائي ثم ربط جديد.');
+                    }
                 } else {
                     if (io) io.to(userId).emit('disconnected', 'تم فصل الواتساب. يرجى إعادة الربط.');
                 }
             } else if (connection === 'open') {
                 sessions[userId] = sock;
                 delete pairingRequests[userId];
+    delete reconnectAttempts[userId];
+                reconnectAttempts[userId] = 0;
                 if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
                 console.log('✅ واتساب متصل: ' + userId);
             }
@@ -113,6 +127,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
         setTimeout(function() {
             if (pairingRequests[userId]) {
                 delete pairingRequests[userId];
+    delete reconnectAttempts[userId];
                 reject(new Error('انتهت المهلة. حاول مرة أخرى.'));
             }
         }, 60000);

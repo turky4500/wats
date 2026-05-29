@@ -342,9 +342,14 @@
                     <div class="connection-card">
                         <div class="connection-header">
                             <h3><span id="conn-dot" class="status-dot waiting"></span> <span id="status-title">جاري الاتصال...</span></h3>
-                            <form action="/disconnect-whatsapp" method="POST" style="margin:0;">
-                                <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('هل تريد فصل الرقم وإعادة الربط؟')" style="font-size:12px;">🔌 فصل</button>
-                            </form>
+                            <div style="display:flex; gap:6px;">
+                                <form action="/disconnect-whatsapp" method="POST" style="margin:0;">
+                                    <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('سيتم فصل الرقم ومسح الجلسة نهائياً')" style="font-size:11px; padding:6px 12px;">🔌 فصل</button>
+                                </form>
+                                <form action="/start-whatsapp" method="POST" style="margin:0;">
+                                    <button type="submit" class="btn btn-sm" style="font-size:11px; padding:6px 12px; background:var(--primary); color:white;">🔗 ربط</button>
+                                </form>
+                            </div>
                         </div>
                         <div class="connection-body">
                             <!-- حالة متصل -->

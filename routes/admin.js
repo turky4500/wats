@@ -120,10 +120,10 @@ router.post('/admin/change-password', requireAdmin, async (req, res) => {
 router.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) => {
     try {
         await disconnectSession(SYSTEM_ID);
-        startWhatsAppSession(SYSTEM_ID, req.app.get('io'));
+        var io = req.app.get('io');
+        if (io) io.to(SYSTEM_ID).emit('disconnected', 'تم الفصل. اضغط ربط جديد.');
         res.redirect('back');
     } catch (e) {
-        console.error('خطأ في فصل واتساب الإدارة:', e);
         res.redirect('back');
     }
 });
@@ -162,6 +162,13 @@ router.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
         console.error('خطأ في حذف المستخدم:', e);
         res.status(400).send('حدث خطأ في الحذف');
     }
+});
+
+router.post('/admin/start-system-whatsapp', requireAdmin, async (req, res) => {
+    try {
+        startWhatsAppSession(SYSTEM_ID, req.app.get('io'));
+        res.redirect('back');
+    } catch (e) { res.redirect('back'); }
 });
 
 module.exports = router;

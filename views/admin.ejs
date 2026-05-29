@@ -239,9 +239,14 @@
                         </div>
                     </div>
 
-                    <form action="/admin/disconnect-system-whatsapp" method="POST" style="margin-top:15px;" onsubmit="return confirm('هل تريد فصل الرقم الإداري وربط رقم جديد؟');">
-                        <button type="submit" class="btn btn-red btn-full">🔌 فصل وإعادة ربط</button>
-                    </form>
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <form action="/admin/disconnect-system-whatsapp" method="POST" style="flex:1;" onsubmit="return confirm('سيتم فصل الرقم ومسح بيانات الجلسة نهائياً');">
+                            <button type="submit" class="btn btn-red btn-full">🔌 فصل نهائي</button>
+                        </form>
+                        <form action="/admin/start-system-whatsapp" method="POST" style="flex:1;">
+                            <button type="submit" class="btn btn-green btn-full">🔗 ربط جديد</button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
