@@ -876,6 +876,57 @@
                 progressEl.classList.remove('active');
             }
         }
+
+        // ===== تبويبات الربط =====
+        function switchTab(tab) {
+            document.getElementById('tabQR').style.display = tab === 'qr' ? 'block' : 'none';
+            document.getElementById('tabCode').style.display = tab === 'code' ? 'block' : 'none';
+            document.getElementById('tabBtnQR').style.background = tab === 'qr' ? 'var(--primary)' : 'white';
+            document.getElementById('tabBtnQR').style.color = tab === 'qr' ? 'white' : 'var(--gray)';
+            document.getElementById('tabBtnCode').style.background = tab === 'code' ? 'var(--primary)' : 'white';
+            document.getElementById('tabBtnCode').style.color = tab === 'code' ? 'white' : 'var(--gray)';
+        }
+
+        // ===== حفظ صورة الباركود =====
+        function saveQR() {
+            var img = document.querySelector('#qr-img img');
+            if (!img) { showToast('لا يوجد باركود لحفظه', 'error'); return; }
+            var a = document.createElement('a');
+            a.href = img.src;
+            a.download = 'whatsapp-qr-code.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('تم حفظ الباركود', 'success');
+        }
+
+        // ===== طلب رمز الربط =====
+        function getPairingCode() {
+            var phone = document.getElementById('pairingPhone').value.trim();
+            if (!phone || phone.length < 10) { showToast('أدخل رقم صحيح مع رمز الدولة', 'error'); return; }
+            var btn = document.getElementById('pairingBtn');
+            btn.disabled = true; btn.innerText = '⏳ جاري التوليد...';
+            fetch('/request-pairing-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: phone })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var f = data.code.match(/.{1,4}/g).join(' - ');
+                    document.getElementById('pairingResult').innerHTML =
+                        '<div style="background:var(--primary-light);border:2px solid #86efac;border-radius:14px;padding:20px;text-align:center;margin-top:15px;">' +
+                        '<div style="font-size:32px;font-weight:900;letter-spacing:8px;color:var(--primary-dark);font-family:monospace;direction:ltr;margin:10px 0;">' + f + '</div>' +
+                        '<div style="font-size:12px;color:#166534;line-height:1.8;">واتساب ← الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف ← أدخل الرمز</div></div>';
+                    showToast('تم توليد الرمز!', 'success');
+                } else {
+                    showToast(data.error, 'error');
+                }
+                btn.disabled = false; btn.innerText = '🔑 توليد';
+            })
+            .catch(function() { showToast('خطأ في الاتصال', 'error'); btn.disabled = false; btn.innerText = '🔑 توليد'; });
+        }
     </script>
     <style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
 </body>
