@@ -419,7 +419,7 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
-app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (req, res) => {
+app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
     const token = authHeader.split(' ')[1];
@@ -442,13 +442,21 @@ app.post(['/api/v1/send', '/api/send-message'], upload.single('media'), async (r
 
     const to = req.body.to;
     const body = req.body.message || req.body.body;
-    const numbers = Array.isArray(to) ? to : [to];
-    if (!to || (!body && !req.file && (!req.body.media || req.body.media.length === 0))) return res.status(400).json({ error: 'Missing Data' });
+    if (!to || (!body && (!req.files || req.files.length === 0) && (!req.body.media || req.body.media.length === 0))) return res.status(400).json({ error: 'Missing Data' });
+
+    // معالجة to - قد يكون JSON string من FormData
+    let parsedTo = to;
+    try { if (typeof to === 'string' && to.startsWith('[')) parsedTo = JSON.parse(to); } catch(e) {}
+    const numbers = Array.isArray(parsedTo) ? parsedTo : [parsedTo];
 
     let mediaArray = [];
-    if (req.file) {
-        mediaArray.push({ mimetype: req.file.mimetype, filename: req.file.originalname || 'file', data: req.file.buffer.toString('base64') });
+    if (req.files && req.files.length > 0) {
+        // ملفات مرفوعة عبر FormData
+        for (const f of req.files) {
+            mediaArray.push({ mimetype: f.mimetype, filename: f.originalname || 'file', data: f.buffer.toString('base64') });
+        }
     } else if (req.body.media && Array.isArray(req.body.media)) {
+        // ملفات مرسلة كـ base64 في JSON (API خارجي)
         mediaArray = req.body.media;
     }
 

@@ -853,13 +853,17 @@
             updateProgress(0, 0, sendTotal);
 
             try {
-                const mediaArray = [];
-                for(let i=0; i<fileInput.files.length; i++) mediaArray.push(await fileToBase64(fileInput.files[i]));
+                var formData = new FormData();
+                formData.append('to', JSON.stringify(numbersArr));
+                formData.append('body', body);
+                for(var i=0; i<fileInput.files.length; i++) {
+                    formData.append('media', fileInput.files[i]);
+                }
 
                 const response = await fetch('/api/send-message', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ to: numbersArr, body, media: mediaArray })
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: formData
                 });
                 const result = await response.json();
 
