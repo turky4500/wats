@@ -233,6 +233,18 @@
         /* ===== Campaign Options / History ===== */
         .campaign-options-box { background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
         .campaign-options-title { font-size: 14px; font-weight: 800; color: var(--dark); margin-bottom: 12px; }
+        .send-modes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+        .mode-option { display: flex; align-items: flex-start; gap: 10px; border: 2px solid #e2e8f0; border-radius: 14px; padding: 14px; background: #f8fafc; cursor: pointer; transition: 0.2s; }
+        .mode-option:hover { border-color: var(--primary); transform: translateY(-1px); }
+        .mode-option input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--primary); }
+        .mode-option strong { display: block; font-size: 14px; color: var(--dark); margin-bottom: 2px; }
+        .mode-option small { color: var(--gray); font-size: 12px; line-height: 1.7; display: block; }
+        .mode-option.fast { border-color: #bfdbfe; background: #eff6ff; }
+        .mode-option.safe { border-color: #bbf7d0; background: #f0fdf4; }
+        .mode-option.disabled { opacity: 0.55; cursor: not-allowed; }
+        .mode-option.disabled:hover { transform: none; border-color: #e2e8f0; }
+        .summary-note strong.note-fast { color: #1d4ed8; }
+        .summary-note strong.note-safe { color: #166534; }
         .inline-checkbox { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--dark2); margin-bottom: 12px; cursor: pointer; }
         .inline-checkbox input { width: 18px; height: 18px; accent-color: var(--primary); }
         .time-window-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -261,7 +273,7 @@
             .main { margin-right: 0; }
             .mobile-header { display: flex !important; }
         }
-        @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } .grid-2 { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } .grid-2 { grid-template-columns: 1fr; } .send-modes-grid { grid-template-columns: 1fr; } }
 
         /* Mobile Header */
         .mobile-header { display: none; background: var(--dark); color: white; padding: 15px 20px; position: sticky; top: 0; z-index: 90; justify-content: space-between; align-items: center; }
@@ -294,6 +306,8 @@
             failed: 'انتهت بفشل',
             cancelled: 'ملغاة'
         };
+        const sendModeLabels = { safe: 'آمن', fast: 'سريع' };
+        const defaultSendMode = (settings.fastModeEnabled && settings.safeModeEnabled === false) ? 'fast' : 'safe';
     %>
 
     <!-- Mobile Header -->
@@ -537,6 +551,24 @@
 
                                 <div class="campaign-options-box">
                                     <div class="campaign-options-title">⚙️ إعدادات الحملة</div>
+
+                                    <div class="send-modes-grid">
+                                        <label class="mode-option safe <%= settings.safeModeEnabled === false ? 'disabled' : '' %>">
+                                            <input type="radio" name="sendMode" value="safe" <%= defaultSendMode === 'safe' ? 'checked' : '' %> <%= settings.safeModeEnabled === false ? 'disabled' : '' %> onchange="updateSummary()">
+                                            <div>
+                                                <strong>الوضع الآمن</strong>
+                                                <small>فاصل عشوائي من <%= settings.safeDelayMinMinutes %> إلى <%= settings.safeDelayMaxMinutes %> دقيقة بين الرسائل</small>
+                                            </div>
+                                        </label>
+                                        <label class="mode-option fast <%= settings.fastModeEnabled === false ? 'disabled' : '' %>">
+                                            <input type="radio" name="sendMode" value="fast" <%= defaultSendMode === 'fast' ? 'checked' : '' %> <%= settings.fastModeEnabled === false ? 'disabled' : '' %> onchange="updateSummary()">
+                                            <div>
+                                                <strong>الوضع السريع</strong>
+                                                <small>فاصل قصير من <%= settings.fastDelayMinSeconds %> إلى <%= settings.fastDelayMaxSeconds %> ثانية بين الرسائل</small>
+                                            </div>
+                                        </label>
+                                    </div>
+
                                     <label class="inline-checkbox">
                                         <input type="checkbox" id="useTimeWindow" onchange="toggleTimeWindowFields()">
                                         <span>تفعيل نافذة زمنية للإرسال</span>
@@ -549,11 +581,10 @@
                                         </div>
                                     </div>
                                     <div class="summary-note">
-                                        ⏱️ التأخير العشوائي بين الرسائل <strong><%= settings.campaignRandomDelayEnabled ? 'مفعّل' : 'معطّل' %></strong>
-                                        <% if (settings.campaignRandomDelayEnabled) { %>
-                                            (من <%= settings.campaignDelayMinMinutes %> إلى <%= settings.campaignDelayMaxMinutes %> دقيقة)
-                                        <% } %>.
-                                        <br>النافذة الزمنية تعمل بتوقيت السعودية.
+                                        🛡️ <strong class="note-safe">الوضع الآمن</strong> مناسب للحملات الحساسة وبفواصل طويلة.
+                                        <br>⚡ <strong class="note-fast">الوضع السريع</strong> أسرع، والعميل يتحمل قرار استخدامه.
+                                        <br>📱 كل الأرقام تُحوّل تلقائياً قبل الإرسال إلى الصيغة الدولية السعودية 9665XXXXXXXX.
+                                        <br>⏰ النافذة الزمنية تعمل بتوقيت السعودية.
                                     </div>
                                 </div>
 
@@ -570,6 +601,10 @@
                                     <div class="summary-row">
                                         <div class="summary-icon" style="background:var(--primary-light);color:var(--primary);">📎</div>
                                         <div><div class="summary-label">المرفقات</div><div class="summary-value" id="summaryMedia">بدون مرفقات</div></div>
+                                    </div>
+                                    <div class="summary-row">
+                                        <div class="summary-icon" style="background:var(--blue-light);color:var(--blue);">🚀</div>
+                                        <div><div class="summary-label">نوع الإرسال</div><div class="summary-value" id="summaryMode">آمن</div></div>
                                     </div>
                                     <div class="summary-row">
                                         <div class="summary-icon" style="background:var(--warning-light);color:var(--warning);">⏰</div>
@@ -620,6 +655,7 @@
                                         <tr>
                                             <th>التاريخ</th>
                                             <th>الحالة</th>
+                                            <th>الوضع</th>
                                             <th>التقدم</th>
                                             <th>التقرير</th>
                                         </tr>
@@ -630,13 +666,14 @@
                                                 <tr>
                                                     <td><%= new Date(c.createdAt).toLocaleString('ar-SA') %></td>
                                                     <td><span class="status-pill status-<%= c.status %>"><%= campaignLabels[c.status] || c.status %></span></td>
+                                                    <td><%= sendModeLabels[c.sendMode || 'safe'] || 'آمن' %></td>
                                                     <td><strong><%= c.sentCount %></strong> / <%= c.totalNumbers %></td>
                                                     <td><a class="campaign-link" href="/campaigns/<%= c._id %>">فتح التقرير</a></td>
                                                 </tr>
                                             <% }) %>
                                         <% } else { %>
                                             <tr>
-                                                <td colspan="4" style="text-align:center;color:var(--gray-light);padding:22px;">لا توجد حملات بعد</td>
+                                                <td colspan="5" style="text-align:center;color:var(--gray-light);padding:22px;">لا توجد حملات بعد</td>
                                             </tr>
                                         <% } %>
                                     </tbody>
@@ -791,29 +828,45 @@
         let recipientsSet = new Set();
         let sendSuccessCount = 0, sendFailCount = 0, sendTotal = 0;
 
+        function normalizeSaudiNumber(value) {
+            let digits = String(value || '').trim().replace(/\D/g, '');
+            if (!digits) return null;
+            if (digits.startsWith('00')) digits = digits.slice(2);
+            if (digits.startsWith('966')) digits = digits.slice(3);
+            if (digits.startsWith('0')) digits = digits.slice(1);
+            if (!digits.startsWith('5') || digits.length !== 9) return null;
+            const normalized = '966' + digits;
+            return normalized.length === 12 && normalized.startsWith('9665') ? normalized : null;
+        }
+
+        function addNumbersFromText(text) {
+            const invalid = [];
+            String(text || '').split(/[,\n\r;\t ]+/).forEach(item => {
+                const raw = item.trim();
+                if (!raw) return;
+                const normalized = normalizeSaudiNumber(raw);
+                if (normalized) recipientsSet.add(normalized);
+                else invalid.push(raw);
+            });
+            updateRecipientsUI();
+            return invalid;
+        }
+
         function addManualNumber() {
             const input = document.getElementById('manualPhone');
             const val = input.value.trim();
             if(val) {
-                // دعم لصق أرقام متعددة مفصولة بفاصلة أو سطر جديد
-                val.split(/[,\n\r]+/).forEach(n => {
-                    const num = n.trim().replace(/[^0-9+]/g, '');
-                    if(num.length >= 8) recipientsSet.add(num);
-                });
+                const invalid = addNumbersFromText(val);
                 input.value = '';
-                updateRecipientsUI();
+                if (invalid.length > 0) showToast(`تم تجاهل ${invalid.length} رقم غير صالح`, 'error');
             }
         }
         document.getElementById('manualPhone').addEventListener('keypress', function(e) { if (e.key === 'Enter') { e.preventDefault(); addManualNumber(); } });
 
         function pasteNumbers() {
             navigator.clipboard.readText().then(text => {
-                text.split(/[,\n\r]+/).forEach(n => {
-                    const num = n.trim().replace(/[^0-9+]/g, '');
-                    if(num.length >= 8) recipientsSet.add(num);
-                });
-                updateRecipientsUI();
-                showToast('تم لصق الأرقام بنجاح', 'success');
+                const invalid = addNumbersFromText(text);
+                showToast(`تم لصق الأرقام بنجاح${invalid.length ? ` - وتجاهل ${invalid.length} رقم غير صالح` : ''}`, invalid.length ? 'error' : 'success');
             }).catch(() => showToast('لا يمكن الوصول للحافظة', 'error'));
         }
 
@@ -822,12 +875,8 @@
             if(!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                evt.target.result.split(/\r?\n/).forEach(line => {
-                    const num = line.trim().replace(/[^0-9+]/g, '');
-                    if(num.length >= 8) recipientsSet.add(num);
-                });
-                updateRecipientsUI();
-                showToast(`تم رفع ${file.name} بنجاح`, 'success');
+                const invalid = addNumbersFromText(evt.target.result);
+                showToast(`تم رفع ${file.name} بنجاح${invalid.length ? ` - وتجاهل ${invalid.length} رقم غير صالح` : ''}`, invalid.length ? 'error' : 'success');
             };
             reader.readAsText(file);
         }
@@ -938,8 +987,11 @@
             const useTimeWindow = document.getElementById('useTimeWindow').checked;
             const windowStart = document.getElementById('windowStart').value || '08:00';
             const windowEnd = document.getElementById('windowEnd').value || '23:00';
+            const selectedMode = document.querySelector('input[name="sendMode"]:checked');
+            const sendMode = selectedMode ? selectedMode.value : 'safe';
             document.getElementById('summaryMsg').innerText = body || '— لا توجد رسالة نصية';
             document.getElementById('summaryMedia').innerText = files.length > 0 ? files.length + ' مرفق' : 'بدون مرفقات';
+            document.getElementById('summaryMode').innerText = sendMode === 'fast' ? 'سريع' : 'آمن';
             document.getElementById('summaryWindow').innerText = useTimeWindow ? `${windowStart} → ${windowEnd}` : '24 ساعة';
         }
 
@@ -958,6 +1010,8 @@
             const useTimeWindow = document.getElementById('useTimeWindow').checked;
             const windowStart = document.getElementById('windowStart').value;
             const windowEnd = document.getElementById('windowEnd').value;
+            const selectedMode = document.querySelector('input[name="sendMode"]:checked');
+            const sendMode = selectedMode ? selectedMode.value : 'safe';
 
             if (!numbersArr.length) return showToast('أضف مستلمين أولاً', 'error');
             if (!body && fileInput.files.length === 0) return showToast('اكتب رسالة أو أضف مرفق!', 'error');
@@ -989,6 +1043,7 @@
                         numbers: numbersArr,
                         message: body,
                         media,
+                        sendMode,
                         useTimeWindow,
                         windowStart: useTimeWindow ? windowStart : null,
                         windowEnd: useTimeWindow ? windowEnd : null
@@ -1011,7 +1066,8 @@
                     }
                 }
 
-                throw new Error(result.error || 'تعذر إنشاء الحملة');
+                throw new Error(result.invalidNumbers ? `${result.error}
+${result.invalidNumbers.join(' , ')}` : (result.error || 'تعذر إنشاء الحملة'));
             } catch (e) {
                 showToast(e.message || 'خطأ في التواصل مع السيرفر!', 'error');
                 btn.innerHTML = '🚀 إنشاء الحملة وبدء المعالجة';

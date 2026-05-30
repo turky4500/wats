@@ -15,6 +15,12 @@ const campaignSchema = new mongoose.Schema({
     failedCount: { type: Number, default: 0 },
     currentIndex: { type: Number, default: 0 },
     currentPhone: { type: String, default: null },
+    sendMode: {
+        type: String,
+        enum: ['safe', 'fast'],
+        default: 'safe',
+        index: true
+    },
     status: {
         type: String,
         enum: ['pending', 'processing', 'paused', 'waiting_window', 'completed', 'failed', 'cancelled'],

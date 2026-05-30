@@ -118,7 +118,8 @@
                     <div class="hero-meta">
                         <div class="hero-chip">👤 <%= user.username %></div>
                         <div class="hero-chip">📅 <span id="created-at">—</span></div>
-                        <div class="hero-chip">🔄 إعادة المحاولة: 3 مرات</div>
+                        <div class="hero-chip">🚀 نوع الإرسال: <span id="send-mode-chip">—</span></div>
+                        <div class="hero-chip">🔄 إعادة المحاولة: فقط عند الخطأ الحقيقي</div>
                     </div>
                 </div>
                 <div>
@@ -164,6 +165,10 @@
                             <div class="info-item">
                                 <div class="info-label">حالة التنفيذ</div>
                                 <div class="info-value" id="status-text">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">نوع الإرسال</div>
+                                <div class="info-value" id="send-mode-text">—</div>
                             </div>
                             <div class="info-item">
                                 <div class="info-label">النافذة الزمنية</div>
@@ -253,6 +258,11 @@
             failed: 'فشل'
         };
 
+        const SEND_MODE_LABELS = {
+            safe: 'آمن',
+            fast: 'سريع'
+        };
+
         function formatDate(value) {
             if (!value) return '—';
             const date = new Date(value);
@@ -286,7 +296,11 @@
 
             timerBox.style.display = 'block';
             timerTitle.textContent = countdown.type === 'window' ? '⏰ انتظار بداية النافذة' : '⏳ انتظار الرسالة التالية';
-            timerSub.textContent = countdown.type === 'window' ? 'سيُستأنف الإرسال تلقائياً عند بداية النافذة المحددة' : 'التأخير العشوائي يعمل الآن بين الرسائل';
+            timerSub.textContent = countdown.type === 'window'
+                ? 'سيُستأنف الإرسال تلقائياً عند بداية النافذة المحددة'
+                : ((currentCampaign && currentCampaign.sendMode === 'fast')
+                    ? 'الوضع السريع مفعل، والفاصل الحالي بالثواني'
+                    : 'الوضع الآمن مفعل، والفاصل الحالي بالدقائق');
 
             let remaining = countdown.totalSeconds;
             const draw = () => {
@@ -355,6 +369,8 @@
             document.getElementById('stat-failed').textContent = campaign.failedCount || 0;
             document.getElementById('stat-remaining').textContent = remaining;
             document.getElementById('status-text').textContent = STATUS_LABELS[campaign.status] || campaign.status;
+            document.getElementById('send-mode-chip').textContent = SEND_MODE_LABELS[campaign.sendMode || 'safe'] || 'آمن';
+            document.getElementById('send-mode-text').textContent = (SEND_MODE_LABELS[campaign.sendMode || 'safe'] || 'آمن') + ((campaign.sendMode === 'fast') ? ' - فاصل قصير' : ' - فاصل آمن');
             document.getElementById('window-text').textContent = campaign.useTimeWindow ? `${campaign.windowStart} → ${campaign.windowEnd} (بتوقيت السعودية)` : 'بدون نافذة زمنية';
             document.getElementById('updated-at').textContent = formatDate(campaign.updatedAt);
             document.getElementById('created-at').textContent = formatDate(campaign.createdAt);

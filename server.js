@@ -34,6 +34,25 @@ function sleep(ms) {
 async function getSettings() {
     let settings = await Settings.findOne();
     if (!settings) settings = await Settings.create({});
+
+    let shouldSave = false;
+    const fallbackMap = {
+        safeModeEnabled: true,
+        safeDelayMinMinutes: settings.safeDelayMinMinutes ?? settings.campaignDelayMinMinutes ?? 3,
+        safeDelayMaxMinutes: settings.safeDelayMaxMinutes ?? settings.campaignDelayMaxMinutes ?? 13,
+        fastModeEnabled: true,
+        fastDelayMinSeconds: settings.fastDelayMinSeconds ?? 5,
+        fastDelayMaxSeconds: settings.fastDelayMaxSeconds ?? 20
+    };
+
+    for (const [key, value] of Object.entries(fallbackMap)) {
+        if (settings[key] === undefined || settings[key] === null) {
+            settings[key] = value;
+            shouldSave = true;
+        }
+    }
+
+    if (shouldSave) await settings.save();
     return settings;
 }
 
@@ -43,24 +62,52 @@ function normalizePhoneNumber(value) {
     return cleaned || null;
 }
 
-function normalizeNumbers(input) {
+function normalizeSaudiPhoneNumber(value) {
+    let digits = normalizePhoneNumber(value);
+    if (!digits) return null;
+
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (digits.startsWith('966')) digits = digits.slice(3);
+    if (digits.startsWith('0')) digits = digits.slice(1);
+
+    if (!digits.startsWith('5') || digits.length !== 9) return null;
+
+    const normalized = `966${digits}`;
+    if (normalized.length !== 12 || !normalized.startsWith('9665')) return null;
+    return normalized;
+}
+
+function normalizeNumbersDetailed(input) {
     const rawItems = Array.isArray(input) ? input : [input];
     const unique = new Set();
     const numbers = [];
+    const invalidNumbers = [];
+    const normalizedMap = [];
 
     for (const item of rawItems) {
         if (item === undefined || item === null) continue;
         const parts = String(item).split(/[\n,;\r\t ]+/);
         for (const part of parts) {
-            const num = normalizePhoneNumber(part);
-            if (num && num.length >= 8 && !unique.has(num)) {
-                unique.add(num);
-                numbers.push(num);
+            const raw = String(part || '').trim();
+            if (!raw) continue;
+            const normalized = normalizeSaudiPhoneNumber(raw);
+            if (!normalized) {
+                invalidNumbers.push(raw);
+                continue;
+            }
+            if (!unique.has(normalized)) {
+                unique.add(normalized);
+                numbers.push(normalized);
+                normalizedMap.push({ input: raw, normalized });
             }
         }
     }
 
-    return numbers;
+    return { numbers, invalidNumbers, normalizedMap };
+}
+
+function normalizeNumbers(input) {
+    return normalizeNumbersDetailed(input).numbers;
 }
 
 function safeJsonParse(value, fallback = null) {
@@ -198,20 +245,50 @@ function buildPermanentError(message) {
     return err;
 }
 
-function getRandomDelayMs(settings) {
-    if (!settings || !settings.campaignRandomDelayEnabled) return 0;
-    let minMinutes = Number(settings.campaignDelayMinMinutes || 0);
-    let maxMinutes = Number(settings.campaignDelayMaxMinutes || 0);
+function isRetryableError(error, attemptNumber) {
+    if (!error || error.noRetry || attemptNumber >= MAX_CAMPAIGN_RETRIES) return false;
 
-    if (Number.isNaN(minMinutes) || minMinutes < 0) minMinutes = 0;
-    if (Number.isNaN(maxMinutes) || maxMinutes < 0) maxMinutes = minMinutes;
-    if (maxMinutes < minMinutes) [minMinutes, maxMinutes] = [maxMinutes, minMinutes];
+    const message = String(error.message || '').toLowerCase();
+    const retryableTerms = [
+        'socket', 'stream', 'connection', 'network', 'reconnect', 'closed', 'reset',
+        'disconnect', 'unavailable', 'econnreset', 'econnaborted', '503', '502',
+        'gateway', 'service unavailable', 'not connected', 'connection lost',
+        'غير متصل', 'انقطع', 'إعادة الاتصال'
+    ];
 
-    const minMs = Math.round(minMinutes * 60 * 1000);
-    const maxMs = Math.round(maxMinutes * 60 * 1000);
+    return retryableTerms.some(term => message.includes(term));
+}
+
+function getRandomDelayMs(settings, sendMode = 'safe') {
+    if (!settings) return 0;
+
+    let minValue = 0;
+    let maxValue = 0;
+    let multiplier = 1000;
+
+    if (sendMode === 'fast') {
+        minValue = Number(settings.fastDelayMinSeconds ?? 5);
+        maxValue = Number(settings.fastDelayMaxSeconds ?? 20);
+        multiplier = 1000;
+    } else {
+        minValue = Number(settings.safeDelayMinMinutes ?? settings.campaignDelayMinMinutes ?? 3);
+        maxValue = Number(settings.safeDelayMaxMinutes ?? settings.campaignDelayMaxMinutes ?? 13);
+        multiplier = 60 * 1000;
+    }
+
+    if (Number.isNaN(minValue) || minValue < 0) minValue = 0;
+    if (Number.isNaN(maxValue) || maxValue < 0) maxValue = minValue;
+    if (maxValue < minValue) [minValue, maxValue] = [maxValue, minValue];
+
+    const minMs = Math.round(minValue * multiplier);
+    const maxMs = Math.round(maxValue * multiplier);
     if (maxMs <= 0) return 0;
     if (maxMs === minMs) return maxMs;
     return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+}
+
+function getSendModeLabel(sendMode) {
+    return sendMode === 'fast' ? 'سريع' : 'آمن';
 }
 
 async function waitWithCampaignControl(campaignId, delayMs, type = 'delay') {
@@ -312,7 +389,7 @@ async function handleCampaignRecipient(campaign, recipient) {
         return { success: true };
     } catch (error) {
         const errorMessage = error.message || 'فشل غير معروف';
-        const shouldRetry = !error.noRetry && attemptNumber < MAX_CAMPAIGN_RETRIES;
+        const shouldRetry = isRetryableError(error, attemptNumber);
 
         await CampaignRecipient.findByIdAndUpdate(recipient._id, {
             status: shouldRetry ? 'pending_retry' : 'failed',
@@ -443,7 +520,7 @@ async function startCampaignWorker(campaignId) {
             if (!hasRemaining) break;
 
             const settings = await getSettings();
-            const delayMs = getRandomDelayMs(settings);
+            const delayMs = getRandomDelayMs(settings, campaign.sendMode || 'safe');
             if (delayMs > 0) {
                 const delayOk = await waitWithCampaignControl(campaignId, delayMs, 'delay');
                 if (!delayOk) {
@@ -953,17 +1030,29 @@ app.post('/admin/settings', requireAdmin, async (req, res) => {
     const {
         supportPhone,
         freeTrialDays,
-        campaignRandomDelayEnabled,
-        campaignDelayMinMinutes,
-        campaignDelayMaxMinutes
+        safeModeEnabled,
+        safeDelayMinMinutes,
+        safeDelayMaxMinutes,
+        fastModeEnabled,
+        fastDelayMinSeconds,
+        fastDelayMaxSeconds
     } = req.body;
 
     const settings = await getSettings();
     settings.supportPhone = supportPhone;
     settings.freeTrialDays = freeTrialDays;
-    settings.campaignRandomDelayEnabled = campaignRandomDelayEnabled === 'on';
-    settings.campaignDelayMinMinutes = Number(campaignDelayMinMinutes || 0);
-    settings.campaignDelayMaxMinutes = Number(campaignDelayMaxMinutes || 0);
+    settings.safeModeEnabled = safeModeEnabled === 'on';
+    settings.safeDelayMinMinutes = Number(safeDelayMinMinutes || 0);
+    settings.safeDelayMaxMinutes = Number(safeDelayMaxMinutes || 0);
+    settings.fastModeEnabled = fastModeEnabled === 'on';
+    settings.fastDelayMinSeconds = Number(fastDelayMinSeconds || 0);
+    settings.fastDelayMaxSeconds = Number(fastDelayMaxSeconds || 0);
+
+    // توافق مع الإعدادات القديمة
+    settings.campaignRandomDelayEnabled = settings.safeModeEnabled;
+    settings.campaignDelayMinMinutes = settings.safeDelayMinMinutes;
+    settings.campaignDelayMaxMinutes = settings.safeDelayMaxMinutes;
+
     await settings.save();
     res.redirect('/admin');
 });
@@ -1025,12 +1114,35 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
 
         let numbers = req.body.numbers;
         if (typeof numbers === 'string' && numbers.trim().startsWith('[')) numbers = safeJsonParse(numbers, []);
-        const normalizedNumbers = normalizeNumbers(numbers);
+        const normalization = normalizeNumbersDetailed(numbers);
+        const normalizedNumbers = normalization.numbers;
         const body = (req.body.message || req.body.body || '').trim();
         const media = extractMediaFromRequest(req, true);
 
-        if (normalizedNumbers.length === 0) return res.status(400).json({ success: false, error: 'أضف أرقاماً صحيحة أولاً' });
+        if (normalizedNumbers.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'لم يتم العثور على أرقام سعودية صحيحة. يجب أن تكون الأرقام بصيغة 9665XXXXXXXX أو قابلة للتحويل من 05XXXXXXXX / 009665XXXXXXXX.'
+            });
+        }
+        if (normalization.invalidNumbers.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: `يوجد ${normalization.invalidNumbers.length} رقم غير صالح. يجب أن تكون جميع الأرقام 12 خانة وتبدأ بـ 9665.`,
+                invalidNumbers: normalization.invalidNumbers.slice(0, 20)
+            });
+        }
         if (!body && media.length === 0) return res.status(400).json({ success: false, error: 'اكتب رسالة أو أضف مرفقاً' });
+
+        const requestedSendMode = String(req.body.sendMode || 'safe').toLowerCase();
+        const sendMode = requestedSendMode === 'fast' ? 'fast' : 'safe';
+        const settings = await getSettings();
+        if (sendMode === 'fast' && settings.fastModeEnabled === false) {
+            return res.status(400).json({ success: false, error: 'الوضع السريع غير مفعّل حالياً من الإدارة' });
+        }
+        if (sendMode === 'safe' && settings.safeModeEnabled === false) {
+            return res.status(400).json({ success: false, error: 'الوضع الآمن غير مفعّل حالياً من الإدارة' });
+        }
 
         const useTimeWindow = req.body.useTimeWindow === true || req.body.useTimeWindow === 'true' || req.body.useTimeWindow === 'on' || req.body.useTimeWindow === 1 || req.body.useTimeWindow === '1';
         const windowStart = useTimeWindow ? req.body.windowStart : null;
@@ -1061,6 +1173,7 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             body,
             media,
             totalNumbers: normalizedNumbers.length,
+            sendMode,
             useTimeWindow,
             windowStart: useTimeWindow ? windowStart : null,
             windowEnd: useTimeWindow ? windowEnd : null,
@@ -1078,7 +1191,7 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
 
         startCampaignWorker(campaign._id).catch(err => console.error('خطأ تشغيل الحملة:', err));
 
-        res.status(201).json({ success: true, campaignId: campaign._id, message: 'تم إنشاء الحملة وبدء معالجتها' });
+        res.status(201).json({ success: true, campaignId: campaign._id, sendMode, message: `تم إنشاء الحملة (${getSendModeLabel(sendMode)}) وبدء معالجتها` });
     } catch (error) {
         console.error('❌ خطأ إنشاء الحملة:', error);
         res.status(500).json({ success: false, error: error.message || 'فشل إنشاء الحملة' });
@@ -1193,7 +1306,15 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
     try {
         if (typeof to === 'string' && to.startsWith('[')) parsedTo = JSON.parse(to);
     } catch (_) {}
-    const numbers = normalizeNumbers(Array.isArray(parsedTo) ? parsedTo : [parsedTo]);
+    const normalization = normalizeNumbersDetailed(Array.isArray(parsedTo) ? parsedTo : [parsedTo]);
+    const numbers = normalization.numbers;
+    if (numbers.length === 0) return res.status(400).json({ error: 'لم يتم العثور على أرقام صحيحة. يجب أن تكون بصيغة 9665XXXXXXXX أو قابلة للتحويل من 05XXXXXXXX / 009665XXXXXXXX' });
+    if (normalization.invalidNumbers.length > 0) {
+        return res.status(400).json({
+            error: `يوجد ${normalization.invalidNumbers.length} رقم غير صالح. يجب أن تكون جميع الأرقام 12 خانة وتبدأ بـ 9665.`,
+            invalidNumbers: normalization.invalidNumbers.slice(0, 20)
+        });
+    }
 
     res.json({ success: true, message: 'تم استلام طلب الإرسال وسيتم المعالجة فوراً.' });
 
@@ -1215,20 +1336,12 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
                         break;
                     } catch (retryErr) {
                         console.error('⚠️ محاولة ' + attempt + '/3 فشلت لـ ' + num + ': ' + retryErr.message);
-                        if (attempt < 3) {
-                            const waitTime = attempt * 5000;
-                            console.log('⏳ انتظار ' + (waitTime / 1000) + ' ثواني...');
-                            await sleep(waitTime);
-                            currentSock = getSession(user._id.toString());
-                            if (!currentSock || !currentSock.user) {
-                                console.log('⏳ الجلسة لم تعد، انتظار إضافي...');
-                                await sleep(5000);
-                                currentSock = getSession(user._id.toString());
-                                if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع');
-                            }
-                        } else {
-                            throw retryErr;
-                        }
+                        if (!isRetryableError(retryErr, attempt)) throw retryErr;
+
+                        const waitTime = Math.min(attempt * 3000, 8000);
+                        await sleep(waitTime);
+                        currentSock = getSession(user._id.toString());
+                        if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع');
                     }
                 }
 
