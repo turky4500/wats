@@ -89,16 +89,27 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
     if (mediaArray && mediaArray.length > 0) {
         for (let i = 0; i < mediaArray.length; i++) {
             const m = mediaArray[i];
-            const base64Data = m.data.includes(',') ? m.data.split(',')[1] : m.data;
-            const buffer = Buffer.from(base64Data, 'base64');
+            // دعم buffer مباشرة أو base64
+            let buffer;
+            if (m.buffer) {
+                buffer = m.buffer;
+            } else if (m.data) {
+                const base64Data = m.data.includes(',') ? m.data.split(',')[1] : m.data;
+                buffer = Buffer.from(base64Data, 'base64');
+            }
             let content = {};
             if (m.mimetype.startsWith('image/')) content = { image: buffer };
             else if (m.mimetype.startsWith('video/')) content = { video: buffer };
             else if (m.mimetype.startsWith('audio/')) content = { audio: buffer, mimetype: 'audio/mp4' };
             else content = { document: buffer, mimetype: m.mimetype, fileName: m.filename || 'file' };
             if (i === 0 && body && !m.mimetype.startsWith('audio/')) content.caption = body;
-            await sock.sendMessage(jid, content);
-            await new Promise(r => setTimeout(r, 1500));
+            try {
+                await sock.sendMessage(jid, content);
+            } catch (sendErr) {
+                console.error('❌ خطأ إرسال ملف:', sendErr.message);
+                throw sendErr;
+            }
+            await new Promise(r => setTimeout(r, 2000));
         }
         if (mediaArray[0].mimetype.startsWith('audio/') && body) await sock.sendMessage(jid, { text: body });
     } else if (body) {
@@ -451,9 +462,9 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
 
     let mediaArray = [];
     if (req.files && req.files.length > 0) {
-        // ملفات مرفوعة عبر FormData
+        // ملفات مرفوعة عبر FormData - نحفظ buffer مباشرة
         for (const f of req.files) {
-            mediaArray.push({ mimetype: f.mimetype, filename: f.originalname || 'file', data: f.buffer.toString('base64') });
+            mediaArray.push({ mimetype: f.mimetype, filename: f.originalname || 'file', buffer: f.buffer });
         }
     } else if (req.body.media && Array.isArray(req.body.media)) {
         // ملفات مرسلة كـ base64 في JSON (API خارجي)
