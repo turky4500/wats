@@ -15,6 +15,7 @@ async function disconnectSession(userId) {
     }
 }
 
+// الجلسة الدائمة المستقرة
 async function startWhatsAppSession(userId, io) {
     const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
 
@@ -47,21 +48,20 @@ async function startWhatsAppSession(userId, io) {
         } else if (connection === 'open') {
             sessions[userId] = sock;
             if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
+            console.log('✅ واتساب متصل (مستقر): ' + userId);
         }
     });
 
     return sock;
 }
 
-// ===== ربط بالرمز =====
-// جلسة مؤقتة بـ macOS لتوليد الرمز فقط
-// بعد نجاح الربط تصبح هي الجلسة الدائمة (بدون إعادة اتصال)
+// ربط بالرمز - جلسة مؤقتة لتوليد الرمز فقط
 async function requestPairingCode(userId, phoneNumber, io) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
     if (cleanNumber.length < 10) throw new Error('رقم غير صالح');
     if (sessions[userId] && sessions[userId].user) throw new Error('الرقم مرتبط بالفعل! افصل أولاً.');
 
-    // مسح الجلسة القديمة
+    // مسح أي جلسة قديمة
     await disconnectSession(userId);
 
     return new Promise(async (resolve, reject) => {
@@ -72,43 +72,45 @@ async function requestPairingCode(userId, phoneNumber, io) {
         try {
             const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
 
-            const sock = makeWASocket({
+            const tempSock = makeWASocket({
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
                 browser: Browsers.macOS("Chrome"),
             });
 
-            sock.ev.on('creds.update', saveCreds);
+            tempSock.ev.on('creds.update', saveCreds);
 
-            sock.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect, qr } = update;
+            let pairingDone = false;
 
-                if (qr) {
+            tempSock.ev.on('connection.update', async (update) => {
+                const { connection, qr } = update;
+
+                if (qr && !pairingDone) {
                     try {
                         const customCode = String(Math.floor(10000000 + Math.random() * 90000000));
-                        const code = await sock.requestPairingCode(cleanNumber, customCode);
+                        const code = await tempSock.requestPairingCode(cleanNumber, customCode);
                         clearTimeout(timeout);
+                        pairingDone = true;
                         resolve(code);
+                        console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
                     } catch (e) {
                         clearTimeout(timeout);
                         reject(new Error('فشل توليد الرمز: ' + e.message));
                     }
                 }
 
-                // نجاح الربط - نحفظ الجلسة كجلسة دائمة (بدون إغلاق وإعادة فتح)
+                // بعد نجاح الربط
                 if (connection === 'open') {
-                    sessions[userId] = sock;
-                    if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
-                }
-
-                if (connection === 'close') {
-                    const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                    delete sessions[userId];
-                    if (shouldReconnect) {
-                        // إعادة اتصال بنفس الـ browser الأصلي المستقر
-                        setTimeout(() => startWhatsAppSession(userId, io), 5000);
-                    }
+                    console.log('🔗 تم الربط بالرمز لـ: ' + userId + ' - جاري التحويل للجلسة المستقرة...');
+                    
+                    // إغلاق الاتصال فقط (بدون logout - نحتفظ بالبيانات)
+                    try { tempSock.ws.close(); } catch(e) {}
+                    
+                    // انتظار ثم بدء الجلسة المستقرة بالبيانات المحفوظة
+                    setTimeout(() => {
+                        startWhatsAppSession(userId, io);
+                    }, 3000);
                 }
             });
         } catch (e) {
