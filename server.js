@@ -492,18 +492,27 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
                 
                 // محاولة الإرسال مع retry
                 let sent = false;
-                for (let attempt = 1; attempt <= 2; attempt++) {
+                for (let attempt = 1; attempt <= 3; attempt++) {
                     try {
                         await sendWhatsAppMessage(currentSock, jid, body, mediaArray);
                         sent = true;
                         break;
                     } catch (retryErr) {
-                        console.error('⚠️ محاولة ' + attempt + ' فشلت لـ ' + num + ': ' + retryErr.message);
-                        if (attempt < 2) {
-                            // انتظار وإعادة جلب الجلسة
-                            await new Promise(r => setTimeout(r, 3000));
+                        console.error('⚠️ محاولة ' + attempt + '/3 فشلت لـ ' + num + ': ' + retryErr.message);
+                        if (attempt < 3) {
+                            // انتظار تدريجي حتى تعيد الجلسة الاتصال
+                            let waitTime = attempt * 5000;
+                            console.log('⏳ انتظار ' + (waitTime/1000) + ' ثواني...');
+                            await new Promise(r => setTimeout(r, waitTime));
+                            // إعادة جلب الجلسة بعد الانتظار
                             currentSock = getSession(user._id.toString());
-                            if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع أثناء الإرسال');
+                            if (!currentSock || !currentSock.user) {
+                                // الجلسة لم تعد بعد - ننتظر أكثر
+                                console.log('⏳ الجلسة لم تعد، انتظار إضافي...');
+                                await new Promise(r => setTimeout(r, 5000));
+                                currentSock = getSession(user._id.toString());
+                                if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع');
+                            }
                         } else {
                             throw retryErr;
                         }
