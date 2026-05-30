@@ -100,17 +100,18 @@ async function requestPairingCode(userId, phoneNumber, io) {
                     }
                 }
 
-                // بعد نجاح الربط
+                // بعد نجاح الربط - نحتفظ بالجلسة مباشرة بدون تحويل
                 if (connection === 'open') {
-                    console.log('🔗 تم الربط بالرمز لـ: ' + userId + ' - جاري التحويل للجلسة المستقرة...');
-                    
-                    // إغلاق الاتصال فقط (بدون logout - نحتفظ بالبيانات)
-                    try { tempSock.ws.close(); } catch(e) {}
-                    
-                    // انتظار ثم بدء الجلسة المستقرة بالبيانات المحفوظة
-                    setTimeout(() => {
-                        startWhatsAppSession(userId, io);
-                    }, 3000);
+                    console.log('✅ تم الربط بالرمز لـ: ' + userId);
+                    sessions[userId] = tempSock;
+                    if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
+                }
+
+                // عند الانقطاع - نعيد الاتصال بالـ browser المستقر
+                if (connection === 'close') {
+                    delete sessions[userId];
+                    // إعادة اتصال بالجلسة المستقرة (Chrome Windows)
+                    setTimeout(() => startWhatsAppSession(userId, io), 5000);
                 }
             });
         } catch (e) {
