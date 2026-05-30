@@ -473,24 +473,50 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
 
     res.json({ success: true, message: "تم استلام طلب الإرسال وسيتم المعالجة فوراً." });
 
-    // تشغيل الإرسال في الخلفية بصمت
+    // تشغيل الإرسال في الخلفية
     (async () => {
         for (let num of numbers) {
             try {
+                // إعادة جلب الجلسة قبل كل رسالة (قد تتغير)
+                let currentSock = getSession(user._id.toString());
+                if (!currentSock || !currentSock.user) {
+                    throw new Error('الواتساب غير متصل');
+                }
+
                 const jid = `${num}@s.whatsapp.net`;
-                const wpCheck = await sock.onWhatsApp(jid);
+                const wpCheck = await currentSock.onWhatsApp(jid);
                 if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل بالواتساب');
                 
-                await sendWhatsAppMessage(sock, jid, body, mediaArray);
+                // محاولة الإرسال مع retry
+                let sent = false;
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    try {
+                        await sendWhatsAppMessage(currentSock, jid, body, mediaArray);
+                        sent = true;
+                        break;
+                    } catch (retryErr) {
+                        console.error('⚠️ محاولة ' + attempt + ' فشلت لـ ' + num + ': ' + retryErr.message);
+                        if (attempt < 2) {
+                            // انتظار وإعادة جلب الجلسة
+                            await new Promise(r => setTimeout(r, 3000));
+                            currentSock = getSession(user._id.toString());
+                            if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع أثناء الإرسال');
+                        } else {
+                            throw retryErr;
+                        }
+                    }
+                }
                 
-                if (io) io.to(user._id.toString()).emit('message-sent', { to: num, body: body || '(مرفق)' });
-                await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'success' });
+                if (sent) {
+                    if (io) io.to(user._id.toString()).emit('message-sent', { to: num, body: body || '(مرفق)' });
+                    await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'success' });
+                }
             } catch (e) {
                 if (io) io.to(user._id.toString()).emit('error', `خطأ مع ${num}: ${e.message}`);
                 await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'failed', errorDetails: e.message });
             }
-            // فاصل زمني بسيط 2 ثانية بين كل رسالة لتجنب الحظر
-            await new Promise(r => setTimeout(r, 2000));
+            // فاصل زمني 3 ثواني بين كل رسالة (أكثر للملفات)
+            await new Promise(r => setTimeout(r, mediaArray.length > 0 ? 4000 : 2000));
         }
     })();
 });
