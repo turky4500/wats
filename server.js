@@ -464,7 +464,10 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
     if (req.files && req.files.length > 0) {
         // ملفات مرفوعة عبر FormData - نحفظ buffer مباشرة
         for (const f of req.files) {
-            mediaArray.push({ mimetype: f.mimetype, filename: f.originalname || 'file', buffer: f.buffer });
+            // فك ترميز اسم الملف (يأتي مشوّه من multer أحياناً)
+            let fname = f.originalname || 'file';
+            try { fname = Buffer.from(fname, 'latin1').toString('utf8'); } catch(e) {}
+            mediaArray.push({ mimetype: f.mimetype, filename: fname, buffer: f.buffer });
         }
     } else if (req.body.media && Array.isArray(req.body.media)) {
         // ملفات مرسلة كـ base64 في JSON (API خارجي)
