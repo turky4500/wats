@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير الحملة | واتساب تكوين</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #25d366; --primary-dark: #1da851; --primary-light: #dcfce7;
+            --accent: #6366f1; --accent-light: #eef2ff; --blue-light: #eff6ff;
+            --warning: #f59e0b; --warning-light: #fffbeb; --danger: #ef4444; --danger-light: #fef2f2;
+            --dark: #0f172a; --dark2: #1e293b; --gray: #64748b; --gray-light: #94a3b8;
+            --bg: #f1f5f9; --card: #ffffff; --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08), 0 5px 10px -5px rgba(0,0,0,0.04);
+            --radius: 18px;
+        }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 28px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .title h1 { font-size: 30px; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+        .title p { color: var(--gray); font-size: 14px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 12px; padding: 12px 20px; font-family: inherit; font-weight: 800; text-decoration: none; cursor: pointer; transition: 0.2s; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; }
+        .btn-outline { background: white; color: var(--dark2); border: 2px solid var(--border); }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-dark { background: var(--dark2); color: white; }
+        .hero-card { background: linear-gradient(135deg, var(--dark) 0%, #1e293b 55%, var(--accent) 100%); color: white; border-radius: 24px; padding: 24px; box-shadow: var(--shadow-lg); margin-bottom: 24px; }
+        .hero-top { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+        .hero-id { font-size: 14px; color: rgba(255,255,255,0.75); }
+        .hero-id code { background: rgba(255,255,255,0.12); padding: 4px 10px; border-radius: 999px; font-size: 13px; }
+        .status-badge { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 9px 14px; font-size: 13px; font-weight: 900; }
+        .status-pending { background: rgba(255,255,255,0.16); color: white; }
+        .status-processing { background: rgba(37,211,102,0.16); color: #bbf7d0; }
+        .status-paused { background: rgba(245,158,11,0.16); color: #fde68a; }
+        .status-waiting_window { background: rgba(59,130,246,0.16); color: #bfdbfe; }
+        .status-completed { background: rgba(34,197,94,0.2); color: #dcfce7; }
+        .status-failed { background: rgba(239,68,68,0.2); color: #fecaca; }
+        .status-cancelled { background: rgba(148,163,184,0.25); color: #e2e8f0; }
+        .hero-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .hero-chip { background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+        .progress-wrap { margin-top: 18px; }
+        .progress-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-weight: 800; font-size: 14px; }
+        .progress-bg { background: rgba(255,255,255,0.18); height: 16px; border-radius: 999px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e 0%, #f59e0b 100%); width: 0%; transition: width 0.4s ease; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
+        .stat-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 20px; }
+        .stat-label { font-size: 13px; color: var(--gray); font-weight: 700; margin-bottom: 8px; }
+        .stat-value { font-size: 32px; font-weight: 900; color: var(--dark); }
+        .details-grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+        .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+        .card-header { padding: 18px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .card-header h3 { font-size: 17px; font-weight: 900; }
+        .card-body { padding: 22px; }
+        .info-list { display: grid; gap: 14px; }
+        .info-item { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 14px; padding: 14px; }
+        .info-label { font-size: 12px; color: var(--gray); font-weight: 700; margin-bottom: 4px; }
+        .info-value { font-size: 15px; font-weight: 800; color: var(--dark); word-break: break-word; }
+        .timer-box { background: linear-gradient(135deg, var(--blue-light) 0%, var(--accent-light) 100%); border: 1px solid #c7d2fe; border-radius: 16px; padding: 18px; margin-top: 16px; }
+        .timer-title { font-size: 13px; font-weight: 800; color: #4338ca; margin-bottom: 6px; }
+        .timer-value { font-size: 24px; font-weight: 900; color: #312e81; }
+        .timer-sub { font-size: 12px; color: #6366f1; margin-top: 6px; }
+        .control-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        .message-preview { background: linear-gradient(135deg, #e5ddd5 0%, #d9cfbe 100%); border-radius: 18px; padding: 18px; position: relative; overflow: hidden; }
+        .message-preview::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM36 4V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E"); opacity: 1; }
+        .bubble { position: relative; z-index: 1; background: #dcf8c5; max-width: 90%; border-radius: 14px; border-top-right-radius: 0; padding: 14px 16px; white-space: pre-wrap; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .media-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .media-badge { background: white; border: 1px solid #dbeafe; color: #1d4ed8; padding: 8px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th { background: #f8fafc; color: var(--gray); font-size: 12px; font-weight: 900; padding: 14px 16px; text-align: right; border-bottom: 2px solid var(--border); }
+        tbody td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 13px; }
+        tbody tr:hover { background: #fafcff; }
+        .phone-cell { font-family: 'Courier New', monospace; direction: ltr; text-align: left; font-weight: 800; color: var(--dark); }
+        .recipient-status { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 11px; font-size: 12px; font-weight: 800; }
+        .recipient-pending { background: #f8fafc; color: #475569; }
+        .recipient-pending_retry { background: #fffbeb; color: #b45309; }
+        .recipient-sent { background: #ecfdf5; color: #166534; }
+        .recipient-failed { background: #fef2f2; color: #b91c1c; }
+        .empty-state { text-align: center; color: var(--gray-light); padding: 28px; font-size: 14px; }
+        .footer-note { color: var(--gray); font-size: 12px; margin-top: 10px; }
+        .sync-note { color: rgba(255,255,255,0.75); font-size: 12px; margin-top: 8px; }
+        @media (max-width: 1100px) {
+            .details-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 700px) {
+            .container { padding: 18px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .topbar { align-items: flex-start; }
+            .hero-top { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topbar">
+            <div class="title">
+                <h1>📊 تقرير الحملة</h1>
+                <p>تحكم كامل بالحملة، تقرير لكل رقم، وتحديث مستمر للحالة</p>
+            </div>
+            <div class="actions">
+                <a href="/dashboard" class="btn btn-outline">← العودة للوحة التحكم</a>
+                <a href="/logs" class="btn btn-outline">📜 سجل الرسائل</a>
+            </div>
+        </div>
+
+        <div class="hero-card">
+            <div class="hero-top">
+                <div>
+                    <div class="hero-id">معرّف الحملة: <code id="campaign-id"><%= campaign._id %></code></div>
+                    <div class="hero-meta">
+                        <div class="hero-chip">👤 <%= user.username %></div>
+                        <div class="hero-chip">📅 <span id="created-at">—</span></div>
+                        <div class="hero-chip">🔄 إعادة المحاولة: 3 مرات</div>
+                    </div>
+                </div>
+                <div>
+                    <div id="campaign-status-badge" class="status-badge status-pending">بانتظار التحميل...</div>
+                    <div class="sync-note">يتم التحديث تلقائياً كل 5 ثوانٍ أو فور وصول إشعار جديد</div>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-head">
+                    <span id="progress-title">التقدم</span>
+                    <span id="progress-text">0 / 0</span>
+                </div>
+                <div class="progress-bg"><div class="progress-fill" id="progress-fill"></div></div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">إجمالي الأرقام</div>
+                <div class="stat-value" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">تم الإرسال بنجاح</div>
+                <div class="stat-value" id="stat-sent" style="color:var(--primary);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">فشل نهائي</div>
+                <div class="stat-value" id="stat-failed" style="color:var(--danger);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">متبقي</div>
+                <div class="stat-value" id="stat-remaining" style="color:var(--accent);">0</div>
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div>
+                <div class="card">
+                    <div class="card-header"><h3>⚙️ التحكم بالحملة</h3></div>
+                    <div class="card-body">
+                        <div class="info-list">
+                            <div class="info-item">
+                                <div class="info-label">حالة التنفيذ</div>
+                                <div class="info-value" id="status-text">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">النافذة الزمنية</div>
+                                <div class="info-value" id="window-text">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">آخر تحديث</div>
+                                <div class="info-value" id="updated-at">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">آخر خطأ</div>
+                                <div class="info-value" id="last-error">لا يوجد</div>
+                            </div>
+                        </div>
+
+                        <div class="timer-box" id="timer-box" style="display:none;">
+                            <div class="timer-title" id="timer-title">العد التنازلي</div>
+                            <div class="timer-value" id="timer-value">00:00</div>
+                            <div class="timer-sub" id="timer-sub">—</div>
+                        </div>
+
+                        <div class="control-buttons" id="control-buttons"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card" style="margin-bottom:24px;">
+                    <div class="card-header"><h3>💬 محتوى الحملة</h3></div>
+                    <div class="card-body">
+                        <div class="message-preview">
+                            <div class="bubble" id="message-body">—</div>
+                        </div>
+                        <div class="media-badges" id="media-badges"></div>
+                        <div class="footer-note">إذا كانت الحملة تحتوي مرفقات فسيتم إرسال النص كتعليق أو رسالة منفصلة حسب نوع الملف.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📞 تقرير الأرقام</h3>
+                        <span id="recipient-count" style="font-size:13px;color:var(--gray);font-weight:800;">0 رقم</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>الرقم</th>
+                                    <th>الحالة</th>
+                                    <th>عدد المحاولات</th>
+                                    <th>آخر خطأ</th>
+                                    <th>وقت النجاح</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recipients-body">
+                                <tr><td colspan="5" class="empty-state">جاري تحميل التقرير...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const campaignId = '<%= campaign._id %>';
+        const socket = io({ query: { userId: '<%= user._id %>' } });
+        let currentCampaign = null;
+        let refreshTimer = null;
+        let countdownInterval = null;
+
+        const STATUS_LABELS = {
+            pending: 'بانتظار البدء',
+            processing: 'قيد التنفيذ',
+            paused: 'متوقفة مؤقتاً',
+            waiting_window: 'بانتظار النافذة الزمنية',
+            completed: 'مكتملة',
+            failed: 'انتهت بفشل',
+            cancelled: 'ملغاة'
+        };
+
+        const RECIPIENT_STATUS_LABELS = {
+            pending: 'بانتظار',
+            pending_retry: 'إعادة محاولة',
+            sent: 'تم الإرسال',
+            failed: 'فشل'
+        };
+
+        function formatDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '—';
+            return date.toLocaleString('ar-SA');
+        }
+
+        function statusClass(status) {
+            return `status-${status || 'pending'}`;
+        }
+
+        function recipientStatusClass(status) {
+            return `recipient-${status || 'pending'}`;
+        }
+
+        function updateCountdown(countdown) {
+            const timerBox = document.getElementById('timer-box');
+            const timerTitle = document.getElementById('timer-title');
+            const timerValue = document.getElementById('timer-value');
+            const timerSub = document.getElementById('timer-sub');
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+
+            if (!countdown || !countdown.totalSeconds || countdown.totalSeconds <= 0) {
+                timerBox.style.display = 'none';
+                return;
+            }
+
+            timerBox.style.display = 'block';
+            timerTitle.textContent = countdown.type === 'window' ? '⏰ انتظار بداية النافذة' : '⏳ انتظار الرسالة التالية';
+            timerSub.textContent = countdown.type === 'window' ? 'سيُستأنف الإرسال تلقائياً عند بداية النافذة المحددة' : 'التأخير العشوائي يعمل الآن بين الرسائل';
+
+            let remaining = countdown.totalSeconds;
+            const draw = () => {
+                if (remaining < 0) {
+                    timerValue.textContent = '00:00';
+                    return;
+                }
+                const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+                const seconds = (remaining % 60).toString().padStart(2, '0');
+                timerValue.textContent = `${minutes}:${seconds}`;
+                remaining -= 1;
+            };
+            draw();
+            countdownInterval = setInterval(draw, 1000);
+        }
+
+        function renderControls(campaign) {
+            const container = document.getElementById('control-buttons');
+            const isTerminal = ['completed', 'failed', 'cancelled'].includes(campaign.status);
+            let html = '';
+
+            if (!isTerminal && campaign.controlStatus === 'active') {
+                html += `<button class="btn btn-warning" onclick="campaignAction('pause')">⏸️ إيقاف مؤقت</button>`;
+            }
+            if (!isTerminal && campaign.controlStatus === 'paused') {
+                html += `<button class="btn btn-primary" onclick="campaignAction('resume')">▶️ استئناف</button>`;
+            }
+            if (!isTerminal && campaign.controlStatus !== 'cancelled') {
+                html += `<button class="btn btn-danger" onclick="campaignAction('cancel')">🚫 إلغاء الحملة</button>`;
+            }
+            html += `<a class="btn btn-outline" href="/dashboard">🏠 رجوع للوحة</a>`;
+            container.innerHTML = html;
+        }
+
+        function renderRecipients(recipients) {
+            const tbody = document.getElementById('recipients-body');
+            document.getElementById('recipient-count').textContent = `${recipients.length} رقم`;
+            if (!recipients.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">لا توجد بيانات للمستلمين</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recipients.map(recipient => `
+                <tr>
+                    <td class="phone-cell">${recipient.phoneNumber}</td>
+                    <td><span class="recipient-status ${recipientStatusClass(recipient.status)}">${RECIPIENT_STATUS_LABELS[recipient.status] || recipient.status}</span></td>
+                    <td>${recipient.retryCount || 0} / 3</td>
+                    <td>${recipient.errorMessage || '—'}</td>
+                    <td>${formatDate(recipient.sentAt)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCampaign(campaign) {
+            currentCampaign = campaign;
+            const progressPercent = campaign.totalNumbers > 0 ? Math.round(((campaign.sentCount + campaign.failedCount) / campaign.totalNumbers) * 100) : 0;
+            const remaining = Math.max(campaign.totalNumbers - campaign.sentCount - campaign.failedCount, 0);
+
+            document.getElementById('campaign-status-badge').className = `status-badge ${statusClass(campaign.status)}`;
+            document.getElementById('campaign-status-badge').textContent = STATUS_LABELS[campaign.status] || campaign.status;
+            document.getElementById('progress-title').textContent = campaign.currentPhone ? `الرقم الحالي: ${campaign.currentPhone}` : 'التقدم';
+            document.getElementById('progress-text').textContent = `${campaign.sentCount + campaign.failedCount} / ${campaign.totalNumbers}`;
+            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+            document.getElementById('stat-total').textContent = campaign.totalNumbers || 0;
+            document.getElementById('stat-sent').textContent = campaign.sentCount || 0;
+            document.getElementById('stat-failed').textContent = campaign.failedCount || 0;
+            document.getElementById('stat-remaining').textContent = remaining;
+            document.getElementById('status-text').textContent = STATUS_LABELS[campaign.status] || campaign.status;
+            document.getElementById('window-text').textContent = campaign.useTimeWindow ? `${campaign.windowStart} → ${campaign.windowEnd} (بتوقيت السعودية)` : 'بدون نافذة زمنية';
+            document.getElementById('updated-at').textContent = formatDate(campaign.updatedAt);
+            document.getElementById('created-at').textContent = formatDate(campaign.createdAt);
+            document.getElementById('last-error').textContent = campaign.lastError || 'لا يوجد';
+            document.getElementById('message-body').textContent = campaign.body || '(بدون نص - مرفقات فقط)';
+
+            const mediaBadges = document.getElementById('media-badges');
+            mediaBadges.innerHTML = (campaign.media || []).length
+                ? campaign.media.map((item, index) => `<span class="media-badge">📎 ${(item.filename || 'مرفق ' + (index + 1))}</span>`).join('')
+                : '<span class="media-badge" style="border-color:#e2e8f0;color:#64748b;">بدون مرفقات</span>';
+
+            renderControls(campaign);
+            renderRecipients(campaign.recipients || []);
+            updateCountdown(campaign.countdown);
+        }
+
+        async function fetchCampaign(showAlert = false) {
+            try {
+                const response = await fetch(`/api/campaigns/${campaignId}`);
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'تعذر تحميل الحملة');
+                renderCampaign(data.campaign);
+            } catch (error) {
+                if (showAlert) alert(error.message || 'حدث خطأ');
+            }
+        }
+
+        async function campaignAction(action) {
+            if (action === 'cancel' && !confirm('هل أنت متأكد من إلغاء الحملة؟ لن يتم إرسال بقية الرسائل.')) return;
+            try {
+                const response = await fetch(`/api/campaigns/${campaignId}/${action}`, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'تعذر تنفيذ الإجراء');
+                await fetchCampaign();
+            } catch (error) {
+                alert(error.message || 'حدث خطأ');
+            }
+        }
+
+        function scheduleRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(fetchCampaign, 5000);
+        }
+
+        socket.on('campaign-update', payload => {
+            const payloadId = payload._id || payload.campaignId;
+            if (String(payloadId) === String(campaignId)) fetchCampaign();
+        });
+
+        socket.on('campaign-completed', payload => {
+            if (String(payload.campaignId) === String(campaignId)) fetchCampaign();
+        });
+
+        fetchCampaign(true);
+        scheduleRefresh();
+    </script>
+</body>
+</html>

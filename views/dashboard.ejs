@@ -230,6 +230,30 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         .grid-sidebar { display: grid; grid-template-columns: 340px 1fr; gap: 25px; align-items: start; }
 
+        /* ===== Campaign Options / History ===== */
+        .campaign-options-box { background: #fff; border: 2px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+        .campaign-options-title { font-size: 14px; font-weight: 800; color: var(--dark); margin-bottom: 12px; }
+        .inline-checkbox { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--dark2); margin-bottom: 12px; cursor: pointer; }
+        .inline-checkbox input { width: 18px; height: 18px; accent-color: var(--primary); }
+        .time-window-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .mini-time-input { border: 2px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14px; background: #f8fafc; }
+        .summary-note { font-size: 12px; color: var(--gray); margin-top: 10px; line-height: 1.8; }
+        .campaign-alert { background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%); border: 1px solid #c7d2fe; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 700; color: #3730a3; }
+        .campaigns-table-wrap { overflow-x: auto; }
+        .campaigns-table { width: 100%; border-collapse: collapse; }
+        .campaigns-table th, .campaigns-table td { padding: 12px 10px; border-bottom: 1px solid #edf2f7; text-align: right; font-size: 13px; }
+        .campaigns-table th { color: var(--gray); font-size: 12px; font-weight: 800; background: #f8fafc; }
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 800; }
+        .status-pill.status-pending { background: #f8fafc; color: #475569; }
+        .status-pill.status-processing { background: #ecfdf5; color: #166534; }
+        .status-pill.status-paused { background: #fffbeb; color: #b45309; }
+        .status-pill.status-waiting_window { background: #eff6ff; color: #1d4ed8; }
+        .status-pill.status-completed { background: #dcfce7; color: #166534; }
+        .status-pill.status-failed { background: #fef2f2; color: #b91c1c; }
+        .status-pill.status-cancelled { background: #e2e8f0; color: #334155; }
+        .campaign-link { text-decoration: none; color: var(--accent); font-weight: 800; }
+        .campaign-link:hover { color: var(--primary-dark); }
+
         /* ===== Responsive ===== */
         @media (max-width: 1100px) { .grid-sidebar { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 900px) {
@@ -260,6 +284,16 @@
             else daysRemaining = 0;
         }
         if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; }
+
+        const campaignLabels = {
+            pending: 'بانتظار البدء',
+            processing: 'قيد التنفيذ',
+            paused: 'متوقفة مؤقتاً',
+            waiting_window: 'بانتظار النافذة',
+            completed: 'مكتملة',
+            failed: 'انتهت بفشل',
+            cancelled: 'ملغاة'
+        };
     %>
 
     <!-- Mobile Header -->
@@ -501,6 +535,28 @@
                                 <input type="file" id="mediaFiles" multiple class="hidden" onchange="handleMediaSelect()">
                                 <div class="media-info" id="mediaFilesNames"></div>
 
+                                <div class="campaign-options-box">
+                                    <div class="campaign-options-title">⚙️ إعدادات الحملة</div>
+                                    <label class="inline-checkbox">
+                                        <input type="checkbox" id="useTimeWindow" onchange="toggleTimeWindowFields()">
+                                        <span>تفعيل نافذة زمنية للإرسال</span>
+                                    </label>
+                                    <div id="timeWindowFields" style="display:none;">
+                                        <div class="time-window-inline">
+                                            <input type="time" id="windowStart" class="mini-time-input" value="08:00" onchange="updateSummary()">
+                                            <span style="font-weight:700;color:var(--gray);">إلى</span>
+                                            <input type="time" id="windowEnd" class="mini-time-input" value="23:00" onchange="updateSummary()">
+                                        </div>
+                                    </div>
+                                    <div class="summary-note">
+                                        ⏱️ التأخير العشوائي بين الرسائل <strong><%= settings.campaignRandomDelayEnabled ? 'مفعّل' : 'معطّل' %></strong>
+                                        <% if (settings.campaignRandomDelayEnabled) { %>
+                                            (من <%= settings.campaignDelayMinMinutes %> إلى <%= settings.campaignDelayMaxMinutes %> دقيقة)
+                                        <% } %>.
+                                        <br>النافذة الزمنية تعمل بتوقيت السعودية.
+                                    </div>
+                                </div>
+
                                 <!-- ملخص قبل الإرسال -->
                                 <div class="summary-box" id="sendSummary">
                                     <div class="summary-row">
@@ -514,6 +570,10 @@
                                     <div class="summary-row">
                                         <div class="summary-icon" style="background:var(--primary-light);color:var(--primary);">📎</div>
                                         <div><div class="summary-label">المرفقات</div><div class="summary-value" id="summaryMedia">بدون مرفقات</div></div>
+                                    </div>
+                                    <div class="summary-row">
+                                        <div class="summary-icon" style="background:var(--warning-light);color:var(--warning);">⏰</div>
+                                        <div><div class="summary-label">نافذة الإرسال</div><div class="summary-value" id="summaryWindow">24 ساعة</div></div>
                                     </div>
                                 </div>
 
@@ -534,9 +594,53 @@
                                     <% if (isExpired) { %>
                                         <button class="btn btn-disabled btn-send" disabled>🚫 الإرسال معطل (اشتراك منتهي)</button>
                                     <% } else { %>
-                                        <button class="btn btn-primary btn-send" id="send-btn" onclick="sendCampaign()">🚀 إرسال الحملة الآن</button>
+                                        <button class="btn btn-primary btn-send" id="send-btn" onclick="sendCampaign()">🚀 إنشاء الحملة وبدء المعالجة</button>
                                     <% } %>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="campaign-card" style="margin-top:25px;">
+                        <div class="campaign-header" style="background:linear-gradient(135deg, var(--accent) 0%, #4338ca 100%);">
+                            <h3>📋 الحملات الأخيرة</h3>
+                            <p>تابع الحالة وافتح التقرير التفصيلي لكل حملة</p>
+                        </div>
+                        <div class="campaign-body">
+                            <% if (activeCampaign) { %>
+                                <div class="campaign-alert">
+                                    لديك حملة مفتوحة الآن: <strong><%= campaignLabels[activeCampaign.status] || activeCampaign.status %></strong>
+                                    — <a class="campaign-link" href="/campaigns/<%= activeCampaign._id %>">فتح التقرير والتحكم</a>
+                                </div>
+                            <% } %>
+
+                            <div class="campaigns-table-wrap">
+                                <table class="campaigns-table">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>الحالة</th>
+                                            <th>التقدم</th>
+                                            <th>التقرير</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (recentCampaigns && recentCampaigns.length > 0) { %>
+                                            <% recentCampaigns.forEach(c => { %>
+                                                <tr>
+                                                    <td><%= new Date(c.createdAt).toLocaleString('ar-SA') %></td>
+                                                    <td><span class="status-pill status-<%= c.status %>"><%= campaignLabels[c.status] || c.status %></span></td>
+                                                    <td><strong><%= c.sentCount %></strong> / <%= c.totalNumbers %></td>
+                                                    <td><a class="campaign-link" href="/campaigns/<%= c._id %>">فتح التقرير</a></td>
+                                                </tr>
+                                            <% }) %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="4" style="text-align:center;color:var(--gray-light);padding:22px;">لا توجد حملات بعد</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -639,10 +743,11 @@
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
 
-            // تحديث عداد التقدم
-            sendSuccessCount++;
-            updateProgress(sendSuccessCount, sendFailCount, sendTotal);
-            checkSendComplete();
+            if (sendTotal > 0) {
+                sendSuccessCount++;
+                updateProgress(sendSuccessCount, sendFailCount, sendTotal);
+                checkSendComplete();
+            }
         });
 
         socket.on('error', (err) => {
@@ -655,16 +760,17 @@
             msgs.appendChild(el);
             msgs.scrollTop = msgs.scrollHeight;
 
-            // تحديث عداد التقدم
-            sendFailCount++;
-            updateProgress(sendSuccessCount, sendFailCount, sendTotal);
-            checkSendComplete();
+            if (sendTotal > 0) {
+                sendFailCount++;
+                updateProgress(sendSuccessCount, sendFailCount, sendTotal);
+                checkSendComplete();
+            }
         });
 
         function checkSendComplete() {
             if ((sendSuccessCount + sendFailCount) >= sendTotal && sendTotal > 0) {
                 const btn = document.getElementById('send-btn');
-                btn.innerHTML = '🚀 إرسال الحملة الآن';
+                btn.innerHTML = '🚀 إنشاء الحملة وبدء المعالجة';
                 btn.disabled = false;
                 btn.classList.remove('btn-disabled');
                 showToast(`✅ اكتملت الحملة: ${sendSuccessCount} ناجحة, ${sendFailCount} فاشلة`, sendFailCount > 0 ? 'error' : 'success');
@@ -751,6 +857,7 @@
         function clearRecipients() {
             recipientsSet.clear(); updateRecipientsUI();
             document.getElementById('txtFileInput').value = '';
+            updateSummary();
         }
 
         function goToStep(step) {
@@ -787,6 +894,7 @@
             let text = document.getElementById('msg').value || "ستظهر رسالتك هنا...";
             text = text.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/_(.*?)_/g, '<i>$1</i>').replace(/~(.*?)~/g, '<s>$1</s>');
             document.getElementById('livePreview').innerHTML = text;
+            updateSummary();
         }
 
         const dropZone = document.getElementById('dropZone');
@@ -806,6 +914,7 @@
                     document.getElementById('mediaFilesNames').innerHTML = `✅ تم تحديد <strong>${files.length}</strong> مرفق (${mb} MB)`;
                 }
             }
+            updateSummary();
         }
 
         function fileToBase64(file) {
@@ -817,11 +926,21 @@
             });
         }
 
+        function toggleTimeWindowFields() {
+            const enabled = document.getElementById('useTimeWindow').checked;
+            document.getElementById('timeWindowFields').style.display = enabled ? 'block' : 'none';
+            updateSummary();
+        }
+
         function updateSummary() {
             const body = document.getElementById('msg').value;
             const files = document.getElementById('mediaFiles').files;
+            const useTimeWindow = document.getElementById('useTimeWindow').checked;
+            const windowStart = document.getElementById('windowStart').value || '08:00';
+            const windowEnd = document.getElementById('windowEnd').value || '23:00';
             document.getElementById('summaryMsg').innerText = body || '— لا توجد رسالة نصية';
             document.getElementById('summaryMedia').innerText = files.length > 0 ? files.length + ' مرفق' : 'بدون مرفقات';
+            document.getElementById('summaryWindow').innerText = useTimeWindow ? `${windowStart} → ${windowEnd}` : '24 ساعة';
         }
 
         function updateProgress(success, failed, total) {
@@ -834,50 +953,73 @@
 
         async function sendCampaign() {
             const numbersArr = Array.from(recipientsSet);
-            const body = document.getElementById('msg').value;
+            const body = document.getElementById('msg').value.trim();
             const fileInput = document.getElementById('mediaFiles');
-            const token = document.getElementById('apiToken').value;
-            if (!body && fileInput.files.length === 0) return showToast("اكتب رسالة أو أضف مرفق!", "error");
+            const useTimeWindow = document.getElementById('useTimeWindow').checked;
+            const windowStart = document.getElementById('windowStart').value;
+            const windowEnd = document.getElementById('windowEnd').value;
 
-            // تحديث الملخص
+            if (!numbersArr.length) return showToast('أضف مستلمين أولاً', 'error');
+            if (!body && fileInput.files.length === 0) return showToast('اكتب رسالة أو أضف مرفق!', 'error');
+            if (useTimeWindow && (!windowStart || !windowEnd)) return showToast('حدد وقت البداية والنهاية للنافذة الزمنية', 'error');
+
             updateSummary();
 
             const btn = document.getElementById('send-btn');
-            btn.innerHTML = '<span style="animation:spin 1s linear infinite; display:inline-block;">⏳</span> جاري الإرسال...';
-            btn.disabled = true; btn.classList.add('btn-disabled');
-
-            // إظهار عداد التقدم
-            sendSuccessCount = 0; sendFailCount = 0; sendTotal = numbersArr.length;
             const progressEl = document.getElementById('sendProgress');
+            btn.innerHTML = '<span style="animation:spin 1s linear infinite; display:inline-block;">⏳</span> جاري إنشاء الحملة...';
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
             progressEl.classList.add('active');
+            sendSuccessCount = 0;
+            sendFailCount = 0;
+            sendTotal = numbersArr.length;
             updateProgress(0, 0, sendTotal);
 
             try {
-                var formData = new FormData();
-                formData.append('to', JSON.stringify(numbersArr));
-                formData.append('body', body);
-                for(var i=0; i<fileInput.files.length; i++) {
-                    formData.append('media', fileInput.files[i]);
+                const media = [];
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    media.push(await fileToBase64(fileInput.files[i]));
                 }
 
-                const response = await fetch('/api/send-message', {
+                const response = await fetch('/api/campaigns', {
                     method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token },
-                    body: formData
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numbers: numbersArr,
+                        message: body,
+                        media,
+                        useTimeWindow,
+                        windowStart: useTimeWindow ? windowStart : null,
+                        windowEnd: useTimeWindow ? windowEnd : null
+                    })
                 });
-                const result = await response.json();
 
-                if (result.success) {
-                    showToast('🚀 تم استلام الطلب! تتبع التقدم أدناه', 'success');
-                } else {
-                    showToast(result.error || "خطأ", "error");
-                    btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
-                    progressEl.classList.remove('active');
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    showToast('تم إنشاء الحملة بنجاح، سيتم فتح التقرير الآن', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/campaigns/' + result.campaignId;
+                    }, 700);
+                    return;
                 }
-            } catch(e) {
-                showToast("خطأ في التواصل مع السيرفر!", "error");
-                btn.innerHTML = '🚀 إرسال الحملة الآن'; btn.disabled = false; btn.classList.remove('btn-disabled');
+
+                if (response.status === 409 && result.campaignId) {
+                    if (confirm((result.error || 'لديك حملة قائمة') + '\nهل تريد فتحها الآن؟')) {
+                        window.location.href = '/campaigns/' + result.campaignId;
+                        return;
+                    }
+                }
+
+                throw new Error(result.error || 'تعذر إنشاء الحملة');
+            } catch (e) {
+                showToast(e.message || 'خطأ في التواصل مع السيرفر!', 'error');
+                btn.innerHTML = '🚀 إنشاء الحملة وبدء المعالجة';
+                btn.disabled = false;
+                btn.classList.remove('btn-disabled');
                 progressEl.classList.remove('active');
+                sendTotal = 0;
+                updateProgress(0, 0, 0);
             }
         }
 
@@ -931,6 +1073,9 @@
             })
             .catch(function() { showToast('خطأ في الاتصال', 'error'); btn.disabled = false; btn.innerText = '🔑 توليد'; });
         }
+
+        toggleTimeWindowFields();
+        updateSummary();
     </script>
     <style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
 </body>
