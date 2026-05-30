@@ -130,9 +130,16 @@ app.post('/register', async (req, res) => {
             subscriptionEndsAt: subDate, isVerified: false, otpCode: otp, otpExpires: otpExp
         });
 
-        await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
         req.session.verifyUserId = user._id;
-        res.redirect('/verify');
+
+        // محاولة إرسال OTP - إذا فشل ننقله لصفحة التوثيق مع زر إعادة الإرسال
+        try {
+            await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
+            res.redirect('/verify');
+        } catch (otpErr) {
+            console.error('⚠️ فشل إرسال OTP لكن الحساب تم إنشاؤه:', otpErr.message);
+            res.render('verify', { error: 'تم إنشاء حسابك لكن فشل إرسال الرمز. اضغط إعادة الإرسال.', success: null });
+        }
     } catch (e) {
         console.error('❌ خطأ في التسجيل:', e.message);
         res.render('register', { error: e.message });
