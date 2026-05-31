@@ -1,0 +1,67 @@
+{
+  "name": "@multiwa/sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript SDK for the MultiWA WhatsApp Business API Gateway. Send messages, manage profiles, automate flows, and consume webhooks against a self-hosted MultiWA server.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --tsconfig tsconfig.build.json",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --tsconfig tsconfig.build.json",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "whatsapp",
+    "multiwa",
+    "api",
+    "sdk",
+    "typescript",
+    "whatsapp-api",
+    "whatsapp-bot",
+    "messaging",
+    "gateway"
+  ],
+  "author": "MultiWA",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ribato22/MultiWA.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/ribato22/MultiWA/tree/main/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/ribato22/MultiWA/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

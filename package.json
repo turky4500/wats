@@ -1,22 +1,52 @@
 {
-  "name": "whatsapp-saas",
+  "name": "multiwa",
   "version": "1.0.0",
-  "main": "server.js",
+  "private": true,
+  "description": "Open Source WhatsApp Business API Gateway - Multi-engine, Self-hosted, Enterprise-ready",
+  "keywords": [
+    "whatsapp",
+    "api",
+    "gateway",
+    "baileys",
+    "whatsapp-web-js",
+    "self-hosted",
+    "open-source",
+    "multiwa"
+  ],
+  "homepage": "https://github.com/ribato22/multiwa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ribato22/multiwa.git"
+  },
+  "license": "MIT",
+  "author": "MultiWA Team",
   "scripts": {
-    "start": "node server.js"
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "typecheck": "turbo typecheck",
+    "check:public-boundary": "bash scripts/check-public-boundary.sh",
+    "check:api-contract": "node scripts/check-api-contract.mjs",
+    "check:api-contract:update": "node scripts/check-api-contract.mjs --update",
+    "check:release": "git diff --check && pnpm run check:public-boundary && pnpm run check:api-contract"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "github:WhiskeySockets/Baileys",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "ejs": "^3.1.9",
-    "express": "^4.18.2",
-    "express-session": "^1.17.3",
-    "mongoose": "^8.0.0",
-    "multer": "^2.1.1",
-    "pino": "^9.4.0",
-    "qrcode": "^1.5.3",
-    "socket.io": "^4.7.2"
+    "@nestjs/event-emitter": "^3.0.1",
+    "@nestjs/schedule": "^6.1.1",
+    "@types/qrcode": "^1.5.6",
+    "otplib": "^13.2.1",
+    "qrcode": "^1.5.4"
   }
 }
