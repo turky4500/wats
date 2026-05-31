@@ -4,8 +4,8 @@ services:
     env: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx next start
+    buildCommand: npm install && ./node_modules/.bin/prisma generate && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production

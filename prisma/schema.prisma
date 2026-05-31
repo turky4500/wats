@@ -7,28 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  password      String
-  phone         String?   @unique
-  avatar        String?
-  role          UserRole  @default(USER)
-  status        UserStatus @default(PENDING)
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastLoginAt   DateTime?
-  profile       Profile?
-  subscription  Subscription?
-  sentMessages      Message[] @relation("SentMessages")
-  receivedMessages  Message[] @relation("ReceivedMessages")
-  auditLogs     AuditLog[]
-  waDevices     WaDevice[]
-  @@map("users")
-}
-
+// ===== Enums =====
 enum UserRole {
   USER
   MODERATOR
@@ -44,169 +23,244 @@ enum UserStatus {
   DELETED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  DIVORCED
+  WIDOWED
+  MARRIED
+}
+
+enum SubStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+  FAILED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  BANK_TRANSFER
+  APPLE_PAY
+  STC_PAY
+  FREE
+}
+
+enum SupportLevel {
+  BASIC
+  STANDARD
+  PREMIUM
+  VIP
+}
+
+enum DeviceStatus {
+  CONNECTED
+  DISCONNECTED
+  CONNECTING
+  QR_SCAN
+  ERROR
+}
+
+enum MessageType {
+  TEXT
+  REQUEST
+  SYSTEM
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// ===== Models =====
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  password      String
+  phone         String?      @unique
+  avatar        String?
+  role          UserRole     @default(USER)
+  status        UserStatus   @default(PENDING)
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  lastLoginAt   DateTime?
+
+  profile       Profile?
+  subscription  Subscription?
+  sentMessages  Message[]    @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  auditLogs     AuditLog[]
+  waDevices     WaDevice[]
+
+  @@map("users")
+}
+
 model Profile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gender          Gender
-  age             Int
-  nationality     String
-  country         String
-  city            String
-  maritalStatus   MaritalStatus
-  religiousLevel  String
-  height          Float?
-  weight          Float?
-  skinColor       String?
-  education       String?
-  job             String?
-  salary          Float?
-  hasChildren     Boolean  @default(false)
-  childrenCount   Int      @default(0)
-  acceptPolygamy  Boolean  @default(false)
-  wantsPolygamy   Boolean  @default(false)
-  tribe           String?
-  bio             String?
-  hobbies         String[]
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gender             Gender
+  age                Int
+  nationality        String
+  country            String
+  city               String
+  maritalStatus      MaritalStatus
+  religiousLevel     String
+  height             Float?
+  weight             Float?
+  skinColor          String?
+  education          String?
+  job                String?
+  salary             Float?
+  hasChildren        Boolean   @default(false)
+  childrenCount      Int       @default(0)
+  acceptPolygamy     Boolean   @default(false)
+  wantsPolygamy      Boolean   @default(false)
+  tribe              String?
+  bio                String?
+  hobbies            String[]
   seekingDescription String?
-  photoVisible    Boolean  @default(true)
-  guardianName    String?
-  guardianPhone   String?
-  guardianRelation String?
-  isVerified      Boolean  @default(false)
-  verificationDocs String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  photoVisible       Boolean   @default(true)
+  guardianName       String?
+  guardianPhone      String?
+  guardianRelation   String?
+  isVerified         Boolean   @default(false)
+  verificationDocs   String[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
   @@map("profiles")
 }
 
-enum Gender { MALE FEMALE }
-enum MaritalStatus { SINGLE DIVORCED WIDOWED MARRIED }
-
 model Subscription {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId        String
   plan          SubscriptionPlan @relation(fields: [planId], references: [id])
-  status        SubStatus @default(ACTIVE)
-  startDate     DateTime @default(now())
+  status        SubStatus      @default(ACTIVE)
+  startDate     DateTime       @default(now())
   endDate       DateTime?
-  autoRenew     Boolean  @default(true)
+  autoRenew     Boolean        @default(true)
   paymentMethod PaymentMethod?
   transactionId String?
   amount        Float?
-  currency      String   @default("SAR")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  currency      String         @default("SAR")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
   @@map("subscriptions")
 }
 
-enum SubStatus { ACTIVE EXPIRED CANCELLED PENDING FAILED }
-enum PaymentMethod { CREDIT_CARD BANK_TRANSFER APPLE_PAY STC_PAY FREE }
-
 model SubscriptionPlan {
-  id            String    @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
   nameAr        String
   description   String?
   price         Float
-  currency      String    @default("SAR")
+  currency      String         @default("SAR")
   duration      Int
   features      String[]
-  maxDevices    Int       @default(1)
-  maxMessages   Int       @default(-1)
-  maxContacts   Int       @default(-1)
-  hasApi        Boolean   @default(false)
-  hasWebhooks   Boolean   @default(false)
-  hasAutomation Boolean   @default(false)
-  hasBroadcast  Boolean   @default(false)
-  priority      Boolean   @default(false)
-  support       SupportLevel @default(BASIC)
-  isActive      Boolean   @default(true)
-  isPopular     Boolean   @default(false)
-  sort          Int       @default(0)
+  maxDevices    Int            @default(1)
+  maxMessages   Int            @default(-1)
+  maxContacts   Int            @default(-1)
+  hasApi        Boolean        @default(false)
+  hasWebhooks   Boolean        @default(false)
+  hasAutomation Boolean        @default(false)
+  hasBroadcast  Boolean        @default(false)
+  priority      Boolean        @default(false)
+  support       SupportLevel   @default(BASIC)
+  isActive      Boolean        @default(true)
+  isPopular     Boolean        @default(false)
+  sort          Int            @default(0)
   subscriptions Subscription[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
   @@map("subscription_plans")
 }
 
-enum SupportLevel { BASIC STANDARD PREMIUM VIP }
-
 model WaDevice {
-  id            String       @id @default(cuid())
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  phoneNumber   String       @unique
-  platform      String
-  status        DeviceStatus @default(DISCONNECTED)
-  qrCode        String?
-  isConnected   Boolean      @default(false)
-  lastConnected DateTime?
-  lastSync      DateTime?
-  messagesSent  Int          @default(0)
-  messagesReceived Int       @default(0)
-  settings      Json?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  phoneNumber      String       @unique
+  platform         String
+  status           DeviceStatus @default(DISCONNECTED)
+  qrCode           String?
+  isConnected      Boolean      @default(false)
+  lastConnected    DateTime?
+  lastSync         DateTime?
+  messagesSent     Int          @default(0)
+  messagesReceived Int          @default(0)
+  settings         Json?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
   @@map("wa_devices")
 }
 
-enum DeviceStatus { CONNECTED DISCONNECTED CONNECTING QR_SCAN ERROR }
-
 model Message {
-  id            String    @id @default(cuid())
-  senderId      String
-  sender        User      @relation("SentMessages", fields: [senderId], references: [id])
-  receiverId    String
-  receiver      User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  content       String
-  type          MessageType @default(TEXT)
-  isRead        Boolean   @default(false)
-  waMessageId   String?
-  createdAt     DateTime  @default(now())
+  id          String        @id @default(cuid())
+  senderId    String
+  sender      User          @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User          @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content     String
+  type        MessageType   @default(TEXT)
+  isRead      Boolean       @default(false)
+  waMessageId String?
+  createdAt   DateTime      @default(now())
+
   @@map("messages")
 }
 
-enum MessageType { TEXT REQUEST SYSTEM }
-
 model AuditLog {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action        String
-  entity        String
-  entityId      String?
-  details       Json?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
   @@map("audit_logs")
 }
 
 model Setting {
-  id            String    @id @default(cuid())
-  key           String    @unique
-  value         String
-  description   String?
-  category      String    @default("general")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String   @default("general")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@map("settings")
 }
 
 model Notification {
-  id            String         @id @default(cuid())
-  userId        String
-  title         String
-  message       String
-  type          NotificationType @default(INFO)
-  isRead        Boolean        @default(false)
-  link          String?
-  createdAt     DateTime       @default(now())
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
   @@map("notifications")
 }
-
-enum NotificationType { INFO SUCCESS WARNING ERROR }
