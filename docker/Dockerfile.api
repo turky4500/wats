@@ -125,6 +125,6 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 EXPOSE 3333
 
-WORKDIR /app/apps/api
+WORKDIR /app
 
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "cd /app/packages/database && prisma migrate deploy --schema ./prisma/schema.prisma && cd /app/apps/api && node dist/main.js"]

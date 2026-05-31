@@ -1,0 +1,50 @@
+databases:
+  - name: wats-multiwa-db
+    databaseName: multiwa
+    user: multiwa
+
+services:
+  - type: web
+    name: wats-multiwa-api
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wats-multiwa-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: https://wats-multiwa-admin.onrender.com,http://localhost:3001
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: SESSIONS_DIR
+        value: /data/sessions
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "true"
+    disk:
+      name: whatsapp-sessions
+      mountPath: /data
+      sizeGB: 5
+
+  - type: web
+    name: wats-multiwa-admin
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile.admin
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://wats-multiwa-api.onrender.com

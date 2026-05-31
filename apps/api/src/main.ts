@@ -83,7 +83,7 @@ async function bootstrap() {
     console.log('✅ [6/7] Validation & Swagger configured');
 
     // Start server
-    const port = process.env.API_PORT || 3000;
+    const port = process.env.PORT || process.env.API_PORT || 3000;
     const host = process.env.API_HOST || '0.0.0.0';
     
     console.log(`🔧 [7/7] Listening on ${host}:${port}...`);
