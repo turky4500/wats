@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نِكاح - تطبيق الزواج الإسلامي</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --green: #1B6B3A;
+      --green2: #2D9B5A;
+      --gold: #D4AF37;
+      --light-gold: #F5E6C8;
+      --cream: #FAF8F5;
+      --white: #FFFFFF;
+      --dark: #1A1A2E;
+      --grey: #6B7280;
+      --divider: #E5E7EB;
+      --online: #16A34A;
+      --red: #DC2626;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    h1.main-title {
+      color: white;
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .subtitle {
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 30px;
+      font-size: 1.1rem;
+    }
+    
+    .phones-container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .phone {
+      background: #1a1a1a;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+      width: 300px;
+      position: relative;
+    }
+    
+    .phone::before {
+      content: '';
+      display: block;
+      width: 80px;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      margin: 0 auto 10px;
+    }
+    
+    .screen {
+      background: var(--cream);
+      border-radius: 30px;
+      overflow: hidden;
+      height: 620px;
+      position: relative;
+    }
+    
+    .phone-label {
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    
+    /* === SPLASH SCREEN === */
+    .splash {
+      background: linear-gradient(180deg, var(--green), #0D4A28);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+    
+    .splash .logo-box {
+      width: 100px;
+      height: 100px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 50px;
+      margin-bottom: 20px;
+    }
+    
+    .splash h1 { color: white; font-size: 42px; margin-bottom: 8px; }
+    
+    .splash .badge {
+      background: rgba(212,175,55,0.2);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-bottom: 50px;
+    }
+    
+    .splash .ayah {
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.8;
+      margin-bottom: 6px;
+    }
+    
+    .splash .surah { color: rgba(212,175,55,0.8); font-size: 12px; }
+    
+    .loader {
+      width: 30px;
+      height: 30px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: 40px;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* === HOME SCREEN === */
+    .home { height: 100%; display: flex; flex-direction: column; }
+    
+    .home-header {
+      background: linear-gradient(135deg, var(--green), #0D4A28);
+      padding: 40px 16px 16px;
+      position: relative;
+    }
+    
+    .home-header .greeting { color: white; font-size: 16px; font-weight: bold; }
+    .home-header .dua { color: rgba(255,255,255,0.75); font-size: 11px; margin-top: 2px; }
+    
+    .stats-card {
+      margin: 12px;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(212,175,55,0.12), #F5E6C8);
+      border-radius: 14px;
+      border: 1px solid rgba(212,175,55,0.3);
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    .stat-item { text-align: center; }
+    .stat-emoji { font-size: 18px; }
+    .stat-val { font-size: 13px; font-weight: bold; color: var(--dark); }
+    .stat-lbl { font-size: 10px; color: var(--grey); }
+    .stat-div { width: 1px; background: rgba(212,175,55,0.3); }
+    
+    .search-bar {
+      margin: 0 12px 12px;
+      padding: 12px 14px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid rgba(27,107,58,0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .search-bar .icon { font-size: 16px; }
+    .search-bar .hint { color: var(--grey); font-size: 13px; flex: 1; }
+    
+    .search-btn {
+      background: var(--green);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    
+    .quick-links {
+      margin: 0 12px 12px;
+      display: flex;
+      gap: 6px;
+    }
+    
+    .q-link {
+      flex: 1;
+      padding: 10px 4px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+    
+    .q-online { background: rgba(22,163,74,0.1); color: var(--online); border: 1px solid rgba(22,163,74,0.2); }
+    .q-gold { background: rgba(212,175,55,0.1); color: var(--gold); border: 1px solid rgba(212,175,55,0.2); }
+    .q-green { background: rgba(27,107,58,0.1); color: var(--green); border: 1px solid rgba(27,107,58,0.2); }
+    .q-purple { background: rgba(124,58,237,0.1); color: #7C3AED; border: 1px solid rgba(124,58,237,0.2); }
+    
+    .section-title {
+      padding: 0 12px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .section-title h3 { font-size: 15px; font-weight: bold; color: var(--dark); }
+    .section-title a { font-size: 12px; color: var(--green); }
+    
+    .members-grid {
+      padding: 0 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      overflow: hidden;
+    }
+    
+    .member-card {
+      background: white;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    
+    .member-photo {
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      font-size: 40px;
+    }
+    
+    .member-photo-f { background: linear-gradient(135deg, #FCE4EC, #F8BBD0); }
+    .member-photo-m { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); }
+    
+    .online-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: var(--online);
+      color: white;
+      font-size: 8px;
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+    
+    .premium-dot {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: var(--gold);
+      color: white;
+      font-size: 8px;
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+    
+    .member-info { padding: 8px; }
+    .member-name { font-size: 12px; font-weight: bold; color: var(--dark); }
+    .member-loc { font-size: 10px; color: var(--grey); margin: 2px 0 4px; }
+    
+    .tags { display: flex; gap: 4px; margin-bottom: 6px; }
+    
+    .tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .tag-g { background: rgba(27,107,58,0.1); color: var(--green); }
+    .tag-y { background: rgba(212,175,55,0.1); color: #B8860B; }
+    
+    .view-btn {
+      width: 100%;
+      background: var(--green);
+      color: white;
+      padding: 5px;
+      border-radius: 6px;
+      font-size: 10px;
+      text-align: center;
+      cursor: pointer;
+    }
+    
+    /* === BOTTOM NAV === */
+    .bottom-nav {
+      margin-top: auto;
+      background: white;
+      border-top: 1px solid var(--divider);
+      display: flex;
+      padding: 8px 0 4px;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      font-size: 9px;
+      color: var(--grey);
+    }
+    
+    .nav-item.active { color: var(--green); }
+    .nav-icon { font-size: 18px; }
+    .nav-badge {
+      position: relative;
+    }
+    .badge-dot {
+      position: absolute;
+      top: -2px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      background: var(--red);
+      border-radius: 50%;
+      font-size: 7px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* === SEARCH SCREEN === */
+    .search-screen { height: 100%; display: flex; flex-direction: column; background: var(--cream); }
+    
+    .app-bar {
+      background: var(--green);
+      padding: 40px 14px 14px;
+      color: white;
+    }
+    
+    .app-bar h2 { font-size: 16px; font-weight: bold; }
+    
+    .gender-tabs {
+      background: var(--green);
+      padding: 0 14px 12px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .tab-active { background: white; color: var(--green); }
+    .tab-inactive { background: rgba(255,255,255,0.15); color: white; }
+    
+    .results-bar {
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      border-bottom: 1px solid var(--divider);
+    }
+    
+    .results-count { font-size: 12px; color: var(--grey); }
+    .sort-btn { font-size: 11px; color: var(--green); }
+    
+    .search-grid {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      overflow: hidden;
+      flex: 1;
+    }
+    
+    /* === MESSAGES SCREEN === */
+    .messages-screen { height: 100%; display: flex; flex-direction: column; background: var(--cream); }
+    
+    .msg-warning {
+      background: rgba(27,107,58,0.05);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--green);
+      border-bottom: 1px solid rgba(27,107,58,0.1);
+    }
+    
+    .conv-list { flex: 1; overflow: hidden; }
+    
+    .conv-item {
+      padding: 12px 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--divider);
+      background: white;
+    }
+    
+    .conv-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(27,107,58,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    .conv-online {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 13px;
+      height: 13px;
+      background: var(--online);
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+    
+    .conv-info { flex: 1; }
+    .conv-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .conv-name { font-size: 13px; font-weight: bold; color: var(--dark); }
+    .conv-time { font-size: 11px; color: var(--green); }
+    .conv-msg { font-size: 12px; color: var(--grey); }
+    
+    .unread-badge {
+      width: 18px;
+      height: 18px;
+      background: var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+    }
+    
+    /* === PROFILE SCREEN === */
+    .profile-screen { height: 100%; display: flex; flex-direction: column; background: var(--cream); overflow-y: auto; }
+    
+    .profile-header {
+      background: linear-gradient(135deg, var(--green), #0D4A28);
+      padding: 40px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .profile-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 50px;
+      border: 3px solid rgba(255,255,255,0.5);
+      margin-bottom: 10px;
+    }
+    
+    .profile-name { color: white; font-size: 18px; font-weight: bold; }
+    .profile-loc { color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 2px; }
+    
+    .profile-body { padding: 14px; }
+    
+    .upgrade-card {
+      background: linear-gradient(135deg, #D4AF37, #B8860B);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    
+    .upgrade-title { color: white; font-size: 13px; font-weight: bold; }
+    .upgrade-desc { color: rgba(255,255,255,0.75); font-size: 10px; margin-top: 2px; }
+    
+    .upgrade-btn {
+      background: white;
+      color: #B8860B;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    
+    .info-card {
+      background: white;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .info-card-title { font-size: 14px; font-weight: bold; color: var(--dark); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    
+    .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; }
+    .info-lbl { color: var(--grey); }
+    .info-val { color: var(--dark); font-weight: 500; }
+    
+    .settings-item { 
+      display: flex; 
+      align-items: center; 
+      padding: 12px 14px;
+      background: white;
+      border-bottom: 1px solid var(--divider);
+      gap: 12px;
+      font-size: 13px;
+      color: var(--dark);
+    }
+    
+    .settings-icon { font-size: 18px; width: 24px; text-align: center; }
+    .settings-arrow { margin-right: auto; color: var(--grey); font-size: 11px; }
+    .settings-red { color: red; }
+    
+    /* Shared */
+    .scroll-content { overflow-y: auto; flex: 1; }
+    
+    /* Info section */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      max-width: 900px;
+      margin: 20px auto 0;
+      width: 100%;
+    }
+    
+    .feature-card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    
+    .feature-card .emoji { font-size: 36px; margin-bottom: 12px; display: block; }
+    .feature-card h3 { color: white; font-size: 1rem; margin-bottom: 8px; }
+    .feature-card p { color: rgba(255,255,255,0.65); font-size: 0.85rem; line-height: 1.5; }
+    
+    .tech-section {
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px;
+      max-width: 900px;
+      margin: 20px auto 0;
+      width: 100%;
+      text-align: center;
+    }
+    
+    .tech-section h3 { color: var(--gold); font-size: 1.2rem; margin-bottom: 16px; }
+    
+    .tech-badges { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    
+    .tech-badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    
+    footer {
+      text-align: center;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.8rem;
+      margin-top: 30px;
+      padding-bottom: 20px;
+    }
+    
+    @media (max-width: 700px) {
+      .phones-container { gap: 16px; }
+      .phone { width: 260px; }
+      .screen { height: 540px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="main-title">💍 نِكاح</h1>
+  <p class="subtitle">تطبيق الزواج الإسلامي الشرعي — Android & iOS</p>
+
+  <div class="phones-container">
+    
+    <!-- Phone 1: Splash / Onboarding -->
+    <div class="phone">
+      <div class="screen">
+        <div class="splash">
+          <div class="logo-box">💍</div>
+          <h1>نِكاح</h1>
+          <div class="badge">الزواج الإسلامي الشرعي</div>
+          <p class="ayah">﴿ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ<br>أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا ﴾</p>
+          <p class="surah">سورة الروم - الآية 21</p>
+          <div class="loader"></div>
+        </div>
+      </div>
+      <div class="phone-label">شاشة البداية</div>
+    </div>
+
+    <!-- Phone 2: Home Screen -->
+    <div class="phone">
+      <div class="screen">
+        <div class="home">
+          <div class="home-header">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div class="greeting">أهلاً أحمد المسلم 👋</div>
+                <div class="dua">اللهم ارزقنا الزوج الصالح</div>
+              </div>
+              <div style="font-size:22px;cursor:pointer">🔔</div>
+            </div>
+          </div>
+          
+          <div class="scroll-content">
+            <div class="stats-card">
+              <div class="stat-item">
+                <div class="stat-emoji">💍</div>
+                <div class="stat-val">450,000+</div>
+                <div class="stat-lbl">قصة نجاح</div>
+              </div>
+              <div class="stat-div"></div>
+              <div class="stat-item">
+                <div class="stat-emoji">⭐</div>
+                <div class="stat-val">18 سنة</div>
+                <div class="stat-lbl">من الخبرة</div>
+              </div>
+              <div class="stat-div"></div>
+              <div class="stat-item">
+                <div class="stat-emoji">🎁</div>
+                <div class="stat-val">مجاني</div>
+                <div class="stat-lbl">التسجيل</div>
+              </div>
+            </div>
+            
+            <div class="search-bar">
+              <span class="icon">🔍</span>
+              <span class="hint">ابحث عن شريك الحياة...</span>
+              <div class="search-btn">بحث</div>
+            </div>
+            
+            <div class="quick-links">
+              <div class="q-link q-online">🟢<br>متواجدون<br>الآن</div>
+              <div class="q-link q-gold">⭐<br>أعضاء<br>جدد</div>
+              <div class="q-link q-green">💚<br>قصص<br>نجاح</div>
+              <div class="q-link q-purple">💎<br>ترقية<br>الحساب</div>
+            </div>
+            
+            <div style="margin:0 12px 8px;padding:10px 12px;background:rgba(27,107,58,0.06);border-radius:10px;border:1px solid rgba(27,107,58,0.15);font-size:11px;color:var(--green);display:flex;gap:8px;align-items:flex-start">
+              <span>📿</span>
+              <span>قال ﷺ: "تزوجوا الودود الولود فإني مكاثر بكم الأمم"</span>
+            </div>
+            
+            <div class="section-title">
+              <h3>آخر الأعضاء دخولاً</h3>
+              <a>عرض الكل</a>
+            </div>
+            
+            <div class="members-grid">
+              <div class="member-card">
+                <div class="member-photo member-photo-f">
+                  👩
+                  <div class="online-dot">● متواجد</div>
+                </div>
+                <div class="member-info">
+                  <div class="member-name">أم عبدالله</div>
+                  <div class="member-loc">📍 جدة، السعودية</div>
+                  <div class="tags">
+                    <span class="tag tag-g">25 سنة</span>
+                    <span class="tag tag-y">عازبة</span>
+                  </div>
+                  <div class="view-btn">عرض الملف</div>
+                </div>
+              </div>
+              <div class="member-card">
+                <div class="member-photo member-photo-f">
+                  👩
+                  <div class="premium-dot">⭐ مميز</div>
+                </div>
+                <div class="member-info">
+                  <div class="member-name">هدى الكريم</div>
+                  <div class="member-loc">📍 دبي، الإمارات</div>
+                  <div class="tags">
+                    <span class="tag tag-g">28 سنة</span>
+                    <span class="tag tag-y">مطلقة</span>
+                  </div>
+                  <div class="view-btn">عرض الملف</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bottom-nav">
+            <div class="nav-item active">
+              <span class="nav-icon">🏠</span>
+              <span>الرئيسية</span>
+            </div>
+            <div class="nav-item">
+              <span class="nav-icon">🔍</span>
+              <span>البحث</span>
+            </div>
+            <div class="nav-item">
+              <div class="nav-badge">
+                <span class="nav-icon">💬</span>
+                <div class="badge-dot">2</div>
+              </div>
+              <span>الرسائل</span>
+            </div>
+            <div class="nav-item">
+              <span class="nav-icon">👤</span>
+              <span>حسابي</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">الشاشة الرئيسية</div>
+    </div>
+
+    <!-- Phone 3: Search Screen -->
+    <div class="phone">
+      <div class="screen">
+        <div class="search-screen">
+          <div class="app-bar">
+            <h2>البحث عن شريك الحياة</h2>
+          </div>
+          <div class="gender-tabs">
+            <div class="tab tab-active">أبحث عن زوجة</div>
+            <div class="tab tab-inactive">أبحث عن زوج</div>
+          </div>
+          <div class="results-bar">
+            <span class="results-count">تم العثور على 3 أعضاء</span>
+            <span class="sort-btn">آخر دخول ▾</span>
+          </div>
+          <div class="search-grid">
+            <div class="member-card">
+              <div class="member-photo member-photo-f" style="height:90px;">
+                👩
+                <div class="online-dot">● متواجد</div>
+              </div>
+              <div class="member-info">
+                <div class="member-name">أم عبدالله</div>
+                <div class="member-loc">📍 جدة، السعودية</div>
+                <div class="tags">
+                  <span class="tag tag-g">25</span>
+                  <span class="tag tag-y">عازبة</span>
+                </div>
+                <div class="view-btn">عرض الملف</div>
+              </div>
+            </div>
+            <div class="member-card">
+              <div class="member-photo member-photo-f" style="height:90px;">
+                👩
+                <div class="premium-dot">⭐</div>
+              </div>
+              <div class="member-info">
+                <div class="member-name">هدى الكريم</div>
+                <div class="member-loc">📍 دبي، الإمارات</div>
+                <div class="tags">
+                  <span class="tag tag-g">28</span>
+                  <span class="tag tag-y">مطلقة</span>
+                </div>
+                <div class="view-btn">عرض الملف</div>
+              </div>
+            </div>
+            <div class="member-card">
+              <div class="member-photo member-photo-f" style="height:90px;">
+                👩
+                <div class="online-dot">● متواجد</div>
+              </div>
+              <div class="member-info">
+                <div class="member-name">نور الهدى</div>
+                <div class="member-loc">📍 الكويت</div>
+                <div class="tags">
+                  <span class="tag tag-g">22</span>
+                  <span class="tag tag-y">عازبة</span>
+                </div>
+                <div class="view-btn">عرض الملف</div>
+              </div>
+            </div>
+            <div class="member-card" style="display:flex;align-items:center;justify-content:center;min-height:140px;border:2px dashed var(--divider);background:transparent;box-shadow:none;">
+              <div style="text-align:center;color:var(--grey);font-size:12px;">
+                <div style="font-size:30px;margin-bottom:6px">+</div>
+                المزيد...
+              </div>
+            </div>
+          </div>
+          <div class="bottom-nav">
+            <div class="nav-item"><span class="nav-icon">🏠</span><span>الرئيسية</span></div>
+            <div class="nav-item active"><span class="nav-icon">🔍</span><span>البحث</span></div>
+            <div class="nav-item"><span class="nav-icon">💬</span><span>الرسائل</span></div>
+            <div class="nav-item"><span class="nav-icon">👤</span><span>حسابي</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">شاشة البحث</div>
+    </div>
+
+    <!-- Phone 4: Messages -->
+    <div class="phone">
+      <div class="screen">
+        <div class="messages-screen">
+          <div class="app-bar">
+            <h2>الرسائل 💬</h2>
+          </div>
+          <div class="msg-warning">
+            <span>⚠️</span>
+            <span>ممنوع تبادل الأرقام أو التواصل خارج التطبيق - اتق الله</span>
+          </div>
+          <div class="conv-list">
+            <div class="conv-item">
+              <div class="conv-avatar">
+                👩
+                <div class="conv-online"></div>
+              </div>
+              <div class="conv-info">
+                <div class="conv-header">
+                  <span class="conv-name">أم عبدالله</span>
+                  <span class="conv-time">منذ 5 د</span>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                  <span class="conv-msg">السلام عليكم ورحمة الله</span>
+                  <div class="unread-badge">2</div>
+                </div>
+              </div>
+            </div>
+            <div class="conv-item">
+              <div class="conv-avatar">👩</div>
+              <div class="conv-info">
+                <div class="conv-header">
+                  <span class="conv-name">هدى الكريم</span>
+                  <span class="conv-time">منذ ساعة</span>
+                </div>
+                <span class="conv-msg">بارك الله فيك</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Chat preview -->
+          <div style="flex:1;background:#f5f5f5;padding:12px;display:flex;flex-direction:column;gap:8px;">
+            <div style="background:white;padding:10px 12px;border-radius:14px 14px 14px 0;font-size:12px;max-width:80%;box-shadow:0 2px 4px rgba(0,0,0,0.05)">
+              السلام عليكم ورحمة الله وبركاته
+              <div style="font-size:9px;color:#999;margin-top:2px">10:00</div>
+            </div>
+            <div style="background:var(--green);padding:10px 12px;border-radius:14px 14px 0 14px;font-size:12px;max-width:80%;align-self:flex-end;color:white;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+              وعليكم السلام ورحمة الله وبركاته
+              <div style="font-size:9px;color:rgba(255,255,255,0.7);margin-top:2px">10:01</div>
+            </div>
+            <div style="background:white;padding:10px 12px;border-radius:14px 14px 14px 0;font-size:12px;max-width:80%;box-shadow:0 2px 4px rgba(0,0,0,0.05)">
+              رأيت ملفكم الشخصي وأعجبني جداً 😊
+              <div style="font-size:9px;color:#999;margin-top:2px">10:02</div>
+            </div>
+          </div>
+          
+          <div style="padding:8px 12px;background:white;border-top:1px solid var(--divider);display:flex;gap:8px;align-items:center">
+            <div style="flex:1;background:#f5f5f5;border-radius:20px;padding:8px 12px;font-size:12px;color:var(--grey)">اكتب رسالتك...</div>
+            <div style="width:36px;height:36px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px">➤</div>
+          </div>
+          
+          <div class="bottom-nav">
+            <div class="nav-item"><span class="nav-icon">🏠</span><span>الرئيسية</span></div>
+            <div class="nav-item"><span class="nav-icon">🔍</span><span>البحث</span></div>
+            <div class="nav-item active"><span class="nav-icon">💬</span><span>الرسائل</span></div>
+            <div class="nav-item"><span class="nav-icon">👤</span><span>حسابي</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">الرسائل والمحادثات</div>
+    </div>
+
+    <!-- Phone 5: Profile -->
+    <div class="phone">
+      <div class="screen">
+        <div class="profile-screen">
+          <div class="profile-header">
+            <div class="profile-avatar">👨</div>
+            <div class="profile-name">أحمد المسلم</div>
+            <div class="profile-loc">28 سنة • الرياض، السعودية ✓</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <span style="background:rgba(27,107,58,0.3);color:white;padding:4px 10px;border-radius:12px;font-size:11px">✓ موثّق</span>
+              <span style="background:rgba(212,175,55,0.3);color:var(--gold);padding:4px 10px;border-radius:12px;font-size:11px">مجاني</span>
+            </div>
+          </div>
+          
+          <div class="scroll-content">
+            <div class="profile-body">
+              <div class="upgrade-card">
+                <div>
+                  <div class="upgrade-title">⭐ العضوية المميزة</div>
+                  <div class="upgrade-desc">ظهور مميز • دخول متخفٍ • مزيد</div>
+                </div>
+                <div class="upgrade-btn">ترقية</div>
+              </div>
+              
+              <div class="info-card">
+                <div class="info-card-title">👤 المعلومات الشخصية</div>
+                <div class="info-row"><span class="info-lbl">🎂 العمر</span><span class="info-val">28 سنة</span></div>
+                <div class="info-row"><span class="info-lbl">🌍 الجنسية</span><span class="info-val">السعودية</span></div>
+                <div class="info-row"><span class="info-lbl">💍 الحالة</span><span class="info-val">أعزب</span></div>
+                <div class="info-row"><span class="info-lbl">🎓 التعليم</span><span class="info-val">بكالوريوس</span></div>
+                <div class="info-row"><span class="info-lbl">🕌 الالتزام</span><span class="info-val">ملتزم</span></div>
+                <div class="info-row"><span class="info-lbl">🧔 اللحية</span><span class="info-val">نعم</span></div>
+              </div>
+              
+              <div style="background:white;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05)">
+                <div class="settings-item"><span class="settings-icon">✏️</span>تعديل الملف الشخصي<span class="settings-arrow">›</span></div>
+                <div class="settings-item"><span class="settings-icon">🔔</span>الإشعارات<span class="settings-arrow">›</span></div>
+                <div class="settings-item"><span class="settings-icon">🔒</span>تغيير كلمة المرور<span class="settings-arrow">›</span></div>
+                <div class="settings-item"><span class="settings-icon">❓</span>المساعدة والدعم<span class="settings-arrow">›</span></div>
+                <div class="settings-item settings-red"><span class="settings-icon">🚪</span>تسجيل الخروج<span class="settings-arrow">›</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bottom-nav">
+            <div class="nav-item"><span class="nav-icon">🏠</span><span>الرئيسية</span></div>
+            <div class="nav-item"><span class="nav-icon">🔍</span><span>البحث</span></div>
+            <div class="nav-item"><span class="nav-icon">💬</span><span>الرسائل</span></div>
+            <div class="nav-item active"><span class="nav-icon">👤</span><span>حسابي</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">الملف الشخصي</div>
+    </div>
+
+  </div>
+
+  <!-- Features Section -->
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="emoji">🕌</span>
+      <h3>زواج شرعي بحت</h3>
+      <p>للزواج الشرعي فقط — لا تعارف ولا صداقة ولا علاقات محرمة. نسير على هدي الكتاب والسنة.</p>
+    </div>
+    <div class="feature-card">
+      <span class="emoji">👨‍👩‍👧</span>
+      <h3>نظام ولي الأمر</h3>
+      <p>يُشترط تسجيل بيانات ولي الأمر للمرأة. التواصل النهائي يتم عبر الولي وفق الشريعة.</p>
+    </div>
+    <div class="feature-card">
+      <span class="emoji">🔍</span>
+      <h3>بحث متقدم</h3>
+      <p>جنسية، إقامة، عمر، الالتزام الديني، الحجاب، الحالة الاجتماعية، المهنة والمزيد.</p>
+    </div>
+    <div class="feature-card">
+      <span class="emoji">🛡️</span>
+      <h3>حماية وإشراف</h3>
+      <p>مراجعة جميع الحسابات. كشف تلقائي لأرقام الهاتف والبريد. نظام إبلاغ وحظر.</p>
+    </div>
+    <div class="feature-card">
+      <span class="emoji">💬</span>
+      <h3>رسائل آمنة</h3>
+      <p>مراسلة داخلية محمية. ممنوع تبادل بيانات التواصل. تحذيرات تلقائية ذكية.</p>
+    </div>
+    <div class="feature-card">
+      <span class="emoji">💞</span>
+      <h3>قصص نجاح</h3>
+      <p>+450,000 قصة نجاح موثّقة. شارك قصتك لتشجيع الآخرين على الخطوة.</p>
+    </div>
+  </div>
+
+  <div class="tech-section">
+    <h3>🔧 التقنيات المستخدمة</h3>
+    <div class="tech-badges">
+      <span class="tech-badge">Flutter (Dart)</span>
+      <span class="tech-badge">Firebase Auth</span>
+      <span class="tech-badge">Cloud Firestore</span>
+      <span class="tech-badge">Firebase Storage</span>
+      <span class="tech-badge">Firebase Messaging</span>
+      <span class="tech-badge">Provider State Management</span>
+      <span class="tech-badge">GoRouter Navigation</span>
+      <span class="tech-badge">Android & iOS</span>
+    </div>
+  </div>
+
+  <footer>
+    💍 نِكاح — تطبيق الزواج الإسلامي الشرعي | مبني بـ Flutter | يعمل على Android & iOS
+  </footer>
+
+</body>
+</html>

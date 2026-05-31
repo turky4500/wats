@@ -1,0 +1,34 @@
+workflows:
+  android-workflow:
+    name: Android Build (APK)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Build APK
+        script: flutter build apk --release --no-shrink
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+
+  ios-workflow:
+    name: iOS Build (IPA)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Pod install
+        script: |
+          cd ios
+          pod install --repo-update
+      - name: Build iOS (no signing)
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app

@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دليل رفع التطبيق — GitHub + Codemagic</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.7;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1B6B3A, #0D4A28);
+      padding: 50px 20px;
+      text-align: center;
+    }
+
+    .hero h1 { font-size: 2.2rem; color: white; margin-bottom: 10px; }
+    .hero p { color: rgba(255,255,255,0.8); font-size: 1.1rem; }
+
+    .badges {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .badge-green { background: rgba(255,255,255,0.15); color: #86efac; border: 1px solid #86efac44; }
+    .badge-gold { background: rgba(212,175,55,0.15); color: #D4AF37; border: 1px solid #D4AF3744; }
+    .badge-blue { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid #93c5fd44; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 30px 20px; }
+
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .overview-card {
+      background: #1e2130;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid #2d3748;
+    }
+
+    .overview-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
+    .overview-card h3 { font-size: 0.95rem; color: #f8fafc; margin-bottom: 6px; }
+    .overview-card p { font-size: 0.8rem; color: #94a3b8; }
+
+    .phase {
+      margin-bottom: 50px;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #1e2130, #252a3a);
+      border-radius: 14px;
+      border-right: 4px solid #1B6B3A;
+    }
+
+    .phase-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #1B6B3A;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .phase-header h2 { font-size: 1.2rem; color: white; }
+    .phase-header p { font-size: 0.85rem; color: #94a3b8; margin-top: 2px; }
+
+    .step {
+      background: #1e2130;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 16px;
+      border: 1px solid #2d3748;
+      position: relative;
+    }
+
+    .step-num {
+      position: absolute;
+      top: -12px;
+      right: 20px;
+      background: #D4AF37;
+      color: #0f1117;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+
+    .step h3 {
+      font-size: 1rem;
+      color: #f8fafc;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step p { color: #cbd5e1; font-size: 0.9rem; margin-bottom: 10px; }
+
+    .screen-mock {
+      background: #0d1117;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      padding: 16px;
+      margin: 12px 0;
+      font-family: monospace;
+      font-size: 0.82rem;
+    }
+
+    .screen-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ef4444; }
+    .dot-y { background: #f59e0b; }
+    .dot-g { background: #22c55e; }
+
+    .url-bar {
+      background: #1f2937;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      color: #9ca3af;
+      flex: 1;
+    }
+
+    .screen-content { color: #e2e8f0; }
+    .screen-content .label { color: #94a3b8; }
+    .screen-content .green { color: #4ade80; }
+    .screen-content .gold { color: #fbbf24; }
+    .screen-content .blue { color: #60a5fa; }
+    .screen-content .red { color: #f87171; }
+    .screen-content .dim { color: #6b7280; }
+
+    .ui-mock {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 14px 0;
+    }
+
+    .ui-mock .nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #21262d;
+      padding-bottom: 10px;
+    }
+
+    .ui-mock .nav-item {
+      font-size: 0.8rem;
+      color: #8b949e;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .ui-mock .nav-item.active {
+      background: #388bfd1a;
+      color: #58a6ff;
+    }
+
+    .form-field {
+      margin-bottom: 12px;
+    }
+
+    .form-label { font-size: 0.78rem; color: #8b949e; margin-bottom: 4px; }
+    .form-input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      width: 100%;
+    }
+
+    .form-input.active { border-color: #388bfd; }
+
+    .btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .btn-green { background: #238636; color: white; }
+    .btn-blue { background: #1f6feb; color: white; }
+    .btn-grey { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+    .btn-gold { background: #D4AF37; color: #0f1117; }
+
+    .codemagic-mock {
+      background: #1a1a2e;
+      border: 1px solid #2d2d4e;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 14px 0;
+    }
+
+    .cm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2d2d4e;
+    }
+
+    .cm-logo { color: #e535ab; font-weight: bold; font-size: 1.1rem; }
+    .cm-badge { background: #e535ab22; color: #e535ab; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; }
+
+    .build-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .status-success { background: #0d2818; border: 1px solid #238636; }
+    .status-running { background: #0d1a2e; border: 1px solid #1f6feb; }
+    .status-pending { background: #1f1a0d; border: 1px solid #9e6a03; }
+
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-success { background: #3fb950; }
+    .dot-running { background: #58a6ff; animation: pulse 1s infinite; }
+    .dot-pending { background: #d29922; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text { font-size: 0.85rem; flex: 1; }
+    .status-text strong { color: #f8fafc; display: block; font-size: 0.88rem; }
+    .status-text span { color: #8b949e; font-size: 0.78rem; }
+
+    .download-area {
+      background: #0d2818;
+      border: 1px solid #238636;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 14px 0;
+      text-align: center;
+    }
+
+    .download-area h3 { color: #3fb950; margin-bottom: 14px; font-size: 1rem; }
+
+    .download-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .dl-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .dl-apk { background: #3ddc84; color: #0d1117; }
+    .dl-ipa { background: #0071e3; color: white; }
+
+    .tip {
+      background: #1a2a1a;
+      border: 1px solid #238636;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      color: #86efac;
+    }
+
+    .warning {
+      background: #2a1a0d;
+      border: 1px solid #9e6a03;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      color: #fbbf24;
+    }
+
+    .progress-bar {
+      background: #21262d;
+      border-radius: 4px;
+      height: 6px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #1f6feb, #58a6ff);
+    }
+
+    .file-tree {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 0.82rem;
+    }
+
+    .file-tree .folder { color: #58a6ff; }
+    .file-tree .file { color: #e2e8f0; }
+    .file-tree .highlight { color: #3fb950; font-weight: bold; }
+    .file-tree .indent { padding-right: 20px; display: block; }
+
+    .timeline {
+      position: relative;
+      padding-right: 30px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      right: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #2d3748;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      right: -24px;
+      top: 6px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #1B6B3A;
+      border: 2px solid #2d9b5a;
+    }
+
+    .timeline-item.done::before { background: #3fb950; border-color: #3fb950; }
+    .timeline-item.active::before { background: #58a6ff; border-color: #58a6ff; animation: pulse 1s infinite; }
+
+    .timeline-item h4 { color: #f8fafc; font-size: 0.9rem; margin-bottom: 4px; }
+    .timeline-item p { color: #94a3b8; font-size: 0.82rem; }
+
+    .final-box {
+      background: linear-gradient(135deg, #1B6B3A22, #0D4A2822);
+      border: 1px solid #1B6B3A44;
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .final-box h2 { color: #4ade80; font-size: 1.5rem; margin-bottom: 12px; }
+    .final-box p { color: #94a3b8; margin-bottom: 20px; }
+
+    @media (max-width: 600px) {
+      .overview { grid-template-columns: 1fr 1fr; }
+      .phase-header { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>💍 رفع تطبيق نِكاح للسحابة</h1>
+  <p>دليل كامل للحصول على APK وIPA بدون خبرة تقنية</p>
+  <div class="badges">
+    <span class="badge badge-green">✅ مجاني 100%</span>
+    <span class="badge badge-gold">📦 APK + IPA</span>
+    <span class="badge badge-blue">⏱️ 20 دقيقة فقط</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- نظرة عامة -->
+  <div class="overview" style="margin-top: 30px;">
+    <div class="overview-card">
+      <span class="icon">📁</span>
+      <h3>الخطوة 1</h3>
+      <p>رفع الكود على GitHub مجاناً</p>
+    </div>
+    <div class="overview-card">
+      <span class="icon">☁️</span>
+      <h3>الخطوة 2</h3>
+      <p>ربط GitHub بـ Codemagic</p>
+    </div>
+    <div class="overview-card">
+      <span class="icon">📲</span>
+      <h3>الخطوة 3</h3>
+      <p>تحميل APK وIPA جاهزَين</p>
+    </div>
+  </div>
+
+  <!-- ===== المرحلة الأولى: GitHub ===== -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-num">1</div>
+      <div>
+        <h2>رفع المشروع على GitHub</h2>
+        <p>GitHub هو موقع مجاني لحفظ مشاريع البرمجة — مثل Google Drive لكن للكود</p>
+      </div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>🌐 إنشاء حساب GitHub</h3>
+      <p>اذهب إلى الرابط التالي وسجّل حساباً مجانياً:</p>
+      <div class="screen-mock">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+          <div class="url-bar">🔒 github.com/signup</div>
+        </div>
+        <div class="screen-content">
+          <div style="text-align:center; padding: 10px 0;">
+            <div style="font-size:1.5rem; margin-bottom:8px;">🐙</div>
+            <div style="color:#f8fafc; font-size:1rem; margin-bottom:16px;">Create your account</div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Username</div>
+            <div class="form-input">nikah_app_dev</div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Email address</div>
+            <div class="form-input active">your@email.com</div>
+          </div>
+          <div class="form-field">
+            <div class="form-label">Password</div>
+            <div class="form-input">••••••••••</div>
+          </div>
+          <div class="btn btn-green" style="width:100%; text-align:center; margin-top:10px;">
+            Continue →
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>📂 إنشاء Repository جديد</h3>
+      <p>بعد تسجيل الدخول، اضغط على "+" في الأعلى ثم "New repository"</p>
+      <div class="ui-mock">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <span style="color:#58a6ff; font-size:1.1rem;">🐙 GitHub</span>
+          <span style="color:#8b949e; font-size:1.5rem;">+ ▾</span>
+        </div>
+        <div style="background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:16px;">
+          <div style="color:#f8fafc; font-size:0.95rem; margin-bottom:14px; font-weight:bold;">Create a new repository</div>
+          <div class="form-field">
+            <div class="form-label">Repository name *</div>
+            <div class="form-input active" style="border-color:#3fb950; color:#3fb950;">nikah-islamic-marriage-app</div>
+          </div>
+          <div style="display:flex; gap:12px; margin:12px 0;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:#e2e8f0;">
+              <span style="color:#58a6ff;">●</span> Public
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:#8b949e;">
+              <span>○</span> Private
+            </div>
+          </div>
+          <div class="btn btn-green" style="margin-top:10px;">✅ Create repository</div>
+        </div>
+      </div>
+      <div class="tip">
+        <span>💡</span>
+        <span>اختر <strong>Public</strong> حتى يعمل مع Codemagic المجاني</span>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>⬆️ رفع ملفات المشروع</h3>
+      <p>في صفحة الـ Repository الجديد، اضغط <strong>"uploading an existing file"</strong></p>
+      <div class="ui-mock">
+        <div style="text-align:center; padding:20px; border:2px dashed #30363d; border-radius:8px;">
+          <div style="font-size:2rem; margin-bottom:8px;">📁</div>
+          <div style="color:#58a6ff; font-size:0.9rem; margin-bottom:6px;">اسحب وأفلت الملفات هنا</div>
+          <div style="color:#8b949e; font-size:0.8rem; margin-bottom:14px;">أو</div>
+          <div class="btn btn-grey">choose your files</div>
+        </div>
+        <div style="margin-top:14px;">
+          <div style="font-size:0.82rem; color:#8b949e; margin-bottom:8px;">الملفات المرفوعة:</div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#3fb950;">
+              <span>✅</span> lib/ (مجلد كامل)
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#3fb950;">
+              <span>✅</span> pubspec.yaml
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#3fb950;">
+              <span>✅</span> codemagic.yaml
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#3fb950;">
+              <span>✅</span> android/ و ios/
+            </div>
+          </div>
+        </div>
+      </div>
+      <p>ثم اضغط <strong>"Commit changes"</strong> باللون الأخضر في الأسفل</p>
+      <div class="ui-mock" style="background:#0d2818; border-color:#238636;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#3fb950; font-size:0.88rem;">✅ Commit changes</span>
+          <div class="btn btn-green" style="font-size:0.8rem; padding:6px 14px;">Commit changes</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== المرحلة الثانية: Codemagic ===== -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-num">2</div>
+      <div>
+        <h2>ربط المشروع بـ Codemagic</h2>
+        <p>Codemagic هو خادم سحابي يبني APK وIPA تلقائياً — مجاني 500 دقيقة/شهر</p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>🔗 تسجيل في Codemagic</h3>
+      <p>اذهب إلى: <strong>codemagic.io</strong> واضغط <strong>"Sign up free"</strong></p>
+      <div class="screen-mock">
+        <div class="screen-bar">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+          <div class="url-bar">🔒 codemagic.io/start</div>
+        </div>
+        <div class="screen-content" style="text-align:center; padding:10px;">
+          <div style="color:#e535ab; font-size:1.4rem; font-weight:bold; margin-bottom:6px;">⚡ Codemagic</div>
+          <div style="color:#8b949e; font-size:0.85rem; margin-bottom:20px;">Build, test and deliver your Flutter app</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="btn" style="background:#24292f; color:white; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px;">
+              <span>🐙</span> Continue with GitHub
+            </div>
+            <div class="btn" style="background:#0052cc; color:white; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px;">
+              <span>🔷</span> Continue with Bitbucket
+            </div>
+          </div>
+          <div style="color:#3fb950; font-size:0.8rem; margin-top:14px;">✅ Free 500 build minutes/month</div>
+        </div>
+      </div>
+      <div class="tip">
+        <span>💡</span>
+        <span>اضغط <strong>"Continue with GitHub"</strong> حتى يتصل مباشرة بحسابك — أسهل وأسرع</span>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="step-num">5</div>
+      <h3>➕ إضافة تطبيقك</h3>
+      <p>بعد تسجيل الدخول اضغط <strong>"Add application"</strong></p>
+      <div class="codemagic-mock">
+        <div class="cm-header">
+          <span class="cm-logo">⚡ Codemagic</span>
+          <span class="cm-badge">Dashboard</span>
+        </div>
+        <div style="text-align:center; padding:20px; border:2px dashed #2d2d4e; border-radius:8px; margin-bottom:14px;">
+          <div style="font-size:1.8rem; margin-bottom:8px;">➕</div>
+          <div style="color:#e2e8f0; font-size:0.9rem; margin-bottom:12px;">Add your first application</div>
+          <div class="btn btn-gold">+ Add application</div>
+        </div>
+        <div style="font-size:0.82rem; color:#6b7280; text-align:center;">No applications yet</div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step">
+      <div class="step-num">6</div>
+      <h3>🔍 اختيار مستودع GitHub</h3>
+      <p>اختر <strong>GitHub</strong> كمصدر، ثم حدد مستودع <strong>nikah-islamic-marriage-app</strong></p>
+      <div class="codemagic-mock">
+        <div style="margin-bottom:14px;">
+          <div style="font-size:0.82rem; color:#8b949e; margin-bottom:8px;">Select repository source:</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="btn" style="background:#2d2d4e; color:#58a6ff; border:2px solid #58a6ff; font-size:0.8rem; padding:6px 14px;">
+              🐙 GitHub ✓
+            </div>
+            <div class="btn btn-grey" style="font-size:0.8rem; padding:6px 14px;">GitLab</div>
+            <div class="btn btn-grey" style="font-size:0.8rem; padding:6px 14px;">Bitbucket</div>
+          </div>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Select repository:</div>
+          <div class="form-input active" style="border-color:#e535ab; color:#e535ab;">
+            🐙 your-username/nikah-islamic-marriage-app
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="font-size:0.82rem; color:#8b949e; margin-bottom:8px;">Project type:</div>
+          <div style="display:flex; gap:8px;">
+            <div class="btn" style="background:#2d2d4e; color:#3fb950; border:2px solid #3fb950; font-size:0.8rem; padding:6px 14px;">
+              💙 Flutter ✓
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="btn btn-gold" style="width:100%; text-align:center;">Finish: Add application →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step">
+      <div class="step-num">7</div>
+      <h3>▶️ تشغيل البناء</h3>
+      <p>في صفحة المشروع ستجد خيارات البناء. اختر <strong>codemagic.yaml</strong> ثم اضغط <strong>"Start new build"</strong></p>
+      <div class="codemagic-mock">
+        <div class="cm-header">
+          <div>
+            <div style="color:#f8fafc; font-size:0.95rem; font-weight:bold;">💍 nikah-islamic-marriage-app</div>
+            <div style="color:#8b949e; font-size:0.78rem;">Flutter • main branch</div>
+          </div>
+          <div class="btn btn-gold" style="font-size:0.8rem; padding:6px 14px;">▶ Start new build</div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:0.82rem; color:#8b949e; margin-bottom:6px;">Workflow:</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="btn" style="background:#2d2d4e; color:#3ddc84; border:2px solid #3ddc84; font-size:0.78rem; padding:5px 12px;">
+              🤖 Android Build (APK) ✓
+            </div>
+            <div class="btn" style="background:#2d2d4e; color:#0071e3; border:1px solid #0071e3; font-size:0.78rem; padding:5px 12px;">
+              🍎 iOS Build (IPA)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== المرحلة الثالثة: النتيجة ===== -->
+  <div class="phase">
+    <div class="phase-header">
+      <div class="phase-num">3</div>
+      <div>
+        <h2>انتظار البناء وتحميل الملفات</h2>
+        <p>سيستغرق البناء من 8 إلى 15 دقيقة — فاعمل شاي ☕</p>
+      </div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="step">
+      <div class="step-num">8</div>
+      <h3>⏳ مراقبة تقدم البناء</h3>
+      <p>ستشاهد شاشة مثل هذه أثناء البناء:</p>
+      <div class="codemagic-mock">
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="color:#f8fafc; font-size:0.9rem; font-weight:bold;">Build #1 — Android APK</span>
+            <span style="color:#fbbf24; font-size:0.8rem;">🔄 Running...</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
+          <div style="font-size:0.75rem; color:#6b7280; margin-top:4px; text-align:left;">65% — Building APK...</div>
+        </div>
+
+        <div class="timeline">
+          <div class="timeline-item done">
+            <h4>✅ flutter pub get</h4>
+            <p>تم تثبيت المكتبات — 45 ثانية</p>
+          </div>
+          <div class="timeline-item done">
+            <h4>✅ Compile Dart code</h4>
+            <p>تم تحويل الكود — 2 دقيقة</p>
+          </div>
+          <div class="timeline-item active">
+            <h4>🔄 Build APK release</h4>
+            <p>جاري بناء APK...</p>
+          </div>
+          <div class="timeline-item">
+            <h4>⬜ Sign & package</h4>
+            <p>توقيع الملف</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 9 -->
+    <div class="step">
+      <div class="step-num">9</div>
+      <h3>✅ البناء اكتمل — تحميل الملفات</h3>
+      <p>عند انتهاء البناء ستظهر هذه الشاشة:</p>
+      <div class="codemagic-mock">
+        <div style="background:#0d2818; border:1px solid #238636; border-radius:8px; padding:16px; margin-bottom:14px; text-align:center;">
+          <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
+          <div style="color:#3fb950; font-size:1rem; font-weight:bold; margin-bottom:4px;">Build Successful!</div>
+          <div style="color:#8b949e; font-size:0.8rem;">Completed in 9 minutes 43 seconds</div>
+        </div>
+
+        <div style="margin-bottom:8px; font-size:0.82rem; color:#8b949e;">Artifacts (ملفات البناء):</div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.5rem;">🤖</span>
+              <div>
+                <div style="color:#f8fafc; font-size:0.88rem; font-weight:bold;">app-release.apk</div>
+                <div style="color:#8b949e; font-size:0.75rem;">Android • 28.4 MB</div>
+              </div>
+            </div>
+            <div class="btn" style="background:#3ddc84; color:#0d1117; font-size:0.78rem; padding:6px 12px;">⬇ تحميل</div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.5rem;">🍎</span>
+              <div>
+                <div style="color:#f8fafc; font-size:0.88rem; font-weight:bold;">Runner.ipa</div>
+                <div style="color:#8b949e; font-size:0.75rem;">iOS • 41.2 MB</div>
+              </div>
+            </div>
+            <div class="btn" style="background:#0071e3; color:white; font-size:0.78rem; padding:6px 12px;">⬇ تحميل</div>
+          </div>
+        </div>
+      </div>
+      <div class="tip">
+        <span>🎉</span>
+        <span>احفظ الملفين على جهازك — <strong>app-release.apk</strong> للأندرويد و <strong>Runner.ipa</strong> للآيفون!</span>
+      </div>
+    </div>
+
+    <!-- Step 10 -->
+    <div class="step">
+      <div class="step-num">10</div>
+      <h3>📲 تثبيت APK على هاتف Android</h3>
+      <div style="display:flex; flex-direction:column; gap:10px; margin:10px 0;">
+        <div style="display:flex; align-items:flex-start; gap:12px; background:#1a2030; border-radius:8px; padding:12px;">
+          <span style="background:#1B6B3A; color:white; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:bold; flex-shrink:0;">1</span>
+          <div>
+            <div style="color:#f8fafc; font-size:0.88rem; font-weight:bold;">أرسل الملف لهاتفك</div>
+            <div style="color:#8b949e; font-size:0.8rem;">عبر واتساب (لنفسك) أو Google Drive أو كابل USB</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:12px; background:#1a2030; border-radius:8px; padding:12px;">
+          <span style="background:#1B6B3A; color:white; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:bold; flex-shrink:0;">2</span>
+          <div>
+            <div style="color:#f8fafc; font-size:0.88rem; font-weight:bold;">فعّل "مصادر غير معروفة"</div>
+            <div style="color:#8b949e; font-size:0.8rem;">إعدادات ← الأمان ← تثبيت تطبيقات غير معروفة</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:12px; background:#1a2030; border-radius:8px; padding:12px;">
+          <span style="background:#1B6B3A; color:white; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:bold; flex-shrink:0;">3</span>
+          <div>
+            <div style="color:#f8fafc; font-size:0.88rem; font-weight:bold;">افتح الملف وثبّته</div>
+            <div style="color:#8b949e; font-size:0.8rem;">اضغط على app-release.apk من مدير الملفات</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:flex-start; gap:12px; background:#0d2818; border:1px solid #238636; border-radius:8px; padding:12px;">
+          <span style="font-size:1.2rem;">🎊</span>
+          <div>
+            <div style="color:#3fb950; font-size:0.88rem; font-weight:bold;">التطبيق جاهز!</div>
+            <div style="color:#6b7280; font-size:0.8rem;">ستجد أيقونة نِكاح على شاشتك الرئيسية</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== الخلاصة ===== -->
+  <div class="final-box">
+    <h2>🎉 أنت جاهز!</h2>
+    <p>اتبع الخطوات العشر وستحصل على APK وIPA جاهزَين في أقل من 30 دقيقة</p>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+      <span class="badge badge-green">1. github.com/signup</span>
+      <span class="badge badge-blue">2. codemagic.io/start</span>
+      <span class="badge badge-gold">3. ⬇ تحميل APK + IPA</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
