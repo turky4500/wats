@@ -1008,14 +1008,11 @@ app.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/settings', requireAdmin, async (req, res) => {
-    const { supportPhone, freeTrialDays, campaignRandomDelayEnabled, campaignDelayMinMinutes, campaignDelayMaxMinutes } = req.body;
+    const { supportPhone, freeTrialDays } = req.body;
 
     const settings = await getSettings();
     settings.supportPhone = supportPhone;
     settings.freeTrialDays = freeTrialDays;
-    settings.campaignRandomDelayEnabled = campaignRandomDelayEnabled === 'on';
-    settings.campaignDelayMinMinutes = Number(campaignDelayMinMinutes || 0);
-    settings.campaignDelayMaxMinutes = Number(campaignDelayMaxMinutes || 0);
     await settings.save();
     res.redirect('/admin');
 });
