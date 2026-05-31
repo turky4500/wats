@@ -36,22 +36,18 @@ async function getSettings() {
     if (!settings) settings = await Settings.create({});
 
     let shouldSave = false;
-    const fallbackMap = {
-        safeModeEnabled: true,
-        safeDelayMinMinutes: settings.safeDelayMinMinutes ?? settings.campaignDelayMinMinutes ?? 3,
-        safeDelayMaxMinutes: settings.safeDelayMaxMinutes ?? settings.campaignDelayMaxMinutes ?? 13,
-        fastModeEnabled: true,
-        fastDelayMinSeconds: settings.fastDelayMinSeconds ?? 5,
-        fastDelayMaxSeconds: settings.fastDelayMaxSeconds ?? 20
-    };
-
-    for (const [key, value] of Object.entries(fallbackMap)) {
-        if (settings[key] === undefined || settings[key] === null) {
-            settings[key] = value;
-            shouldSave = true;
-        }
+    if (settings.campaignRandomDelayEnabled === undefined || settings.campaignRandomDelayEnabled === null) {
+        settings.campaignRandomDelayEnabled = true;
+        shouldSave = true;
     }
-
+    if (settings.campaignDelayMinMinutes === undefined || settings.campaignDelayMinMinutes === null) {
+        settings.campaignDelayMinMinutes = 3;
+        shouldSave = true;
+    }
+    if (settings.campaignDelayMaxMinutes === undefined || settings.campaignDelayMaxMinutes === null) {
+        settings.campaignDelayMaxMinutes = 13;
+        shouldSave = true;
+    }
     if (shouldSave) await settings.save();
     return settings;
 }
@@ -259,36 +255,21 @@ function isRetryableError(error, attemptNumber) {
     return retryableTerms.some(term => message.includes(term));
 }
 
-function getRandomDelayMs(settings, sendMode = 'safe') {
-    if (!settings) return 0;
+function getRandomDelayMs(settings) {
+    if (!settings || !settings.campaignRandomDelayEnabled) return 0;
 
-    let minValue = 0;
-    let maxValue = 0;
-    let multiplier = 1000;
+    let minMinutes = Number(settings.campaignDelayMinMinutes || 0);
+    let maxMinutes = Number(settings.campaignDelayMaxMinutes || 0);
 
-    if (sendMode === 'fast') {
-        minValue = Number(settings.fastDelayMinSeconds ?? 5);
-        maxValue = Number(settings.fastDelayMaxSeconds ?? 20);
-        multiplier = 1000;
-    } else {
-        minValue = Number(settings.safeDelayMinMinutes ?? settings.campaignDelayMinMinutes ?? 3);
-        maxValue = Number(settings.safeDelayMaxMinutes ?? settings.campaignDelayMaxMinutes ?? 13);
-        multiplier = 60 * 1000;
-    }
+    if (Number.isNaN(minMinutes) || minMinutes < 0) minMinutes = 0;
+    if (Number.isNaN(maxMinutes) || maxMinutes < 0) maxMinutes = minMinutes;
+    if (maxMinutes < minMinutes) [minMinutes, maxMinutes] = [maxMinutes, minMinutes];
 
-    if (Number.isNaN(minValue) || minValue < 0) minValue = 0;
-    if (Number.isNaN(maxValue) || maxValue < 0) maxValue = minValue;
-    if (maxValue < minValue) [minValue, maxValue] = [maxValue, minValue];
-
-    const minMs = Math.round(minValue * multiplier);
-    const maxMs = Math.round(maxValue * multiplier);
+    const minMs = Math.round(minMinutes * 60 * 1000);
+    const maxMs = Math.round(maxMinutes * 60 * 1000);
     if (maxMs <= 0) return 0;
     if (maxMs === minMs) return maxMs;
     return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-}
-
-function getSendModeLabel(sendMode) {
-    return sendMode === 'fast' ? 'سريع' : 'آمن';
 }
 
 async function waitWithCampaignControl(campaignId, delayMs, type = 'delay') {
@@ -520,7 +501,7 @@ async function startCampaignWorker(campaignId) {
             if (!hasRemaining) break;
 
             const settings = await getSettings();
-            const delayMs = getRandomDelayMs(settings, campaign.sendMode || 'safe');
+            const delayMs = getRandomDelayMs(settings);
             if (delayMs > 0) {
                 const delayOk = await waitWithCampaignControl(campaignId, delayMs, 'delay');
                 if (!delayOk) {
@@ -1027,32 +1008,14 @@ app.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/settings', requireAdmin, async (req, res) => {
-    const {
-        supportPhone,
-        freeTrialDays,
-        safeModeEnabled,
-        safeDelayMinMinutes,
-        safeDelayMaxMinutes,
-        fastModeEnabled,
-        fastDelayMinSeconds,
-        fastDelayMaxSeconds
-    } = req.body;
+    const { supportPhone, freeTrialDays, campaignRandomDelayEnabled, campaignDelayMinMinutes, campaignDelayMaxMinutes } = req.body;
 
     const settings = await getSettings();
     settings.supportPhone = supportPhone;
     settings.freeTrialDays = freeTrialDays;
-    settings.safeModeEnabled = safeModeEnabled === 'on';
-    settings.safeDelayMinMinutes = Number(safeDelayMinMinutes || 0);
-    settings.safeDelayMaxMinutes = Number(safeDelayMaxMinutes || 0);
-    settings.fastModeEnabled = fastModeEnabled === 'on';
-    settings.fastDelayMinSeconds = Number(fastDelayMinSeconds || 0);
-    settings.fastDelayMaxSeconds = Number(fastDelayMaxSeconds || 0);
-
-    // توافق مع الإعدادات القديمة
-    settings.campaignRandomDelayEnabled = settings.safeModeEnabled;
-    settings.campaignDelayMinMinutes = settings.safeDelayMinMinutes;
-    settings.campaignDelayMaxMinutes = settings.safeDelayMaxMinutes;
-
+    settings.campaignRandomDelayEnabled = campaignRandomDelayEnabled === 'on';
+    settings.campaignDelayMinMinutes = Number(campaignDelayMinMinutes || 0);
+    settings.campaignDelayMaxMinutes = Number(campaignDelayMaxMinutes || 0);
     await settings.save();
     res.redirect('/admin');
 });
@@ -1134,16 +1097,6 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
         }
         if (!body && media.length === 0) return res.status(400).json({ success: false, error: 'اكتب رسالة أو أضف مرفقاً' });
 
-        const requestedSendMode = String(req.body.sendMode || 'safe').toLowerCase();
-        const sendMode = requestedSendMode === 'fast' ? 'fast' : 'safe';
-        const settings = await getSettings();
-        if (sendMode === 'fast' && settings.fastModeEnabled === false) {
-            return res.status(400).json({ success: false, error: 'الوضع السريع غير مفعّل حالياً من الإدارة' });
-        }
-        if (sendMode === 'safe' && settings.safeModeEnabled === false) {
-            return res.status(400).json({ success: false, error: 'الوضع الآمن غير مفعّل حالياً من الإدارة' });
-        }
-
         const useTimeWindow = req.body.useTimeWindow === true || req.body.useTimeWindow === 'true' || req.body.useTimeWindow === 'on' || req.body.useTimeWindow === 1 || req.body.useTimeWindow === '1';
         const windowStart = useTimeWindow ? req.body.windowStart : null;
         const windowEnd = useTimeWindow ? req.body.windowEnd : null;
@@ -1173,7 +1126,6 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             body,
             media,
             totalNumbers: normalizedNumbers.length,
-            sendMode,
             useTimeWindow,
             windowStart: useTimeWindow ? windowStart : null,
             windowEnd: useTimeWindow ? windowEnd : null,
@@ -1191,7 +1143,7 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
 
         startCampaignWorker(campaign._id).catch(err => console.error('خطأ تشغيل الحملة:', err));
 
-        res.status(201).json({ success: true, campaignId: campaign._id, sendMode, message: `تم إنشاء الحملة (${getSendModeLabel(sendMode)}) وبدء معالجتها` });
+        res.status(201).json({ success: true, campaignId: campaign._id, message: 'تم إنشاء الحملة وبدء معالجتها' });
     } catch (error) {
         console.error('❌ خطأ إنشاء الحملة:', error);
         res.status(500).json({ success: false, error: error.message || 'فشل إنشاء الحملة' });
