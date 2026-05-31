@@ -285,10 +285,10 @@
             }
 
             timerBox.style.display = 'block';
-            timerTitle.textContent = countdown.type === 'window' ? '⏰ انتظار بداية النافذة' : '⏳ انتظار الرسالة التالية';
+            timerTitle.textContent = countdown.type === 'window' ? '⏰ انتظار بداية النافذة' : '⏳ انتظار المعالجة';
             timerSub.textContent = countdown.type === 'window'
                 ? 'سيُستأنف الإرسال تلقائياً عند بداية النافذة المحددة'
-                : 'التأخير العشوائي يعمل الآن بين الرسائل';
+                : 'جاري الانتظار لاستكمال المعالجة';
 
             let remaining = countdown.totalSeconds;
             const draw = () => {

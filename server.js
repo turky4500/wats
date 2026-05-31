@@ -500,22 +500,7 @@ async function startCampaignWorker(campaignId) {
             const hasRemaining = await hasRemainingCampaignRecipients(campaignId);
             if (!hasRemaining) break;
 
-            const settings = await getSettings();
-            const delayMs = getRandomDelayMs(settings);
-            if (delayMs > 0) {
-                const delayOk = await waitWithCampaignControl(campaignId, delayMs, 'delay');
-                if (!delayOk) {
-                    campaign = await Campaign.findById(campaignId);
-                    if (campaign && campaign.controlStatus === 'cancelled') {
-                        await finalizeCampaign(campaignId);
-                    } else if (campaign && campaign.controlStatus === 'paused') {
-                        campaign.status = 'paused';
-                        await campaign.save();
-                        await emitCampaignUpdate(campaignId, false);
-                    }
-                    return;
-                }
-            }
+
         }
 
         await finalizeCampaign(campaignId);
