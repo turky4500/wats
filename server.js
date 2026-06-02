@@ -1043,6 +1043,90 @@ app.post('/logs/delete', requireAuth, async (req, res) => {
     res.redirect('back');
 });
 
+// 🔄 إعادة إرسال رسائل من الأرشيف (واحدة أو دفعة، مع إمكانية تعديل الرقم/النص)
+app.post('/logs/resend', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        if (!user) return res.status(401).json({ success: false, error: 'غير مصرح' });
+
+        // الصلاحية: تأكد أن المستخدم يستطيع الإرسال (اشتراك فعّال... إلخ)
+        const sendState = await getUserCanSendState(user);
+        if (!sendState.allowed) {
+            return res.status(403).json({ success: false, error: sendState.error });
+        }
+
+        // تأكد من وجود جلسة واتساب نشطة
+        let sock = getSession(user._id.toString());
+        if (!sock || !sock.user) {
+            return res.status(503).json({ success: false, error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم.' });
+        }
+
+        // استلام المدخلات: items = [{ logId, to, body }, ...]
+        let items = req.body.items;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (_) { items = null; }
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'لم يتم تحديد أي رسائل لإعادة الإرسال' });
+        }
+        if (items.length > 50) {
+            return res.status(400).json({ success: false, error: 'الحد الأقصى 50 رسالة في المرة الواحدة' });
+        }
+
+        // إرسال متسلسل بدون تأخير (إعادة إرسال يدوية)
+        const results = [];
+        for (const item of items) {
+            const normalizedTo = normalizePhoneNumber(item.to);
+            const body = (item.body || '').toString().trim();
+
+            if (!normalizedTo || normalizedTo.length < 10) {
+                results.push({ logId: item.logId, to: item.to, success: false, error: 'رقم غير صالح' });
+                continue;
+            }
+            if (!body) {
+                results.push({ logId: item.logId, to: normalizedTo, success: false, error: 'نص الرسالة فارغ' });
+                continue;
+            }
+
+            const jid = normalizedTo + '@s.whatsapp.net';
+            try {
+                let currentSock = getSession(user._id.toString());
+                if (!currentSock || !currentSock.user) throw new Error('انقطع الاتصال بالواتساب');
+                await currentSock.sendMessage(jid, { text: body });
+                await MessageLog.create({
+                    userId: user._id,
+                    to: normalizedTo,
+                    body: body,
+                    status: 'success'
+                });
+                results.push({ logId: item.logId, to: normalizedTo, success: true });
+            } catch (err) {
+                const errMsg = err && err.message ? err.message : 'خطأ غير معروف';
+                await MessageLog.create({
+                    userId: user._id,
+                    to: normalizedTo,
+                    body: body,
+                    status: 'failed',
+                    errorDetails: errMsg
+                });
+                results.push({ logId: item.logId, to: normalizedTo, success: false, error: errMsg });
+            }
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        const failedCount = results.length - successCount;
+        return res.json({
+            success: true,
+            total: results.length,
+            successCount,
+            failedCount,
+            results
+        });
+    } catch (e) {
+        return res.status(500).json({ success: false, error: e.message || 'خطأ داخلي' });
+    }
+});
+
 app.get('/api/campaigns', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     const campaigns = await Campaign.find({ userId: user._id }).sort({ createdAt: -1 }).limit(20).lean();
