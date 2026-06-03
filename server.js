@@ -12,7 +12,7 @@ const MessageLog = require('./models/MessageLog');
 const Settings = require('./models/Settings');
 const Campaign = require('./models/Campaign');
 const CampaignRecipient = require('./models/CampaignRecipient');
-const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode } = require('./whatsappManager');
+const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode, waitForReadySession, isSessionReady } = require('./whatsappManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -1055,10 +1055,10 @@ app.post('/logs/resend', requireAuth, async (req, res) => {
             return res.status(403).json({ success: false, error: sendState.error });
         }
 
-        // تأكد من وجود جلسة واتساب نشطة
-        let sock = getSession(user._id.toString());
-        if (!sock || !sock.user) {
-            return res.status(503).json({ success: false, error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم.' });
+        // ✅ انتظار جلسة جاهزة (إعادة الاتصال تلقائياً إن لزم)
+        let sock = await waitForReadySession(user._id.toString(), io, 15000);
+        if (!sock) {
+            return res.status(503).json({ success: false, error: 'الواتساب غير متصل أو في طور إعادة الاتصال. حاول بعد قليل أو افتح لوحة التحكم لربط الرقم.' });
         }
 
         // استلام المدخلات: items = [{ logId, to, body }, ...]
@@ -1089,10 +1089,29 @@ app.post('/logs/resend', requireAuth, async (req, res) => {
             }
 
             const jid = normalizedTo + '@s.whatsapp.net';
-            try {
-                let currentSock = getSession(user._id.toString());
-                if (!currentSock || !currentSock.user) throw new Error('انقطع الاتصال بالواتساب');
-                await currentSock.sendMessage(jid, { text: body });
+            let lastErr = null;
+            let sentOk = false;
+            const MAX_RESEND_ATTEMPTS = 3;
+            for (let attempt = 1; attempt <= MAX_RESEND_ATTEMPTS; attempt++) {
+                try {
+                    let currentSock = getSession(user._id.toString());
+                    if (!currentSock || !currentSock.user) {
+                        currentSock = await waitForReadySession(user._id.toString(), io, 10000);
+                        if (!currentSock) throw new Error('انقطع الاتصال بالواتساب');
+                    }
+                    await currentSock.sendMessage(jid, { text: body });
+                    sentOk = true;
+                    break;
+                } catch (err) {
+                    lastErr = err;
+                    const msg = String(err && err.message ? err.message : '').toLowerCase();
+                    const permanent = msg.includes('not authorized') || msg.includes('not-authorized') || msg.includes('forbidden');
+                    if (permanent || attempt >= MAX_RESEND_ATTEMPTS) break;
+                    await sleep(2000 + attempt * 1500); // 3.5s, 5s
+                }
+            }
+
+            if (sentOk) {
                 await MessageLog.create({
                     userId: user._id,
                     to: normalizedTo,
@@ -1100,8 +1119,8 @@ app.post('/logs/resend', requireAuth, async (req, res) => {
                     status: 'success'
                 });
                 results.push({ logId: item.logId, to: normalizedTo, success: true });
-            } catch (err) {
-                const errMsg = err && err.message ? err.message : 'خطأ غير معروف';
+            } else {
+                const errMsg = lastErr && lastErr.message ? lastErr.message : 'خطأ غير معروف';
                 await MessageLog.create({
                     userId: user._id,
                     to: normalizedTo,
@@ -1308,12 +1327,11 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
         return res.status(403).json({ success: false, error: sendState.error });
     }
 
-    let sock = getSession(user._id.toString());
+    // ✅ انتظار جلسة جاهزة بدلاً من الرفض الفوري
+    let sock = await waitForReadySession(user._id.toString(), io, 15000);
     if (!sock) {
-        startWhatsAppSession(user._id.toString(), io);
-        return res.status(503).json({ error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم.' });
+        return res.status(503).json({ error: 'الواتساب غير متصل أو في طور إعادة الاتصال. حاول بعد قليل أو افتح لوحة التحكم لربط الرقم.' });
     }
-    if (!sock.user) return res.status(503).json({ error: 'WhatsApp is reconnecting. Try again.' });
 
     const to = req.body.to;
     const body = req.body.message || req.body.body;
@@ -1347,19 +1365,26 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
                 if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) throw new Error('الرقم غير مسجل بالواتساب');
 
                 let sent = false;
-                for (let attempt = 1; attempt <= 3; attempt++) {
+                const MAX_API_ATTEMPTS = 5;
+                for (let attempt = 1; attempt <= MAX_API_ATTEMPTS; attempt++) {
                     try {
                         await sendWhatsAppMessage(currentSock, jid, body, bodyMedia);
                         sent = true;
                         break;
                     } catch (retryErr) {
-                        console.error('⚠️ محاولة ' + attempt + '/3 فشلت لـ ' + num + ': ' + retryErr.message);
-                        if (!isRetryableError(retryErr, attempt)) throw retryErr;
+                        console.error('⚠️ محاولة ' + attempt + '/' + MAX_API_ATTEMPTS + ' فشلت لـ ' + num + ': ' + retryErr.message);
+                        // لو الخطأ غير قابل للإعادة (مثل رقم غير صالح)، اخرج فوراً
+                        const msg = String(retryErr.message || '').toLowerCase();
+                        const isPermanent = msg.includes('not authorized') || msg.includes('not-authorized') || msg.includes('forbidden');
+                        if (isPermanent || attempt >= MAX_API_ATTEMPTS) throw retryErr;
 
-                        const waitTime = Math.min(attempt * 3000, 8000);
+                        // backoff تصاعدي: 3, 6, 10, 15 ثانية
+                        const waitTime = Math.min(3000 + (attempt - 1) * 3000, 15000);
                         await sleep(waitTime);
-                        currentSock = getSession(user._id.toString());
-                        if (!currentSock || !currentSock.user) throw new Error('الواتساب انقطع');
+
+                        // ✅ انتظار جلسة جاهزة (مع إعادة بدء إن لزم) بدل الرمي الفوري
+                        currentSock = await waitForReadySession(user._id.toString(), io, 12000);
+                        if (!currentSock) throw new Error('الواتساب انقطع ولم يعد للاتصال');
                     }
                 }
 
