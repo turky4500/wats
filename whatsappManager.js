@@ -1,4 +1,4 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
 
@@ -56,7 +56,7 @@ function getSocketOptions(version, state) {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.windows('Chrome'),
+        browser: ['Chrome (Windows)', 'Desktop', '1.0.0'],
         version,
         markOnlineOnConnect: false,
         keepAliveIntervalMs: 25000,
@@ -215,13 +215,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
             }
         }, PAIRING_TIMEOUT);
 
-        const complete = (err, code) => {
-            if (resolved) return;
-            resolved = true;
-            clearTimeout(timeout);
-            if (err) reject(err);
-            else resolve(code);
-        };
+        const cleanup = () => clearTimeout(timeout);
 
         (async () => {
             try {
@@ -234,27 +228,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
                 sock.ev.on('creds.update', saveCreds);
 
                 sock.ev.on('connection.update', (update) => {
-                    handlePairingUpdate(update).catch(err => {
-                        console.error('❌ خطأ غير متوقع في معالج الربط:', err);
-                        if (!resolved) { resolved = true; clearTimeout(timeout); reject(err); }
-                    });
-                });
-
-                async function handlePairingUpdate(update) {
-                    const { connection, lastDisconnect, qr } = update;
-
-                    if (!pairingRequested && qr) {
-                        pairingRequested = true;
-                        try {
-                            const code = await sock.requestPairingCode(cleanNumber);
-                            console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
-                            complete(null, code);
-                        } catch (err) {
-                            console.error('❌ فشل توليد رمز الربط:', err.message);
-                            complete(new Error('فشل توليد الرمز: ' + err.message));
-                        }
-                        return;
-                    }
+                    const { connection, lastDisconnect } = update;
 
                     if (connection === 'open') {
                         sessions[userId] = sock;
@@ -262,13 +236,13 @@ async function requestPairingCode(userId, phoneNumber, io) {
                         delete connecting[userId];
                         console.log('✅ تم ربط واتساب بنجاح: ' + userId);
                         if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
-                        complete(null, null);
+                        if (!resolved) { resolved = true; cleanup(); resolve(null); }
                         return;
                     }
 
                     if (connection === 'close') {
                         const statusCode = lastDisconnect?.error?.output?.statusCode;
-                        const errMsg = lastDisconnect?.error?.message || '';
+                        const errMsg = lastDisconnect?.error?.message || 'unknown';
                         const loggedOut = statusCode === DisconnectReason.loggedOut;
                         const banned = statusCode === DisconnectReason.forbidden || statusCode === 403;
 
@@ -283,34 +257,33 @@ async function requestPairingCode(userId, phoneNumber, io) {
                                 try { fs.rmSync(authPath, { recursive: true, force: true }); } catch (_) {}
                             }
                             if (io) io.to(userId).emit('logged_out', 'تم تسجيل الخروج. أعد ربط الرقم.');
-                            complete(new Error('تم تسجيل الخروج'));
+                            if (!resolved) { resolved = true; cleanup(); reject(new Error('تم تسجيل الخروج')); }
                             return;
                         }
 
-                        if (!pairingRequested) {
-                            complete(new Error('انقطع الاتصال قبل اكتمال الربط: ' + errMsg));
+                        if (!resolved) {
+                            resolved = true; cleanup();
+                            reject(new Error('فشل الاتصال بخوادم واتساب: ' + errMsg));
                             return;
                         }
-
-                        reconnectAttempts[userId] = (reconnectAttempts[userId] || 0) + 1;
-                        if (reconnectAttempts[userId] > MAX_RECONNECT_ATTEMPTS) {
-                            console.log(`❌ تجاوز حد المحاولات: ${userId}`);
-                            if (io) io.to(userId).emit('connection_failed', 'تعذر إعادة الاتصال.');
-                            reconnectAttempts[userId] = 0;
-                            return;
-                        }
-
-                        const delay = getReconnectDelay(userId);
-                        console.log(`🔄 إعادة محاولة [${userId}] #${reconnectAttempts[userId]} بعد ${Math.round(delay / 1000)}ث`);
-                        setTimeout(() => {
-                            startWhatsAppSession(userId, io).catch(e => {
-                                console.error(`❌ فشل إعادة الاتصال [${userId}]:`, e.message);
-                            });
-                        }, delay);
                     }
-                }
+                });
+
+                // انتظار 7 ثوانٍ حتى يستقر الاتصال، ثم طلب رمز الربط
+                setTimeout(async () => {
+                    if (resolved || pairingRequested) return;
+                    pairingRequested = true;
+                    try {
+                        const code = await sock.requestPairingCode(cleanNumber);
+                        console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
+                        if (!resolved) { resolved = true; cleanup(); resolve(code); }
+                    } catch (err) {
+                        console.error('❌ فشل توليد رمز الربط:', err.message);
+                        if (!resolved) { resolved = true; cleanup(); reject(new Error('فشل توليد الرمز: ' + err.message)); }
+                    }
+                }, 7000);
             } catch (e) {
-                complete(new Error('خطأ: ' + e.message));
+                if (!resolved) { resolved = true; cleanup(); reject(new Error('خطأ: ' + e.message)); }
             }
         })();
     });
