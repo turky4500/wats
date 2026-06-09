@@ -206,7 +206,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
-                browser: Browsers.macOS("Chrome"),
+                browser: Browsers.ubuntu('Chrome'),
                 version,
                 markOnlineOnConnect: false,
                 keepAliveIntervalMs: 25000,
@@ -226,12 +226,19 @@ async function requestPairingCode(userId, phoneNumber, io) {
 
                 if (qr && !pairingDone) {
                     try {
-                        const customCode = String(Math.floor(10000000 + Math.random() * 90000000));
-                        const code = await tempSock.requestPairingCode(cleanNumber, customCode);
-                        clearTimeout(timeout);
                         pairingDone = true;
-                        resolve(code);
-                        console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
+                        // Baileys requires a slight delay before requesting pairing code
+                        setTimeout(async () => {
+                            try {
+                                const code = await tempSock.requestPairingCode(cleanNumber);
+                                clearTimeout(timeout);
+                                resolve(code);
+                                console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
+                            } catch (err) {
+                                clearTimeout(timeout);
+                                reject(new Error('فشل توليد الرمز: ' + err.message));
+                            }
+                        }, 2500);
                     } catch (e) {
                         clearTimeout(timeout);
                         reject(new Error('فشل توليد الرمز: ' + e.message));
