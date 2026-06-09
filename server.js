@@ -1,4 +1,10 @@
 require('dotenv').config();
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection:', reason instanceof Error ? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('⚠️ Uncaught Exception:', err.message);
+});
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -605,12 +611,12 @@ mongoose.connect(process.env.MONGODB_URI)
             await getSettings();
 
             let sysSock = getSession(SYSTEM_ID);
-            if (!sysSock) startWhatsAppSession(SYSTEM_ID, io);
+            if (!sysSock) startWhatsAppSession(SYSTEM_ID, io).catch(err => console.error('❌ فشل بدء جلسة النظام:', err.message));
 
             const users = await User.find({ role: 'user', isActive: true });
             for (const user of users) {
                 const userSock = getSession(user._id.toString());
-                if (!userSock) startWhatsAppSession(user._id.toString(), io);
+                if (!userSock) startWhatsAppSession(user._id.toString(), io).catch(err => console.error('❌ فشل بدء جلسة المستخدم:', err.message));
             }
 
             setTimeout(() => {
@@ -818,13 +824,14 @@ app.post('/disconnect-whatsapp', requireAuth, async (req, res) => {
     let targetId = req.session.userId;
     if (req.session.originalAdminId) targetId = req.session.userId;
     await disconnectSession(targetId.toString());
-    startWhatsAppSession(targetId.toString(), io);
     res.redirect('back');
 });
 
 app.post('/request-pairing-code', requireAuth, async (req, res) => {
     try {
-        const code = await requestPairingCode(req.session.userId.toString(), req.body.phoneNumber, io);
+        const phoneNumber = req.body.phoneNumber;
+        if (!phoneNumber) return res.json({ success: false, error: 'يرجى إدخال رقم الجوال' });
+        const code = await requestPairingCode(req.session.userId.toString(), phoneNumber, io);
         res.json({ success: true, code });
     } catch (e) {
         res.json({ success: false, error: e.message });
@@ -833,13 +840,14 @@ app.post('/request-pairing-code', requireAuth, async (req, res) => {
 
 app.post('/admin/disconnect-system-whatsapp', requireAdmin, async (req, res) => {
     await disconnectSession(SYSTEM_ID);
-    startWhatsAppSession(SYSTEM_ID, io);
     res.redirect('back');
 });
 
 app.post('/admin/request-pairing-code', requireAdmin, async (req, res) => {
     try {
-        const code = await requestPairingCode(SYSTEM_ID, req.body.phoneNumber, io);
+        const phoneNumber = req.body.phoneNumber;
+        if (!phoneNumber) return res.json({ success: false, error: 'يرجى إدخال رقم الجوال' });
+        const code = await requestPairingCode(SYSTEM_ID, phoneNumber, io);
         res.json({ success: true, code });
     } catch (e) {
         res.json({ success: false, error: e.message });
@@ -1414,7 +1422,7 @@ io.on('connection', (socket) => {
         } else if (!sock) {
             startWhatsAppSession(sessionUserId, io).then(s => {
                 if (s && s.user) socket.emit('ready', 'WhatsApp is connected');
-            });
+            }).catch(err => console.error('❌ فشل بدء جلسة واتساب:', err.message));
         }
     }
 });
