@@ -206,7 +206,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
-                browser: ['Ubuntu', 'Chrome', '20.0.04'],
+                browser: ['Chrome (Windows)', 'Desktop', '1.0.0'], // Changed to match startWhatsAppSession for consistency
                 version,
                 markOnlineOnConnect: false,
                 keepAliveIntervalMs: 25000,
@@ -219,31 +219,21 @@ async function requestPairingCode(userId, phoneNumber, io) {
 
             tempSock.ev.on('creds.update', saveCreds);
 
-            let pairingDone = false;
+            // ✅ طلب الرمز مباشرة بعد التهيئة كما ينصح مطورو Baileys
+            setTimeout(async () => {
+                try {
+                    const code = await tempSock.requestPairingCode(cleanNumber);
+                    clearTimeout(timeout);
+                    resolve(code);
+                    console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
+                } catch (err) {
+                    clearTimeout(timeout);
+                    reject(new Error('فشل توليد الرمز: ' + err.message));
+                }
+            }, 3000);
 
             tempSock.ev.on('connection.update', async (update) => {
-                const { connection, qr, lastDisconnect } = update;
-
-                if (qr && !pairingDone) {
-                    try {
-                        pairingDone = true;
-                        // Baileys requires a slight delay before requesting pairing code
-                        setTimeout(async () => {
-                            try {
-                                const code = await tempSock.requestPairingCode(cleanNumber);
-                                clearTimeout(timeout);
-                                resolve(code);
-                                console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
-                            } catch (err) {
-                                clearTimeout(timeout);
-                                reject(new Error('فشل توليد الرمز: ' + err.message));
-                            }
-                        }, 2500);
-                    } catch (e) {
-                        clearTimeout(timeout);
-                        reject(new Error('فشل توليد الرمز: ' + e.message));
-                    }
-                }
+                const { connection, lastDisconnect } = update;
 
                 if (connection === 'open') {
                     console.log('✅ تم الربط بالرمز لـ: ' + userId);
