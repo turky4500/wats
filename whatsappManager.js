@@ -206,7 +206,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
-                browser: Browsers.ubuntu('Chrome'),
+                browser: ['Ubuntu', 'Chrome', '20.0.04'],
                 version,
                 markOnlineOnConnect: false,
                 keepAliveIntervalMs: 25000,
