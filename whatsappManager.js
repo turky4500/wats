@@ -182,10 +182,10 @@ async function startWhatsAppSession(userId, io) {
 }
 
 /**
- * طلب رمز الربط - الطريقة الموثوقة
- * - ننشئ socket وننتظر حتى connection === 'open'
- * - Baileys قد يسوي close/open عدة مرات أثناء handshake
- * - ننتظر open الأولي ثم نطلب الرمز
+ * طلب رمز الربط - الطريقة البسيطة بالـ setTimeout
+ * - ننشئ socket وننتظر 7 ثواني
+ * - نطلب الرمز ونرجعه فوراً
+ * - الـ socket يبقى في sessions ينتظر إدخال الكود من واتساب
  */
 async function requestPairingCode(userId, phoneNumber, io) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
@@ -206,55 +206,95 @@ async function requestPairingCode(userId, phoneNumber, io) {
     }
 
     await disconnectSession(userId);
-    connecting[userId] = true;
 
-    const version = await getWAVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
+    return new Promise((resolve, reject) => {
+        let resolved = false;
+        let pairingRequested = false;
 
-    const sock = makeWASocket(getSocketOptions(version, state));
-    sessions[userId] = sock;
-
-    sock.ev.on('creds.update', saveCreds);
-
-    // ✅ ننتظر connection === 'open' (يمكن يسوي close/open عدة مرات)
-    const connectionReady = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-            reject(new Error('انتهى وقت انتظار الاتصال (45 ثانية)'));
-        }, 45000);
+            if (!resolved) {
+                resolved = true;
+                if (sessions[userId]) {
+                    try { sessions[userId].end?.(); } catch (_) { }
+                    delete sessions[userId];
+                }
+                delete connecting[userId];
+                reject(new Error('انتهت المهلة (دقيقتان). حاول مرة أخرى.'));
+            }
+        }, PAIRING_TIMEOUT);
 
-        sock.ev.on('connection.update', (update) => {
-            if (update.connection === 'open') {
-                clearTimeout(timeout);
-                console.log('✅ Socket متصل بخوادم واتساب - جاهز لطلب الرمز');
-                resolve(true);
+        const cleanup = () => clearTimeout(timeout);
+
+        (async () => {
+            try {
+                const version = await getWAVersion();
+                const { state, saveCreds } = await useMultiFileAuthState(`./auth_info_baileys/${userId}`);
+
+                const sock = makeWASocket(getSocketOptions(version, state));
+                sessions[userId] = sock;
+
+                sock.ev.on('creds.update', saveCreds);
+
+                sock.ev.on('connection.update', (update) => {
+                    const { connection, lastDisconnect } = update;
+
+                    if (connection === 'open') {
+                        sessions[userId] = sock;
+                        reconnectAttempts[userId] = 0;
+                        delete connecting[userId];
+                        console.log('✅ تم ربط واتساب بنجاح: ' + userId);
+                        if (io) io.to(userId).emit('ready', 'WhatsApp is connected');
+                        if (!resolved) { resolved = true; cleanup(); resolve(null); }
+                        return;
+                    }
+
+                    if (connection === 'close') {
+                        const statusCode = lastDisconnect?.error?.output?.statusCode;
+                        const errMsg = lastDisconnect?.error?.message || 'unknown';
+                        const loggedOut = statusCode === DisconnectReason.loggedOut;
+                        const banned = statusCode === DisconnectReason.forbidden || statusCode === 403;
+
+                        delete sessions[userId];
+                        delete connecting[userId];
+
+                        if (loggedOut || banned) {
+                            console.log(`🚪 تسجيل خروج/حظر: ${userId}`);
+                            reconnectAttempts[userId] = 0;
+                            const authPath = `./auth_info_baileys/${userId}`;
+                            if (fs.existsSync(authPath)) {
+                                try { fs.rmSync(authPath, { recursive: true, force: true }); } catch (_) {}
+                            }
+                            if (io) io.to(userId).emit('logged_out', 'تم تسجيل الخروج. أعد ربط الرقم.');
+                            if (!resolved) { resolved = true; cleanup(); reject(new Error('تم تسجيل الخروج')); }
+                            return;
+                        }
+
+                        if (!resolved) {
+                            resolved = true; cleanup();
+                            reject(new Error('فشل الاتصال بخوادم واتساب: ' + errMsg));
+                            return;
+                        }
+                    }
+                });
+
+                // انتظار 7 ثوانٍ حتى يستقر الاتصال، ثم طلب رمز الربط
+                setTimeout(async () => {
+                    if (resolved || pairingRequested) return;
+                    pairingRequested = true;
+                    try {
+                        const code = await sock.requestPairingCode(cleanNumber);
+                        console.log('🔑 رمز الربط تم توليده لـ ' + userId);
+                        if (!resolved) { resolved = true; cleanup(); resolve(code); }
+                    } catch (err) {
+                        console.error('❌ فشل توليد رمز الربط:', err.message);
+                        if (!resolved) { resolved = true; cleanup(); reject(new Error('فشل توليد الرمز: ' + err.message)); }
+                    }
+                }, 7000);
+            } catch (e) {
+                if (!resolved) { resolved = true; cleanup(); reject(new Error('خطأ: ' + e.message)); }
             }
-            if (update.connection === 'close') {
-                // ✅ لا نرفض على أول close - Baileys يسوي close/open أثناء handshake
-                // فقط نرفض لو صار close بدون open خلال المهلة
-                console.log('⏳ Connection closed أثناء handshake - في انتظار إعادة الاتصال...');
-            }
-        });
+        })();
     });
-
-    try {
-        await connectionReady;
-
-        // ✅ الآن الـ Socket متصل فعلياً - نطلب الكود
-        console.log('🔑 طلب رمز الربط للرقم: ' + cleanNumber);
-        const code = await sock.requestPairingCode(cleanNumber);
-        console.log('✅ رمز الربط تم توليده: ' + code);
-
-        // ✅ نربط setupConnectionHandlers بعد نجاح طلب الكود
-        setupConnectionHandlers(sock, userId, io);
-
-        delete connecting[userId];
-        return code;
-    } catch (e) {
-        console.error('❌ خطأ في requestPairingCode:', e.message);
-        delete connecting[userId];
-        delete sessions[userId];
-        throw e;
-    }
 }
 
 function getSession(userId) {
