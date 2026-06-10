@@ -182,11 +182,10 @@ async function startWhatsAppSession(userId, io) {
 }
 
 /**
- * طلب رمز الربط - الطريقة المحسنة
- * - ننشئ socket جديد وننتظر حتى يكون مستقر
- * - نطلب الرمز ونرجعه
- * - الـ socket يبقى في sessions مع setupConnectionHandlers
- * - عندما يدخل المستخدم الكود في واتساب، الاتصال يكتمل تلقائياً
+ * طلب رمز الربط - الطريقة الموثوقة
+ * - ننشئ socket وننتظر حتى connection === 'open'
+ * - Baileys قد يسوي close/open عدة مرات أثناء handshake
+ * - ننتظر open الأولي ثم نطلب الرمز
  */
 async function requestPairingCode(userId, phoneNumber, io) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
@@ -217,50 +216,43 @@ async function requestPairingCode(userId, phoneNumber, io) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // ✅ نربط setupConnectionHandlers مباشرة - هذا يضمن أن الاتصال يكتمل تلقائياً
-    // بعد ما المستخدم يدخل الكود في واتساب
-    setupConnectionHandlers(sock, userId, io);
+    // ✅ ننتظر connection === 'open' (يمكن يسوي close/open عدة مرات)
+    const connectionReady = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('انتهى وقت انتظار الاتصال (45 ثانية)'));
+        }, 45000);
 
-    let codeReturned = false;
+        sock.ev.on('connection.update', (update) => {
+            if (update.connection === 'open') {
+                clearTimeout(timeout);
+                console.log('✅ Socket متصل بخوادم واتساب - جاهز لطلب الرمز');
+                resolve(true);
+            }
+            if (update.connection === 'close') {
+                // ✅ لا نرفض على أول close - Baileys يسوي close/open أثناء handshake
+                // فقط نرفض لو صار close بدون open خلال المهلة
+                console.log('⏳ Connection closed أثناء handshake - في انتظار إعادة الاتصال...');
+            }
+        });
+    });
 
     try {
-        // ✅ ننتظر حتى يستقر الاتصال أو ننتظر 7 ثواني
-        await new Promise((resolve) => {
-            const maxWait = 7000;
-            const start = Date.now();
-            const check = () => {
-                // نحاول نتحقق من حالة الاتصال
-                const sockReady = sock && sock.user && sock.ws && sock.ws.readyState === 1;
-                if (sockReady) {
-                    console.log('✅ WebSocket متصل - جاهز لطلب الرمز');
-                    resolve();
-                    return;
-                }
-                if (Date.now() - start > maxWait) {
-                    // انتهى الوقت - نحاول نطلب الكود على كل حال
-                    console.log('⏳ انتهاء وقت الانتظار - محاولة طلب الرمز');
-                    resolve();
-                    return;
-                }
-                setTimeout(check, 500);
-            };
-            setTimeout(check, 1000);
-        });
+        await connectionReady;
 
-        // ✅ طلب رمز الربط
+        // ✅ الآن الـ Socket متصل فعلياً - نطلب الكود
         console.log('🔑 طلب رمز الربط للرقم: ' + cleanNumber);
         const code = await sock.requestPairingCode(cleanNumber);
         console.log('✅ رمز الربط تم توليده: ' + code);
 
-        codeReturned = true;
+        // ✅ نربط setupConnectionHandlers بعد نجاح طلب الكود
+        setupConnectionHandlers(sock, userId, io);
+
         delete connecting[userId];
         return code;
     } catch (e) {
         console.error('❌ خطأ في requestPairingCode:', e.message);
         delete connecting[userId];
-        if (!codeReturned) {
-            delete sessions[userId];
-        }
+        delete sessions[userId];
         throw e;
     }
 }
