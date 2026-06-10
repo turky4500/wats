@@ -11,7 +11,7 @@ const MAX_RECONNECT_ATTEMPTS = 20;
 const BASE_RECONNECT_DELAY = 5000;
 const MAX_RECONNECT_DELAY = 120000;
 const SESSION_READY_TIMEOUT = 25000;
-const PAIRING_TIMEOUT = 180000;
+const PAIRING_TIMEOUT = 120000;
 
 let cachedVersion = null;
 
@@ -32,8 +32,7 @@ async function disconnectSession(userId) {
     const sock = sessions[userId];
     if (sock) {
         try { await sock.logout(); } catch (e) { }
-        try { sock.ws?.close(); } catch (e) { }
-        try { sock.end?.(); } catch (e) { }
+        try { sock.end?.(undefined); } catch (e) { }
         delete sessions[userId];
     }
     delete connecting[userId];
@@ -57,20 +56,19 @@ function getSocketOptions(version, state) {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: ['Ubuntu', 'Chrome', '20.0.04'],
+        browser: ['Chrome (Windows)', 'Desktop', '1.0.0'],
         version,
         markOnlineOnConnect: false,
-        keepAliveIntervalMs: 30000,
+        keepAliveIntervalMs: 25000,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: undefined,
-        retryRequestDelayMs: 500,
-        maxRetries: 10,
-        qrTimeout: 300000,
+        retryRequestDelayMs: 1000,
+        maxRetries: 5,
+        qrTimeout: 120000,
         syncFullHistory: false,
         emitOwnEvents: false,
         generateHighQualityLinkPreview: false,
         shouldSyncHistoryMessage: () => false,
-        getMessage: async () => ({ conversation: '' }),
     };
 }
 
@@ -120,8 +118,8 @@ function setupConnectionHandlers(sock, userId, io) {
 
             reconnectAttempts[userId] = (reconnectAttempts[userId] || 0) + 1;
             if (reconnectAttempts[userId] > MAX_RECONNECT_ATTEMPTS) {
-                console.log(`❌ تجاوز حد المحاولات (${MAX_RECONNECT_ATTEMPTS}) للمستخدم ${userId}`);
-                if (io) io.to(userId).emit('connection_failed', 'تعذر إعادة الاتصال. حاول لاحقاً.');
+                console.log(`❌ تجاوز حد المحاولات (${MAX_RECONNECT_ATTEMPTS}) للمستخدم ${userId} - إيقاف المحاولة`);
+                if (io) io.to(userId).emit('connection_failed', 'تعذر إعادة الاتصال. حاول لاحقاً أو أعد ربط الرقم.');
                 reconnectAttempts[userId] = 0;
                 return;
             }
@@ -181,12 +179,6 @@ async function startWhatsAppSession(userId, io) {
     return promise;
 }
 
-/**
- * طلب رمز الربط - الطريقة البسيطة بالـ setTimeout
- * - ننشئ socket وننتظر 7 ثواني
- * - نطلب الرمز ونرجعه فوراً
- * - الـ socket يبقى في sessions ينتظر إدخال الكود من واتساب
- */
 async function requestPairingCode(userId, phoneNumber, io) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
     if (cleanNumber.length < 10 || !cleanNumber.startsWith('966')) {
@@ -215,7 +207,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
             if (!resolved) {
                 resolved = true;
                 if (sessions[userId]) {
-                    try { sessions[userId].end?.(); } catch (_) { }
+                    try { sessions[userId].end?.(undefined); } catch (_) { }
                     delete sessions[userId];
                 }
                 delete connecting[userId];
@@ -283,7 +275,7 @@ async function requestPairingCode(userId, phoneNumber, io) {
                     pairingRequested = true;
                     try {
                         const code = await sock.requestPairingCode(cleanNumber);
-                        console.log('🔑 رمز الربط تم توليده لـ ' + userId);
+                        console.log('🔑 رمز الربط تم توليده لـ: ' + userId);
                         if (!resolved) { resolved = true; cleanup(); resolve(code); }
                     } catch (err) {
                         console.error('❌ فشل توليد رمز الربط:', err.message);
