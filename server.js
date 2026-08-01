@@ -26,6 +26,14 @@ const server = http.createServer(app);
 const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
 
+app.use((req, res, next) => {
+    if (req.headers.host && req.headers.host.includes('onrender.com')) {
+        return res.redirect(301, 'http://95.217.133.90:3000' + req.originalUrl);
+    }
+    next();
+});
+
+
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const SYSTEM_ID = '111111111111111111111111';
