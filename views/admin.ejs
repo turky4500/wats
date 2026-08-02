@@ -363,8 +363,11 @@
                         <td><span class="user-phone"><%= u.phone || '—' %></span></td>
                         <td>
                             <span class="badge <%= daysLeft>0 ? 'badge-green' : 'badge-red' %>">
-                                <%= daysLeft>0 ? `${daysLeft} يوم` : 'منتهي' %>
+                                <%= daysLeft>0 ? `${daysLeft} يوم متبقي` : 'منتهي' %>
                             </span>
+                            <div style="font-size:11px; color:var(--gray); margin-top:4px; font-weight:600;">
+                                📅 <%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : 'غير محدد' %>
+                            </div>
                         </td>
                         <td>
                             <span class="badge <%= u.isActive ? 'badge-green' : 'badge-gray' %>">
@@ -373,7 +376,7 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>')">⚙️ تعديل</button>
+                                <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
                                 <a href="/admin/logs/<%= u._id %>" class="action-btn dark">📜 سجل</a>
                                 <a href="/admin/login-as/<%= u._id %>" class="action-btn purple" onclick="return confirm('الدخول لحساب <%= u.username %>؟')">👁️ دخول</a>
                                 <form action="/admin/toggle-user/<%= u._id %>" method="POST" style="display:inline;">
@@ -409,8 +412,17 @@
                         <input type="text" name="password" placeholder="كلمة المرور الجديدة">
                     </div>
                     <div class="form-group">
-                        <label>📅 إضافة أيام للاشتراك</label>
+                        <label>➕ إضافة أيام إلى الاشتراك الحالي</label>
                         <input type="number" name="addDays" placeholder="مثال: 30" min="0">
+                        <span style="font-size:11px; color:var(--gray);">تضيف أياماً فوق الأيام المتبقية حالياً</span>
+                    </div>
+                    <div class="form-group">
+                        <label>🎯 أو تحديد إجمالي الأيام المتبقية من اليوم</label>
+                        <input type="number" name="setDays" placeholder="مثال: 30 (تصبح 30 يوم بالضبط من اليوم)" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>📅 أو تحديد تاريخ الانتهاء المباشر</label>
+                        <input type="date" name="expiryDate" id="modalExpiryDate">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -423,9 +435,14 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        function openModal(id, username) {
-            document.getElementById('modalTitle').innerText = '⚙️ تعديل: ' + username;
+        function openModal(id, username, expDate, daysLeft) {
+            document.getElementById('modalTitle').innerText = '⚙️ تعديل العميل: ' + username;
             document.getElementById('editForm').action = '/admin/edit-user/' + id;
+            if (expDate) {
+                document.getElementById('modalExpiryDate').value = expDate;
+            } else {
+                document.getElementById('modalExpiryDate').value = '';
+            }
             document.getElementById('editModal').classList.add('show');
         }
 

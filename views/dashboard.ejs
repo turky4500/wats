@@ -277,13 +277,16 @@
     <%
         let daysRemaining = 0;
         let isExpired = true;
+        let expDateFormatted = 'غير محدد';
         if (user.subscriptionEndsAt) {
-            const diffTime = new Date(user.subscriptionEndsAt) - new Date();
+            const d = new Date(user.subscriptionEndsAt);
+            expDateFormatted = d.toISOString().split('T')[0];
+            const diffTime = d - new Date();
             daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             if (daysRemaining > 0) isExpired = false;
             else daysRemaining = 0;
         }
-        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; }
+        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
 
         const campaignLabels = {
             pending: 'بانتظار البدء',
@@ -314,6 +317,9 @@
                 <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
                     <%= isExpired ? '⛔ منتهي' : `✅ متبقي ${daysRemaining} يوم` %>
                 </span>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 6px; font-weight: 600;">
+                    📅 الانتهاء: <%= expDateFormatted %>
+                </div>
             </div>
             <div class="sidebar-nav">
                 <a href="/dashboard" class="active"><span class="icon">📊</span> لوحة التحكم</a>

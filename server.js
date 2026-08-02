@@ -959,22 +959,36 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
 
 app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
     try {
-        const { password, addDays } = req.body;
+        const { password, addDays, setDays, expiryDate } = req.body;
         const user = await User.findById(req.params.id);
-        if (password) user.password = password;
-        if (addDays && parseInt(addDays) > 0) {
-            // ✅ إنشاء نسخة جديدة من التاريخ (وليس reference) حتى يكتشف Mongoose التغيير
-            let currentEnd = (user.subscriptionEndsAt && user.subscriptionEndsAt > new Date())
+        if (!user) return res.status(404).send('المستخدم غير موجود');
+
+        if (password && password.trim() !== '') {
+            user.password = password.trim();
+        }
+
+        if (expiryDate && expiryDate.trim() !== '') {
+            user.subscriptionEndsAt = new Date(expiryDate + 'T23:59:59');
+            user.markModified('subscriptionEndsAt');
+        } else if (setDays && setDays.trim() !== '' && parseInt(setDays) >= 0) {
+            let newEnd = new Date();
+            newEnd.setDate(newEnd.getDate() + parseInt(setDays));
+            user.subscriptionEndsAt = newEnd;
+            user.markModified('subscriptionEndsAt');
+        } else if (addDays && addDays.trim() !== '' && parseInt(addDays) > 0) {
+            let currentEnd = (user.subscriptionEndsAt && new Date(user.subscriptionEndsAt) > new Date())
                 ? new Date(user.subscriptionEndsAt)
                 : new Date();
             currentEnd.setDate(currentEnd.getDate() + parseInt(addDays));
             user.subscriptionEndsAt = currentEnd;
-            user.markModified('subscriptionEndsAt'); // إجبار Mongoose على حفظ التغيير
+            user.markModified('subscriptionEndsAt');
         }
+
         await user.save();
         res.redirect('/admin');
     } catch (e) {
-        res.status(400).send('حدث خطأ');
+        console.error('Error in edit-user:', e);
+        res.status(400).send('حدث خطأ أثناء تعديل المستخدم: ' + e.message);
     }
 });
 
