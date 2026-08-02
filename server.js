@@ -612,7 +612,10 @@ async function getOwnedCampaign(userId, campaignId) {
     return Campaign.findOne({ _id: campaignId, userId });
 }
 
-mongoose.connect(process.env.MONGODB_URI)
+const MONGO_URI = (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('127.0.0.1') && !process.env.MONGODB_URI.includes('localhost'))
+    ? process.env.MONGODB_URI
+    : 'mongodb+srv://tur100:Sa123456@cluster0.asfixge.mongodb.net/test?appName=Cluster0';
+mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
         try {
