@@ -963,9 +963,13 @@ app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
         const user = await User.findById(req.params.id);
         if (password) user.password = password;
         if (addDays && parseInt(addDays) > 0) {
-            let currentEnd = (user.subscriptionEndsAt && user.subscriptionEndsAt > new Date()) ? user.subscriptionEndsAt : new Date();
+            // ✅ إنشاء نسخة جديدة من التاريخ (وليس reference) حتى يكتشف Mongoose التغيير
+            let currentEnd = (user.subscriptionEndsAt && user.subscriptionEndsAt > new Date())
+                ? new Date(user.subscriptionEndsAt)
+                : new Date();
             currentEnd.setDate(currentEnd.getDate() + parseInt(addDays));
             user.subscriptionEndsAt = currentEnd;
+            user.markModified('subscriptionEndsAt'); // إجبار Mongoose على حفظ التغيير
         }
         await user.save();
         res.redirect('/admin');
