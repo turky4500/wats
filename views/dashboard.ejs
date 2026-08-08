@@ -975,14 +975,41 @@
             }
         }
 
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const text = evt.target.result;
+                const lines = text.split(/[\r\n,;]+/);
+                let addedCount = 0;
+                lines.forEach(l => {
+                    let clean = l.replace(/[^0-9]/g, '');
+                    if (clean.length >= 8) {
+                        if (clean.startsWith('05')) clean = '966' + clean.substring(1);
+                        else if (clean.startsWith('5')) clean = '966' + clean;
+                        if (clean.length === 12 && clean.startsWith('9665') && !recipientsList.includes(clean)) {
+                            recipientsList.push(clean);
+                            addedCount++;
+                        }
+                    }
+                });
+                renderChips();
+                showToast(`تم استخراج ${addedCount} رقم صالح من ${file.name} بنجاح 🎯`);
+            };
+            reader.readAsText(file);
+        }
+
         async function sendCampaign() {
             if (recipientsList.length === 0) {
                 showToast('يرجى إضافة رقم واحد على الأقل للمستلمين', 'error');
                 return;
             }
             const msg = document.getElementById('msgInput').value;
-            if (!msg.trim()) {
-                showToast('يرجى كتابة نص الرسالة أولاً', 'error');
+            const mediaFiles = document.getElementById('mediaFiles').files;
+
+            if (!msg.trim() && mediaFiles.length === 0) {
+                showToast('يرجى كتابة نص الرسالة أو إضافة مرفق أولاً', 'error');
                 return;
             }
 
@@ -991,23 +1018,31 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
 
             const formData = new FormData();
-            formData.append('recipients', recipientsList.join(','));
+            formData.append('numbers', JSON.stringify(recipientsList));
             formData.append('message', msg);
             
-            const mediaFiles = document.getElementById('mediaFiles').files;
             for (let i = 0; i < mediaFiles.length; i++) {
                 formData.append('media', mediaFiles[i]);
             }
 
             try {
-                const res = await fetch('/api/v1/send-campaign', {
+                const res = await fetch('/api/campaigns', {
                     method: 'POST',
                     body: formData
                 });
+                
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const htmlText = await res.text();
+                    throw new Error('تعذر الوصول لخدمة الحملات، تأكد من حالة الدخول والاشتراك');
+                }
+
                 const data = await res.json();
                 if (data.success) {
                     showToast('تم إطلاق الحملة بنجاح! 🚀');
-                    setTimeout(() => window.location.reload(), 2000);
+                    setTimeout(() => {
+                        window.location.href = data.campaignId ? `/campaigns/${data.campaignId}` : '/dashboard';
+                    }, 1500);
                 } else {
                     showToast(data.error || 'حدث خطأ أثناء إرسال الحملة', 'error');
                     btn.disabled = false;
