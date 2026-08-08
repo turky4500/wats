@@ -478,15 +478,112 @@
         .btn-send { width: 100%; padding: 16px; font-size: 16px; font-weight: 900; border-radius: var(--radius); }
         .btn-disabled { background: #cbd5e1 !important; color: white !important; cursor: not-allowed !important; }
 
+        /* ===== Mobile Responsive Styles ===== */
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 18px;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 990;
+            box-shadow: var(--shadow);
+        }
+        .logo-circle-sm {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 18px;
+        }
+        .menu-toggle-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: var(--dark2);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .menu-toggle-btn:active { background: #e2e8f0; }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1040;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+
+        @media (max-width: 992px) {
+            .mobile-topbar { display: flex; }
+            .sidebar {
+                transform: translateX(100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1050;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-right: 0; padding: 80px 16px 30px 16px; }
+            .master-grid { grid-template-columns: 1fr; gap: 20px; }
+            .phone-mockup-card { position: relative; top: 0; }
+        }
+
+        @media (max-width: 768px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+            .stat-card { padding: 16px; border-radius: 14px; }
+            .stat-card .stat-icon { width: 40px; height: 40px; font-size: 16px; margin-bottom: 8px; }
+            .stat-card .stat-value { font-size: 22px; }
+            .stat-card .stat-label { font-size: 11px; }
+
+            .page-header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
+            .page-header-text h1 { font-size: 22px; }
+            .date-chip { align-self: flex-start; }
+
+            .templates-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .template-card { padding: 10px 8px; }
+            .template-card .icon { font-size: 18px; margin-bottom: 2px; }
+            .template-card .label { font-size: 11px; }
+
+            .steps-container { padding: 10px 14px; }
+            .step-circle { width: 32px; height: 32px; font-size: 12px; }
+            .step-label { font-size: 11px; }
+            .step-divider { margin: 0 8px; }
+
+            .campaign-body { padding: 18px 14px; }
+            .campaign-header { padding: 18px 20px; }
+
+            .msg-textarea, .recipients-area { font-size: 16px; } /* Prevents iOS safari zoom */
+            .phone-frame { height: 460px; border-radius: 28px; border-width: 6px; }
+        }
+
         /* Toast */
-        #toast-container { position: fixed; bottom: 25px; left: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: var(--card); padding: 16px 24px; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease; border-right: 5px solid var(--primary); }
+        #toast-container { position: fixed; bottom: 20px; left: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: var(--card); padding: 14px 20px; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 10px; animation: slideIn 0.3s ease; border-right: 5px solid var(--primary); pointer-events: auto; }
         .toast.error { border-right-color: var(--danger); }
-        @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
     <div id="toast-container"></div>
+
+    <!-- Mobile Top Navigation Bar -->
+    <div class="mobile-topbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="logo-circle-sm"><i class="fab fa-whatsapp"></i></div>
+            <span style="font-size: 16px; font-weight: 900; color: var(--dark);">واتساب تكوين</span>
+        </div>
+        <button class="menu-toggle-btn" onclick="toggleMobileSidebar()" aria-label="القائمة">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
     <%
         let daysRemaining = 0;
@@ -1053,6 +1150,13 @@
                 btn.disabled = false;
                 btn.innerHTML = '🚀 إطلاق الحملة الآن';
             }
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
         }
     </script>
 </body>
