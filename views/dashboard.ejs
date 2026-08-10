@@ -1046,11 +1046,31 @@
                 preview.innerText = 'ستظهر رسالتك وتنسيقها هنا لحظياً أثناء الكتابة...';
                 return;
             }
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'م' : 'ص';
+            hours = hours % 12 || 12;
+            const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+            const samplePhone = recipientsList.length > 0 ? recipientsList[0] : '0501234567';
+
             let formatted = txt
+                .replace(/\{التاريخ\}|\{تاريخ\}|\{DATE\}|\{date\}/gi, `<span class="badge bg-light text-success border px-1 font-monospace">${dateStr}</span>`)
+                .replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, `<span class="badge bg-light text-primary border px-1 font-monospace">${timeStr}</span>`)
+                .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">العميل العزيز</span>`)
+                .replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${samplePhone}</span>`)
                 .replace(/\*(.*?)\*/g, '<b>$1</b>')
                 .replace(/_(.*?)_/g, '<i>$1</i>')
                 .replace(/~(.*?)~/g, '<del>$1</del>')
                 .replace(/```(.*?)```/g, '<code>$1</code>');
+
             preview.innerHTML = formatted;
         }
 

@@ -564,7 +564,59 @@ async function createDefaultAdmin() {
 }
 createDefaultAdmin();
 
-async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
+function formatMessagePlaceholders(text, phone = '', extraData = {}) {
+    if (!text || typeof text !== 'string') return text;
+
+    // توقيت السعودية (KSA UTC+3)
+    const now = new Date();
+    const ksaOffset = 3 * 60; // offset in minutes
+    const utcMinutes = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const ksaTime = new Date(utcMinutes + (ksaOffset * 60000));
+
+    // تنسيق التاريخ والوقت
+    const year = ksaTime.getFullYear();
+    const month = String(ksaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(ksaTime.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    let hours = ksaTime.getHours();
+    const minutes = String(ksaTime.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'م' : 'ص';
+    hours = hours % 12 || 12;
+    const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+    // تنظيف رقم الجوال للعرض
+    let cleanPhone = String(phone || '').replace(/\D/g, '');
+    let displayPhone = cleanPhone;
+    if (displayPhone.startsWith('9665')) {
+        displayPhone = '05' + displayPhone.substring(4);
+    } else if (displayPhone.startsWith('966')) {
+        displayPhone = '0' + displayPhone.substring(3);
+    }
+
+    const nameStr = extraData.name || extraData.username || extraData.recipientName || 'العميل العزيز';
+
+    let result = text;
+
+    // 1. استبدال التاريخ
+    result = result.replace(/\{التاريخ\}|\{تاريخ\}|\{DATE\}|\{date\}/gi, dateStr);
+
+    // 2. استبدال الوقت
+    result = result.replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, timeStr);
+
+    // 3. استبدال الاسم
+    result = result.replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, nameStr);
+
+    // 4. استبدال الرقم
+    result = result.replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, displayPhone);
+
+    return result;
+}
+
+async function sendWhatsAppMessage(sock, jid, body, mediaArray, extraData = {}) {
+    const rawPhone = jid ? jid.split('@')[0] : '';
+    const finalBody = formatMessagePlaceholders(body, rawPhone, extraData);
+
     if (mediaArray && mediaArray.length > 0) {
         for (let i = 0; i < mediaArray.length; i++) {
             const m = mediaArray[i];
@@ -580,7 +632,7 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
             else if (m.mimetype.startsWith('video/')) content = { video: buffer };
             else if (m.mimetype.startsWith('audio/')) content = { audio: buffer, mimetype: 'audio/mp4' };
             else content = { document: buffer, mimetype: m.mimetype, fileName: m.filename || 'file' };
-            if (i === 0 && body && !m.mimetype.startsWith('audio/')) content.caption = body;
+            if (i === 0 && finalBody && !m.mimetype.startsWith('audio/')) content.caption = finalBody;
 
             try {
                 await sock.sendMessage(jid, content);
@@ -590,9 +642,9 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray) {
             }
             await sleep(2000);
         }
-        if (mediaArray[0].mimetype.startsWith('audio/') && body) await sock.sendMessage(jid, { text: body });
-    } else if (body) {
-        await sock.sendMessage(jid, { text: body });
+        if (mediaArray[0].mimetype.startsWith('audio/') && finalBody) await sock.sendMessage(jid, { text: finalBody });
+    } else if (finalBody) {
+        await sock.sendMessage(jid, { text: finalBody });
     }
 }
 
