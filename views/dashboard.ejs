@@ -56,37 +56,42 @@
     <div class="layout">
         <!-- ===== Sidebar ===== -->
         <div class="sidebar">
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar()" aria-label="إغلاق القائمة"><i class="fas fa-times"></i></button>
             <div class="sidebar-brand">
-                <div class="logo-circle"><i class="fab fa-whatsapp"></i></div>
-                <div class="sidebar-brand-text">
+                <div class="brand-logo"><i class="fab fa-whatsapp"></i></div>
+                <div class="brand-text">
                     <span class="title">واتساب تكوين</span>
                     <span class="subtitle">PRO GATEWAY V2</span>
                 </div>
             </div>
 
             <div class="sidebar-user">
-                <div class="user-header">
-                    <span class="name"><%= user.username %></span>
-                    <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
-                        <%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %>
-                    </span>
+                <div class="u-top">
+                    <div class="u-avatar"><%= (user.username || 'U').charAt(0).toUpperCase() %></div>
+                    <div>
+                        <div class="u-name"><%= user.username %></div>
+                        <div class="u-sub"><%= user.role === 'admin' ? 'مدير النظام' : 'عميل' %></div>
+                    </div>
                 </div>
+                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
+                    <%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %>
+                </span>
                 <div class="exp-date">
                     <i class="far fa-calendar-alt"></i> الانتهاء: <%= expDateFormatted %>
                 </div>
             </div>
 
             <div class="sidebar-nav">
-                <a href="/dashboard" class="active"><span class="icon"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
-                <a href="/logs"><span class="icon"><i class="fas fa-history"></i></span> سجل الرسائل</a>
-                <a href="/api-guide"><span class="icon"><i class="fas fa-code"></i></span> دليل الـ API</a>
+                <a href="/dashboard" class="active"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
+                <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
                 <% if (isImpersonating) { %>
-                    <a href="/return-to-admin" style="color: #f59e0b;"><span class="icon"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
+                    <a href="/return-to-admin" style="color: #f59e0b;"><span class="ic"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
                 <% } %>
             </div>
 
             <div class="sidebar-footer">
-                <a href="/logout"><i class="fas fa-sign-out-alt ms-2"></i> تسجيل الخروج</a>
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
             </div>
         </div>
 
@@ -621,6 +626,18 @@
             sidebar.classList.toggle('open');
             overlay.classList.toggle('active');
         }
+
+        // إغلاق القائمة تلقائياً عند النقر على أي رابط بداخلها
+        document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
+            link.addEventListener('click', () => {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
     </script>
     <script src="/js/app.js"></script>
 </body>
