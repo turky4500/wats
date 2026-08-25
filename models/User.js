@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema({
     otpCode: { type: String },
     otpExpires: { type: Date },
 
+    // تغيير رقم الجوال
+    pendingPhone: { type: String },
+    phoneOtpCode: { type: String },
+    phoneOtpExpires: { type: Date },
+
     createdAt: { type: Date, default: Date.now }
 });
 

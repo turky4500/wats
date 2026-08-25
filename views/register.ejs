@@ -40,8 +40,14 @@
             </div>
             <div class="input-group">
                 <label>رقم الواتساب (للتفعيل)</label>
-                <input type="text" name="phone" placeholder="مثال: 9665xxxxxxxx" dir="ltr" required>
+                <input type="text" name="phone" id="phoneInput" placeholder="مثال: 9665xxxxxxxx" dir="ltr" required oninput="validatePhoneFormat()">
                 <div class="input-hint">أدخل الرقم مع رمز الدولة بدون + أو 00</div>
+                <div id="phoneError" style="display:none; background:#fef2f2; color:#ef4444; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; margin-top:6px; border:1px solid #fecaca; text-align:right;">
+                    ⚠️ الرقم يجب أن يكون بالصيغة الدولية (مثال: 9665xxxxxxxx)
+                </div>
+                <div id="phoneSuccess" style="display:none; background:#ecfdf5; color:#059669; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; margin-top:6px; border:1px solid #bbf7d0; text-align:right;">
+                    ✅ صيغة الرقم صحيحة
+                </div>
             </div>
             <div class="input-group">
                 <label>كلمة المرور</label>
@@ -64,6 +70,31 @@
             else if (len < 10) { bar.style.width = '66%'; bar.style.background = '#f59e0b'; }
             else { bar.style.width = '100%'; bar.style.background = '#10b981'; }
         });
+
+        function validatePhoneFormat() {
+            const input = document.getElementById('phoneInput');
+            const errorDiv = document.getElementById('phoneError');
+            const successDiv = document.getElementById('phoneSuccess');
+            const val = input.value.replace(/\D/g, '');
+
+            if (val.length === 0) {
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+                return;
+            }
+
+            const validPrefixes = ['966', '971', '965', '973', '974', '968', '967', '20', '962', '963', '964', '961', '212', '216', '213'];
+            const startsWithValidPrefix = validPrefixes.some(p => val.startsWith(p));
+            const startsWith5 = val.startsWith('5') && val.length >= 9;
+
+            if (startsWithValidPrefix || startsWith5) {
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'block';
+            } else {
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

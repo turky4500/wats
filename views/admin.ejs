@@ -377,7 +377,7 @@
                         </td>
                         <td>
                             <div class="action-btns">
-                                <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
+                                <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.phone || '' %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
                                 <a href="/admin/logs/<%= u._id %>" class="action-btn dark">📜 سجل</a>
                                 <a href="/admin/login-as/<%= u._id %>" class="action-btn purple" onclick="return confirm('الدخول لحساب <%= u.username %>؟')">👁️ دخول</a>
                                 <form action="/admin/toggle-user/<%= u._id %>" method="POST" style="display:inline;">
@@ -409,6 +409,11 @@
             <form id="editForm" method="POST">
                 <div class="modal-body">
                     <div class="form-group">
+                        <label>📱 رقم الجوال (صيغة دولية)</label>
+                        <input type="text" name="phone" id="modalPhone" placeholder="9665xxxxxxxx" dir="ltr">
+                        <span style="font-size:11px; color:var(--gray);">الصيغة الدولية مثل 9665xxxxxxxx</span>
+                    </div>
+                    <div class="form-group">
                         <label>🔑 كلمة مرور جديدة (اتركه فارغاً لعدم التغيير)</label>
                         <input type="text" name="password" placeholder="كلمة المرور الجديدة">
                     </div>
@@ -436,9 +441,10 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        function openModal(id, username, expDate, daysLeft) {
+        function openModal(id, username, phone, expDate, daysLeft) {
             document.getElementById('modalTitle').innerText = '⚙️ تعديل العميل: ' + username;
             document.getElementById('editForm').action = '/admin/edit-user/' + id;
+            document.getElementById('modalPhone').value = phone || '';
             if (expDate) {
                 document.getElementById('modalExpiryDate').value = expDate;
             } else {

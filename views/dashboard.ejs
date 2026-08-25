@@ -147,6 +147,40 @@
                 </div>
             </div>
 
+            <!-- ===== Phone Change Card ===== -->
+            <div class="connection-card" id="phoneChangeCard">
+                <div class="connection-header">
+                    <h3><i class="fas fa-phone-alt text-primary fs-5"></i> تغيير رقم الجوال</h3>
+                    <span style="font-size:13px; color:var(--gray);">رقمك الحالي: <strong dir="ltr" style="font-family:monospace;"><%= user.phone || 'غير محدد' %></strong></span>
+                </div>
+                <div class="connection-body">
+                    <div id="phoneChangeStep1">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label style="font-weight:700; font-size:13px; color:var(--gray);">أدخل الرقم الجديد بالصيغة الدولية:</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="text" id="newPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="flex:1; padding:10px 14px; border:2px solid #e2e8f0; border-radius:10px; font-family:monospace; font-size:14px; outline:none;">
+                                <button onclick="requestPhoneChange()" class="btn btn-primary" style="white-space:nowrap;" id="sendOtpBtn">📤 إرسال رمز التحقق</button>
+                            </div>
+                            <div style="font-size:12px; color:var(--gray); margin-top:4px;">الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx</div>
+                            <div id="phoneChangeMsg" style="display:none; margin-top:8px; padding:10px; border-radius:8px; font-size:13px; font-weight:700;"></div>
+                        </div>
+                    </div>
+                    <div id="phoneChangeStep2" style="display:none;">
+                        <div style="background:#eff6ff; border:2px solid #bfdbfe; border-radius:12px; padding:16px; margin-bottom:12px;">
+                            <div style="font-weight:800; color:#1e40af; margin-bottom:6px;">📱 تم إرسال رمز التحقق إلى الرقم الجديد</div>
+                            <div style="font-size:12px; color:#3b82f6;">أدخل الرمز المكون من 4 أرقام الذي وصلك على الواتساب</div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="text" id="phoneOtpInput" placeholder="1234" maxlength="4" dir="ltr" style="flex:1; padding:10px 14px; border:2px solid #e2e8f0; border-radius:10px; font-family:monospace; font-size:18px; text-align:center; letter-spacing:4px; outline:none;">
+                                <button onclick="verifyPhoneChange()" class="btn btn-green" style="white-space:nowrap;" id="verifyOtpBtn">✅ تأكيد</button>
+                            </div>
+                        </div>
+                        <button onclick="cancelPhoneChange()" style="background:none; border:none; color:var(--gray); font-size:12px; cursor:pointer; font-family:inherit; font-weight:700;">← إلغاء والعودة</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ===== Connection Status Card ===== -->
             <div class="connection-card">
                 <div class="connection-header">
@@ -625,6 +659,91 @@
             const overlay = document.getElementById('sidebarOverlay');
             sidebar.classList.toggle('open');
             overlay.classList.toggle('active');
+        }
+
+        // ===== Phone Change Functions =====
+        let pendingNewPhone = '';
+
+        function showPhoneMsg(msg, type) {
+            const div = document.getElementById('phoneChangeMsg');
+            div.style.display = 'block';
+            div.style.background = type === 'error' ? '#fef2f2' : '#ecfdf5';
+            div.style.color = type === 'error' ? '#ef4444' : '#059669';
+            div.style.border = type === 'error' ? '1px solid #fecaca' : '1px solid #bbf7d0';
+            div.innerHTML = type === 'error' ? '❌ ' + msg : '✅ ' + msg;
+        }
+
+        function hidePhoneMsg() {
+            document.getElementById('phoneChangeMsg').style.display = 'none';
+        }
+
+        async function requestPhoneChange() {
+            const phone = document.getElementById('newPhoneInput').value.trim();
+            if (!phone) { showPhoneMsg('يرجى إدخال رقم الجوال الجديد', 'error'); return; }
+            const cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) { showPhoneMsg('رقم الجوال غير صحيح. يجب أن يكون بالصيغة الدولية', 'error'); return; }
+
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ جاري الإرسال...';
+            hidePhoneMsg();
+
+            try {
+                const res = await fetch('/api/change-phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPhone: cleanPhone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    pendingNewPhone = cleanPhone;
+                    document.getElementById('phoneChangeStep1').style.display = 'none';
+                    document.getElementById('phoneChangeStep2').style.display = 'block';
+                } else {
+                    showPhoneMsg(data.error || 'حدث خطأ', 'error');
+                }
+            } catch (e) {
+                showPhoneMsg('تعذر الاتصال بالخادم', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '📤 إرسال رمز التحقق';
+        }
+
+        async function verifyPhoneChange() {
+            const otp = document.getElementById('phoneOtpInput').value.trim();
+            if (!otp || otp.length !== 4) { showPhoneMsg('أدخل رمز التحقق المكون من 4 أرقام', 'error'); return; }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳';
+
+            try {
+                const res = await fetch('/api/verify-phone-change', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم تغيير رقم الجوال بنجاح ✅');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showPhoneMsg(data.error || 'الرمز غير صحيح', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '✅ تأكيد';
+                }
+            } catch (e) {
+                showPhoneMsg('تعذر الاتصال بالخادم', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '✅ تأكيد';
+            }
+        }
+
+        function cancelPhoneChange() {
+            document.getElementById('phoneChangeStep1').style.display = 'block';
+            document.getElementById('phoneChangeStep2').style.display = 'none';
+            document.getElementById('phoneOtpInput').value = '';
+            hidePhoneMsg();
         }
 
         // إغلاق القائمة تلقائياً عند النقر على أي رابط بداخلها

@@ -722,6 +722,18 @@ app.post('/register', async (req, res) => {
     try {
         const { username, phone, password } = req.body;
         const cleanPhone = phone.replace(/\D/g, '');
+
+        const validPrefixes = ['966', '971', '965', '973', '974', '968', '967', '20', '962', '963', '964', '961', '212', '216', '213'];
+        const startsWithValidPrefix = validPrefixes.some(p => cleanPhone.startsWith(p));
+        const startsWith5 = cleanPhone.startsWith('5') && cleanPhone.length >= 9;
+
+        if (!startsWithValidPrefix && !startsWith5) {
+            return res.render('register', { error: 'رقم الجوال يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx (مع رمز الدولة).' });
+        }
+        if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+            return res.render('register', { error: 'رقم الجوال غير صحيح. تأكد من إدخال الرقم مع رمز الدولة بالصيغة الدولية.' });
+        }
+
         let user = await User.findOne({ $or: [{ username }, { phone: cleanPhone }] });
         if (user) return res.render('register', { error: 'اسم المستخدم أو رقم الجوال مستخدم مسبقاً.' });
 
@@ -806,6 +818,9 @@ app.get('/forgot-password', (req, res) => res.render('forgot-password', { error:
 app.post('/forgot-password', async (req, res) => {
     try {
         const cleanPhone = req.body.phone.replace(/\D/g, '');
+        if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+            return res.render('forgot-password', { error: 'رقم الجوال غير صحيح. أدخل الرقم بالصيغة الدولية مثل 9665xxxxxxxx' });
+        }
         const user = await User.findOne({ phone: cleanPhone });
         if (!user) return res.render('forgot-password', { error: 'رقم الجوال غير مسجل لدينا' });
 
@@ -1011,9 +1026,19 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
 
 app.post('/admin/edit-user/:id', requireAdmin, async (req, res) => {
     try {
-        const { password, addDays, setDays, expiryDate } = req.body;
+        const { password, addDays, setDays, expiryDate, phone } = req.body;
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).send('المستخدم غير موجود');
+
+        if (phone && phone.trim() !== '') {
+            const cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
+                const existing = await User.findOne({ phone: cleanPhone, _id: { $ne: req.params.id } });
+                if (!existing) {
+                    user.phone = cleanPhone;
+                }
+            }
+        }
 
         if (password && password.trim() !== '') {
             user.password = password.trim();
@@ -1097,6 +1122,73 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
     admin.password = newPassword;
     await admin.save();
     res.redirect('/admin');
+});
+
+app.post('/admin/change-phone/:id', requireAdmin, async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone || phone.trim() === '') return res.status(400).send('يرجى إدخال رقم الجوال');
+        const cleanPhone = phone.replace(/\D/g, '');
+        if (cleanPhone.length < 9 || cleanPhone.length > 15) return res.status(400).send('رقم الجوال غير صحيح');
+        const existing = await User.findOne({ phone: cleanPhone, _id: { $ne: req.params.id } });
+        if (existing) return res.status(400).send('رقم الجوال مستخدم من قبل مستخدم آخر');
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).send('المستخدم غير موجود');
+        user.phone = cleanPhone;
+        await user.save();
+        res.redirect('/admin');
+    } catch (e) {
+        res.status(400).send('حدث خطأ: ' + e.message);
+    }
+});
+
+app.post('/api/change-phone', requireAuth, async (req, res) => {
+    try {
+        const { newPhone } = req.body;
+        if (!newPhone) return res.status(400).json({ success: false, error: 'يرجى إدخال رقم الجوال الجديد' });
+        const cleanPhone = newPhone.replace(/\D/g, '');
+        if (cleanPhone.length < 9 || cleanPhone.length > 15) return res.status(400).json({ success: false, error: 'رقم الجوال غير صحيح' });
+        const existing = await User.findOne({ phone: cleanPhone, _id: { $ne: req.session.userId } });
+        if (existing) return res.status(400).json({ success: false, error: 'رقم الجوال مستخدم من قبل مستخدم آخر' });
+
+        const user = await User.findById(req.session.userId);
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpExp = new Date();
+        otpExp.setMinutes(otpExp.getMinutes() + 10);
+
+        user.pendingPhone = cleanPhone;
+        user.phoneOtpCode = otp;
+        user.phoneOtpExpires = otpExp;
+        await user.save();
+
+        await sendSystemOTP(cleanPhone, `رمز تغيير رقم الجوال هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
+        res.json({ success: true, message: 'تم إرسال رمز التحقق إلى الرقم الجديد' });
+    } catch (e) {
+        console.error('❌ خطأ في طلب تغيير الجوال:', e.message);
+        res.status(500).json({ success: false, error: e.message || 'حدث خطأ' });
+    }
+});
+
+app.post('/api/verify-phone-change', requireAuth, async (req, res) => {
+    try {
+        const { otp } = req.body;
+        if (!otp) return res.status(400).json({ success: false, error: 'يرجى إدخال رمز التحقق' });
+
+        const user = await User.findById(req.session.userId);
+        if (!user || !user.pendingPhone) return res.status(400).json({ success: false, error: 'لا يوجد طلب تغيير رقم معلق' });
+        if (user.phoneOtpCode !== otp || new Date() > user.phoneOtpExpires) return res.status(400).json({ success: false, error: 'الرمز غير صحيح أو منتهي الصلاحية' });
+
+        user.phone = user.pendingPhone;
+        user.pendingPhone = null;
+        user.phoneOtpCode = null;
+        user.phoneOtpExpires = null;
+        await user.save();
+
+        res.json({ success: true, message: 'تم تغيير رقم الجوال بنجاح' });
+    } catch (e) {
+        console.error('❌ خطأ في تأكيد تغيير الجوال:', e.message);
+        res.status(500).json({ success: false, error: e.message || 'حدث خطأ' });
+    }
 });
 
 app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
