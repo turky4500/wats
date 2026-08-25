@@ -13,11 +13,13 @@ const session = require('express-session');
 const cors = require('cors');
 const multer = require('multer');
 const crypto = require('crypto');
+const XLSX = require('xlsx');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const Settings = require('./models/Settings');
 const Campaign = require('./models/Campaign');
 const CampaignRecipient = require('./models/CampaignRecipient');
+const Group = require('./models/Group');
 const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode, waitForReadySession, isSessionReady } = require('./whatsappManager');
 
 const app = express();
@@ -973,6 +975,130 @@ app.get('/profile', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
     res.render('profile', { user });
+});
+
+app.get('/groups', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    if (user.role === 'admin') return res.redirect('/admin');
+    const groups = await Group.find({ userId: user._id }).sort({ createdAt: -1 }).lean();
+    res.render('groups', { user, groups });
+});
+
+app.post('/api/groups', requireAuth, async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name || name.trim() === '') return res.status(400).json({ success: false, error: 'يرجى إدخال اسم المجموعة' });
+        const group = await Group.create({ userId: req.session.userId, name: name.trim(), contacts: [] });
+        res.json({ success: true, group });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/groups', requireAuth, async (req, res) => {
+    try {
+        const groups = await Group.find({ userId: req.session.userId }).sort({ createdAt: -1 }).lean();
+        res.json({ success: true, groups });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/groups/list', requireAuth, async (req, res) => {
+    try {
+        const groups = await Group.find({ userId: req.session.userId }).sort({ createdAt: -1 }).lean();
+        const result = groups.map(g => ({ _id: g._id, name: g.name, contactsCount: g.contacts ? g.contacts.length : 0, createdAt: g.createdAt }));
+        res.json({ success: true, groups: result });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.delete('/api/groups/:id', requireAuth, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.id, userId: req.session.userId });
+        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
+        await Group.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.get('/api/groups/:id', requireAuth, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.id, userId: req.session.userId }).lean();
+        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
+        res.json({ success: true, group });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/groups/:id/contacts', requireAuth, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.id, userId: req.session.userId });
+        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
+        let contacts = req.body.contacts;
+        if (typeof contacts === 'string') {
+            try { contacts = JSON.parse(contacts); } catch (_) { contacts = []; }
+        }
+        if (!Array.isArray(contacts) || contacts.length === 0) return res.status(400).json({ success: false, error: 'لا توجد جهات اتصال' });
+
+        let added = 0;
+        for (const c of contacts) {
+            const phone = String(c.phone || '').replace(/\D/g, '');
+            if (phone.length < 9 || phone.length > 15) continue;
+            const exists = group.contacts.some(ec => ec.phone === phone);
+            if (!exists) {
+                group.contacts.push({ name: c.name || '', phone });
+                added++;
+            }
+        }
+        await group.save();
+        res.json({ success: true, added, total: group.contacts.length });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.delete('/api/groups/:id/contacts', requireAuth, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.id, userId: req.session.userId });
+        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
+        const { contactIds } = req.body;
+        if (!Array.isArray(contactIds)) return res.status(400).json({ success: false, error: 'لم يتم تحديد جهات اتصال' });
+        group.contacts = group.contacts.filter(c => !contactIds.includes(c._id.toString()));
+        await group.save();
+        res.json({ success: true, total: group.contacts.length });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        if (rows.length === 0) return res.status(400).json({ success: false, error: 'الملف فارغ' });
+
+        const contacts = [];
+        for (const row of rows) {
+            const phoneKey = Object.keys(row).find(k => /phone|جوال|رقم|mobile|number/i.test(k));
+            const nameKey = Object.keys(row).find(k => /name|اسم|اسم العميل|customer/i.test(k));
+            const phone = String(row[phoneKey] || '').replace(/\D/g, '');
+            const name = nameKey ? String(row[nameKey] || '') : '';
+            if (phone.length >= 9 && phone.length <= 15) {
+                contacts.push({ name, phone });
+            }
+        }
+        if (contacts.length === 0) return res.status(400).json({ success: false, error: 'لم يتم العثور على أرقام صحيحة في الملف' });
+        res.json({ success: true, contacts, total: contacts.length });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'خطأ في قراءة الملف: ' + e.message });
+    }
 });
 
 app.get('/campaigns/:id', requireAuth, async (req, res) => {

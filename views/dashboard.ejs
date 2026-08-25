@@ -83,6 +83,7 @@
 
             <div class="sidebar-nav">
                 <a href="/dashboard" class="active"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
                 <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
                 <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
                 <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
@@ -208,7 +209,8 @@
                         <div class="form-step active" id="step-1">
                             <div class="recipients-tabs">
                                 <button class="tab-btn active" id="tab-manual" onclick="switchRecTab('manual')"><i class="fas fa-keyboard ms-1"></i> إدخال يدوي / لصق</button>
-                                <button class="tab-btn" id="tab-file" onclick="switchRecTab('file')"><i class="fas fa-file-excel ms-1"></i> رفع ملف Excel/CSV/TXT</button>
+                                <button class="tab-btn" id="tab-file" onclick="switchRecTab('file')"><i class="fas fa-file-excel ms-1"></i> رفع ملف</button>
+                                <button class="tab-btn" id="tab-group" onclick="switchRecTab('group')"><i class="fas fa-users ms-1"></i> من مجموعتي</button>
                             </div>
 
                             <div id="rec-manual-box">
@@ -223,6 +225,13 @@
                                     <p>يدعم ملفات XLSX, XLS, CSV, TXT (يتم استخراج الأرقام آلياً)</p>
                                 </div>
                                 <input type="file" id="excelFile" accept=".xlsx, .xls, .csv, .txt" class="d-none" style="display:none;" onchange="handleFileSelect(event)">
+                            </div>
+
+                            <div id="rec-group-box" style="display:none;">
+                                <div style="margin-bottom:12px;">
+                                    <div class="form-group-label"><i class="fas fa-users text-primary"></i> اختر مجموعة جهات الاتصال:</div>
+                                    <div id="groupSelectList" style="max-height:250px;overflow-y:auto;"></div>
+                                </div>
                             </div>
 
                             <div class="chips-container" id="chipsContainer">
@@ -339,6 +348,7 @@
         const socket = io({ query: { userId: "<%= user._id %>" } });
         let isConnected = false;
         let recipientsList = [];
+        let allGroups = [];
 
         // Live Clock
         setInterval(() => {
@@ -408,8 +418,62 @@
         function switchRecTab(type) {
             document.getElementById('tab-manual').classList.toggle('active', type === 'manual');
             document.getElementById('tab-file').classList.toggle('active', type === 'file');
+            document.getElementById('tab-group').classList.toggle('active', type === 'group');
             document.getElementById('rec-manual-box').style.display = type === 'manual' ? 'block' : 'none';
             document.getElementById('rec-file-box').style.display = type === 'file' ? 'block' : 'none';
+            document.getElementById('rec-group-box').style.display = type === 'group' ? 'block' : 'none';
+            if (type === 'group') loadGroups();
+        }
+
+        // Load Groups
+        async function loadGroups() {
+            try {
+                const res = await fetch('/api/groups/list');
+                const data = await res.json();
+                if (!data.success) return;
+                allGroups = data.groups;
+                renderGroupList();
+            } catch (e) { console.error('Failed to load groups:', e); }
+        }
+
+        function renderGroupList() {
+            const container = document.getElementById('groupSelectList');
+            if (allGroups.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-300);"><i class="fas fa-users" style="font-size:32px;margin-bottom:10px;display:block;"></i>لا توجد مجموعات بعد<br><a href="/groups" style="color:var(--primary);font-weight:700;">أنشئ مجموعة الآن ←</a></div>';
+                return;
+            }
+            container.innerHTML = allGroups.map(g => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:2px solid var(--ink-100);border-radius:var(--r-sm);margin-bottom:8px;cursor:pointer;transition:all 0.2s;" 
+                     onmouseover="this.style.borderColor='var(--primary)'" 
+                     onmouseout="this.style.borderColor='var(--ink-100)'"
+                     onclick="selectGroup('${g._id}', '${g.name.replace(/'/g, "\\'")}', ${g.contactsCount})">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;"><i class="fas fa-users"></i></div>
+                        <div>
+                            <div style="font-weight:800;font-size:14px;">${g.name}</div>
+                            <div style="font-size:11px;color:var(--ink-400);">${g.contactsCount} جهة اتصال</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" id="grp-${g._id}" style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;" onclick="event.stopPropagation();">
+                        <label for="grp-${g._id}" style="font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;">تحديد</label>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectGroup(groupId, groupName, count) {
+            document.querySelectorAll('#groupSelectList input[type=checkbox]').forEach(cb => cb.checked = false);
+            const cb = document.getElementById('grp-' + groupId);
+            if (cb) cb.checked = true;
+            try {
+                const res = await fetch('/api/groups/' + groupId);
+                const data = await res.json();
+                if (!data.success) { showToast(data.error, 'error'); return; }
+                recipientsList = data.group.contacts.map(c => c.phone);
+                renderChips();
+                showToast(`تم تحميل ${recipientsList.length} رقم من مجموعة "${groupName}"`);
+            } catch (e) { showToast('خطأ في تحميل المجموعة', 'error'); }
         }
 
         // Parse Recipients
@@ -578,6 +642,20 @@
                 showToast('يرجى كتابة نص الرسالة أو إضافة مرفق أولاً', 'error');
                 return;
             }
+
+            const msgPreview = msg.length > 100 ? msg.substring(0, 100) + '...' : msg;
+            const mediaCount = mediaFiles.length;
+            let detailText = '📋 *ملخص الحملة:*\n\n';
+            detailText += '👥 عدد الأرقام: ' + recipientsList.length + ' رقم\n';
+            if (mediaCount > 0) detailText += '📎 المرفقات: ' + mediaCount + ' ملف(ات)\n';
+            detailText += '\n📝 *معاينة الرسالة:*\n' + (msgPreview || '(بدون نص - مرفق فقط)') + '\n\n';
+            detailText += '⚠️ هل أنت متأكد من إرسال هذه الحملة لـ ' + recipientsList.length + ' رقم؟';
+
+            const firstConfirm = confirm(detailText);
+            if (!firstConfirm) return;
+
+            const secondConfirm = confirm('🔒 تأكيد نهائي:\n\nسيتم إرسال رسالتك فوراً إلى ' + recipientsList.length + ' رقم.\nهل تريد المتابعة؟');
+            if (!secondConfirm) return;
 
             const btn = document.getElementById('send-btn');
             btn.disabled = true;

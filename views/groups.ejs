@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مجموعاتي | واتساب تكوين</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 24px; }
+        .group-card {
+            background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow);
+            border: 1px solid var(--ink-100); overflow: hidden; transition: all 0.3s; cursor: pointer;
+        }
+        .group-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); border-color: var(--primary); }
+        .group-card-top {
+            padding: 20px; display: flex; align-items: center; gap: 14px;
+            border-bottom: 1px solid var(--ink-50);
+        }
+        .group-icon {
+            width: 50px; height: 50px; border-radius: var(--r-sm); display: flex;
+            align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+            background: var(--primary-soft); color: var(--primary);
+        }
+        .group-info { flex: 1; }
+        .group-info h3 { font-size: 16px; font-weight: 800; margin-bottom: 2px; }
+        .group-info p { font-size: 12px; color: var(--ink-400); }
+        .group-card-bottom {
+            padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--ink-50);
+        }
+        .group-count { font-size: 13px; font-weight: 700; color: var(--ink-500); }
+        .group-count strong { color: var(--primary); font-size: 18px; }
+        .group-actions { display: flex; gap: 6px; }
+
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(11,18,32,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center; z-index:1000; }
+        .modal-overlay.show { display:flex; }
+        .modal-box { background:white; border-radius:var(--r-lg); width:100%; max-width:560px; max-height:85vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn 0.25s ease; }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .modal-header { padding:20px 24px; border-bottom:1px solid var(--ink-50); display:flex; justify-content:space-between; align-items:center; }
+        .modal-header h3 { font-size:17px; font-weight:900; }
+        .modal-body { padding:24px; }
+        .modal-footer { padding:14px 24px; border-top:1px solid var(--ink-50); display:flex; gap:10px; justify-content:flex-end; }
+
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-weight:700; font-size:13px; color:var(--ink-400); margin-bottom:6px; }
+        .form-group input, .form-group textarea {
+            width:100%; padding:10px 14px; border:2px solid var(--ink-100); border-radius:var(--r-sm);
+            font-family:inherit; font-size:14px; outline:none; transition:border 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color:var(--primary); }
+
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 20px; border:none; border-radius:var(--r-sm); font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; transition:all 0.2s; color:white; }
+        .btn:hover { transform:translateY(-1px); }
+        .btn-primary { background:var(--primary); }
+        .btn-green { background:var(--whatsapp); }
+        .btn-red { background:var(--danger); }
+        .btn-dark { background:var(--ink-700); }
+        .btn-full { width:100%; }
+
+        .contacts-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:12px; }
+        .contacts-table th { background:var(--ink-50); padding:10px 14px; text-align:right; font-weight:700; color:var(--ink-500); font-size:12px; }
+        .contacts-table td { padding:10px 14px; border-bottom:1px solid var(--ink-50); }
+        .contacts-table tr:hover { background:var(--ink-50); }
+
+        .drop-zone {
+            border:2px dashed var(--ink-200); border-radius:var(--r-md); padding:30px; text-align:center;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .drop-zone:hover { border-color:var(--primary); background:var(--primary-soft); }
+        .drop-zone h4 { font-size:15px; font-weight:800; margin-bottom:6px; }
+        .drop-zone p { font-size:12px; color:var(--ink-400); }
+
+        .empty-state { text-align:center; padding:60px 20px; color:var(--ink-300); }
+        .empty-state i { font-size:48px; margin-bottom:16px; display:block; }
+        .empty-state h3 { font-size:18px; font-weight:800; color:var(--ink-500); margin-bottom:8px; }
+        .empty-state p { font-size:14px; }
+
+        .msg-box { display:none; padding:10px 14px; border-radius:var(--r-sm); font-size:13px; font-weight:700; margin-top:10px; }
+        .msg-box.error { background:var(--danger-soft); color:var(--danger); border:1px solid #fecaca; }
+        .msg-box.success { background:var(--primary-soft); color:var(--primary-dark); border:1px solid #bbf7d0; }
+
+        @media (max-width:768px) { .groups-grid { grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="mobile-topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="logo-circle-sm"><i class="fab fa-whatsapp"></i></div>
+            <span style="font-size:16px;font-weight:900;color:var(--dark);">واتساب تكوين</span>
+        </div>
+        <button class="menu-toggle-btn" onclick="toggleMobileSidebar()"><i class="fas fa-bars"></i></button>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <%
+        let daysRemaining = 0; let isExpired = true; let expDateFormatted = 'غير محدد';
+        if (user.subscriptionEndsAt) {
+            const d = new Date(user.subscriptionEndsAt); expDateFormatted = d.toISOString().split('T')[0];
+            const diffTime = d - new Date(); daysRemaining = Math.ceil(diffTime / (1000*60*60*24));
+            if (daysRemaining > 0) isExpired = false; else daysRemaining = 0;
+        }
+        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
+    %>
+
+    <div class="layout">
+        <div class="sidebar">
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar()"><i class="fas fa-times"></i></button>
+            <div class="sidebar-brand">
+                <div class="brand-logo"><i class="fab fa-whatsapp"></i></div>
+                <div class="brand-text"><span class="title">واتساب تكوين</span><span class="subtitle">PRO GATEWAY V2</span></div>
+            </div>
+            <div class="sidebar-user">
+                <div class="u-top">
+                    <div class="u-avatar"><%= (user.username || 'U').charAt(0).toUpperCase() %></div>
+                    <div><div class="u-name"><%= user.username %></div><div class="u-sub">عميل</div></div>
+                </div>
+                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>"><%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %></span>
+                <div class="exp-date"><i class="far fa-calendar-alt"></i> الانتهاء: <%= expDateFormatted %></div>
+            </div>
+            <div class="sidebar-nav">
+                <a href="/dashboard"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/groups" class="active"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
+                <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
+                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
+                <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
+            </div>
+            <div class="sidebar-footer"><a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></div>
+        </div>
+
+        <div class="main">
+            <div class="page-header">
+                <div class="page-header-text">
+                    <h1>مجموعاتي 📋</h1>
+                    <p>أنشئ مجموعات بأرقام جهات الاتصال واستوردها من ملفات Excel</p>
+                </div>
+                <button class="btn btn-primary" onclick="openCreateModal()"><i class="fas fa-plus"></i> مجموعة جديدة</button>
+            </div>
+
+            <% if (groups.length === 0) { %>
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h3>لا توجد مجموعات بعد</h3>
+                <p>أنشئ مجموعة جديدة لتخزين أرقام جهات اتصالك</p>
+            </div>
+            <% } else { %>
+            <div class="groups-grid">
+                <% groups.forEach(g => { %>
+                <div class="group-card" onclick="viewGroup('<%= g._id %>')">
+                    <div class="group-card-top">
+                        <div class="group-icon"><i class="fas fa-users"></i></div>
+                        <div class="group-info">
+                            <h3><%= g.name %></h3>
+                            <p><%= new Date(g.createdAt).toLocaleDateString('ar-SA') %></p>
+                        </div>
+                    </div>
+                    <div class="group-card-bottom">
+                        <div class="group-count"><strong><%= g.contacts ? g.contacts.length : 0 %></strong> جهة اتصال</div>
+                        <div class="group-actions">
+                            <button class="btn btn-red" style="padding:6px 10px;font-size:11px;" onclick="event.stopPropagation();deleteGroup('<%= g._id %>', '<%= g.name %>')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="createModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>إنشاء مجموعة جديدة</h3>
+                <button onclick="document.getElementById('createModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>اسم المجموعة</label>
+                    <input type="text" id="groupNameInput" placeholder="مثال: العملاء، الأصدقاء">
+                </div>
+                <div id="createMsg" class="msg-box"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-dark" onclick="document.getElementById('createModal').classList.remove('show')">إلغاء</button>
+                <button class="btn btn-primary" onclick="createGroup()" id="createBtn"><i class="fas fa-plus"></i> إنشاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Group Modal -->
+    <div id="viewModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal-box" style="max-width:700px;">
+            <div class="modal-header">
+                <h3 id="viewGroupName">المجموعة</h3>
+                <button onclick="document.getElementById('viewModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div style="display:flex;gap:6px;margin-bottom:16px;">
+                    <button class="btn btn-primary" id="tabContacts" onclick="switchViewTab('contacts')" style="flex:1;"><i class="fas fa-list"></i> جهات الاتصال</button>
+                    <button class="btn btn-dark" id="tabImport" onclick="switchViewTab('import')" style="flex:1;"><i class="fas fa-file-excel"></i> استيراد من ملف</button>
+                    <button class="btn btn-dark" id="tabAdd" onclick="switchViewTab('add')" style="flex:1;"><i class="fas fa-plus"></i> إضافة يدوية</button>
+                </div>
+
+                <!-- Contacts List -->
+                <div id="viewTabContacts">
+                    <div id="contactsList" style="max-height:300px;overflow-y:auto;"></div>
+                </div>
+
+                <!-- Import Excel -->
+                <div id="viewTabImport" style="display:none;">
+                    <div class="drop-zone" onclick="document.getElementById('excelImportFile').click()">
+                        <div style="font-size:30px;margin-bottom:8px;">📁</div>
+                        <h4>اختر ملف Excel أو CSV</h4>
+                        <p>الملف يجب أن يحتوي على عمود "phone" أو "جوال" أو "رقم"</p>
+                    </div>
+                    <input type="file" id="excelImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
+                    <div id="importPreview" style="display:none;margin-top:12px;"></div>
+                    <div id="importMsg" class="msg-box"></div>
+                </div>
+
+                <!-- Add Manual -->
+                <div id="viewTabAdd" style="display:none;">
+                    <div class="form-group">
+                        <label>الرقم (بالصيغة الدولية مثل 9665xxxxxxxx)</label>
+                        <input type="text" id="addPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
+                    </div>
+                    <div class="form-group">
+                        <label>الاسم (اختياري)</label>
+                        <input type="text" id="addNameInput" placeholder="اسم جهة الاتصال">
+                    </div>
+                    <button class="btn btn-green btn-full" onclick="addContactManual()"><i class="fas fa-plus"></i> إضافة</button>
+                    <div id="addMsg" class="msg-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let currentGroupId = null;
+        let importedContacts = [];
+
+        function showToast(message, type) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast ' + (type || 'success');
+            t.innerHTML = (type === 'error' ? '❌ ' : '✅ ') + message;
+            c.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+        }
+
+        function showMsg(id, msg, type) {
+            const d = document.getElementById(id);
+            d.style.display = 'block';
+            d.className = 'msg-box ' + type;
+            d.textContent = msg;
+        }
+        function hideMsg(id) { document.getElementById(id).style.display = 'none'; }
+
+        function openCreateModal() {
+            document.getElementById('groupNameInput').value = '';
+            hideMsg('createMsg');
+            document.getElementById('createModal').classList.add('show');
+            document.getElementById('groupNameInput').focus();
+        }
+
+        async function createGroup() {
+            const name = document.getElementById('groupNameInput').value.trim();
+            if (!name) { showMsg('createMsg', 'يرجى إدخال اسم المجموعة', 'error'); return; }
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/groups', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم إنشاء المجموعة بنجاح');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showMsg('createMsg', data.error || 'حدث خطأ', 'error');
+                }
+            } catch (e) { showMsg('createMsg', 'خطأ في الاتصال', 'error'); }
+            btn.disabled = false;
+        }
+
+        async function deleteGroup(id, name) {
+            if (!confirm('هل أنت متأكد من حذف المجموعة "' + name + '"؟')) return;
+            try {
+                const res = await fetch('/api/groups/' + id, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) { showToast('تم الحذف'); setTimeout(() => location.reload(), 500); }
+                else showToast(data.error || 'خطأ', 'error');
+            } catch (e) { showToast('خطأ', 'error'); }
+        }
+
+        async function viewGroup(id) {
+            currentGroupId = id;
+            hideMsg('importMsg');
+            hideMsg('addMsg');
+            importedContacts = [];
+            document.getElementById('importPreview').style.display = 'none';
+            switchViewTab('contacts');
+            try {
+                const res = await fetch('/api/groups/' + id);
+                const data = await res.json();
+                if (!data.success) { showToast(data.error, 'error'); return; }
+                const g = data.group;
+                document.getElementById('viewGroupName').textContent = g.name + ' (' + g.contacts.length + ' جهة اتصال)';
+                renderContacts(g.contacts);
+                document.getElementById('viewModal').classList.add('show');
+            } catch (e) { showToast('خطأ', 'error'); }
+        }
+
+        function renderContacts(contacts) {
+            const container = document.getElementById('contactsList');
+            if (!contacts || contacts.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-300);">لا توجد جهات اتصال</div>';
+                return;
+            }
+            let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th></th></tr></thead><tbody>';
+            contacts.forEach((c, i) => {
+                html += '<tr><td>' + (i+1) + '</td><td>' + (c.name || '—') + '</td><td dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</td><td><button class="btn btn-red" style="padding:4px 8px;font-size:10px;" onclick="removeContact(\'' + c._id + '\')"><i class="fas fa-times"></i></button></td></tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function removeContact(contactId) {
+            try {
+                const res = await fetch('/api/groups/' + currentGroupId + '/contacts', {
+                    method: 'DELETE', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ contactIds: [contactId] })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم الحذف');
+                    const gRes = await fetch('/api/groups/' + currentGroupId);
+                    const gData = await gRes.json();
+                    if (gData.success) {
+                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
+                        renderContacts(gData.group.contacts);
+                    }
+                }
+            } catch (e) { showToast('خطأ', 'error'); }
+        }
+
+        function switchViewTab(tab) {
+            document.getElementById('viewTabContacts').style.display = tab === 'contacts' ? 'block' : 'none';
+            document.getElementById('viewTabImport').style.display = tab === 'import' ? 'block' : 'none';
+            document.getElementById('viewTabAdd').style.display = tab === 'add' ? 'block' : 'none';
+            ['tabContacts','tabImport','tabAdd'].forEach(id => {
+                document.getElementById(id).className = 'btn btn-dark';
+                document.getElementById(id).style.flex = '1';
+            });
+            if (tab === 'contacts') document.getElementById('tabContacts').className = 'btn btn-primary';
+            else if (tab === 'import') document.getElementById('tabImport').className = 'btn btn-primary';
+            else document.getElementById('tabAdd').className = 'btn btn-primary';
+        }
+
+        async function handleExcelImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            showMsg('importMsg', 'جاري قراءة الملف...', 'success');
+            try {
+                const res = await fetch('/api/groups/import-excel', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    importedContacts = data.contacts;
+                    let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
+                    html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الملف</div>';
+                    html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
+                    data.contacts.slice(0, 20).forEach((c, i) => {
+                        html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
+                    });
+                    if (data.total > 20) html += '<div style="padding:4px 0;color:var(--ink-400);">...و ' + (data.total - 20) + ' جهة اتصال أخرى</div>';
+                    html += '</div>';
+                    html += '<button class="btn btn-green btn-full" style="margin-top:12px;" onclick="saveImportedContacts()"><i class="fas fa-save"></i> حفظ في المجموعة (' + data.total + ' جهة اتصال)</button>';
+                    html += '</div>';
+                    document.getElementById('importPreview').innerHTML = html;
+                    document.getElementById('importPreview').style.display = 'block';
+                    hideMsg('importMsg');
+                } else {
+                    showMsg('importMsg', data.error || 'خطأ', 'error');
+                }
+            } catch (e) { showMsg('importMsg', 'خطأ في رفع الملف', 'error'); }
+            event.target.value = '';
+        }
+
+        async function saveImportedContacts() {
+            if (!importedContacts.length || !currentGroupId) return;
+            try {
+                const res = await fetch('/api/groups/' + currentGroupId + '/contacts', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ contacts: importedContacts })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تمت إضافة ' + data.added + ' جهة اتصال');
+                    importedContacts = [];
+                    document.getElementById('importPreview').style.display = 'none';
+                    const gRes = await fetch('/api/groups/' + currentGroupId);
+                    const gData = await gRes.json();
+                    if (gData.success) {
+                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
+                        renderContacts(gData.group.contacts);
+                        switchViewTab('contacts');
+                    }
+                } else { showToast(data.error, 'error'); }
+            } catch (e) { showToast('خطأ', 'error'); }
+        }
+
+        async function addContactManual() {
+            const phone = document.getElementById('addPhoneInput').value.trim();
+            const name = document.getElementById('addNameInput').value.trim();
+            if (!phone) { showMsg('addMsg', 'أدخل رقم الجوال', 'error'); return; }
+            const cleanPhone = phone.replace(/\D/g, '');
+            const validPrefixes = ['966','971','965','973','974','968','967','20','962','963','964','961','212','216','213'];
+            if (!validPrefixes.some(p => cleanPhone.startsWith(p))) {
+                showMsg('addMsg', 'الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx', 'error'); return;
+            }
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+                showMsg('addMsg', 'رقم غير صحيح', 'error'); return;
+            }
+            try {
+                const res = await fetch('/api/groups/' + currentGroupId + '/contacts', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ contacts: [{ name, phone: cleanPhone }] })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showMsg('addMsg', 'تمت الإضافة بنجاح', 'success');
+                    document.getElementById('addPhoneInput').value = '';
+                    document.getElementById('addNameInput').value = '';
+                    const gRes = await fetch('/api/groups/' + currentGroupId);
+                    const gData = await gRes.json();
+                    if (gData.success) {
+                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
+                        renderContacts(gData.group.contacts);
+                    }
+                } else { showMsg('addMsg', data.error, 'error'); }
+            } catch (e) { showMsg('addMsg', 'خطأ', 'error'); }
+        }
+
+        function toggleMobileSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
