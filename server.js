@@ -969,6 +969,12 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     });
 });
 
+app.get('/profile', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    if (user.role === 'admin') return res.redirect('/admin');
+    res.render('profile', { user });
+});
+
 app.get('/campaigns/:id', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     if (user.role === 'admin') return res.redirect('/admin');
@@ -1147,7 +1153,16 @@ app.post('/api/change-phone', requireAuth, async (req, res) => {
         const { newPhone } = req.body;
         if (!newPhone) return res.status(400).json({ success: false, error: 'يرجى إدخال رقم الجوال الجديد' });
         const cleanPhone = newPhone.replace(/\D/g, '');
-        if (cleanPhone.length < 9 || cleanPhone.length > 15) return res.status(400).json({ success: false, error: 'رقم الجوال غير صحيح' });
+
+        const validPrefixes = ['966', '971', '965', '973', '974', '968', '967', '20', '962', '963', '964', '961', '212', '216', '213'];
+        const startsWithValidPrefix = validPrefixes.some(p => cleanPhone.startsWith(p));
+        if (!startsWithValidPrefix) {
+            return res.status(400).json({ success: false, error: 'الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx (مع رمز الدولة)' });
+        }
+        if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+            return res.status(400).json({ success: false, error: 'رقم الجوال غير صحيح. تأكد من الصيغة الدولية' });
+        }
+
         const existing = await User.findOne({ phone: cleanPhone, _id: { $ne: req.session.userId } });
         if (existing) return res.status(400).json({ success: false, error: 'رقم الجوال مستخدم من قبل مستخدم آخر' });
 

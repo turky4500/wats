@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحديث البيانات | واتساب تكوين</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 900px) { .profile-grid { grid-template-columns: 1fr; } }
+
+        .profile-card {
+            background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow);
+            border: 1px solid var(--ink-100); overflow: hidden; transition: all 0.3s;
+        }
+        .profile-card:hover { box-shadow: var(--shadow-lg); }
+        .profile-card-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--ink-50);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .profile-card-header .icon-box {
+            width: 44px; height: 44px; border-radius: var(--r-sm);
+            display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+        }
+        .profile-card-header h3 { font-size: 16px; font-weight: 800; }
+        .profile-card-header p { font-size: 12px; color: var(--ink-400); margin-top: 2px; }
+        .profile-card-body { padding: 24px; }
+
+        .info-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid var(--ink-50);
+        }
+        .info-row:last-child { border: none; }
+        .info-label { font-size: 13px; color: var(--ink-400); font-weight: 600; }
+        .info-value { font-size: 14px; font-weight: 800; color: var(--ink-700); direction: ltr; font-family: var(--font-num); }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: 700; font-size: 13px; color: var(--ink-400); margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 11px 14px; border: 2px solid var(--ink-100);
+            border-radius: var(--r-sm); font-family: inherit; font-size: 14px;
+            outline: none; transition: border 0.2s;
+        }
+        .form-group input:focus { border-color: var(--primary); }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 22px; border: none; border-radius: var(--r-sm); font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: all 0.2s; color: white; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--primary); }
+        .btn-green { background: var(--whatsapp); }
+        .btn-full { width: 100%; }
+
+        .msg-box {
+            display: none; padding: 12px 16px; border-radius: var(--r-sm);
+            font-size: 13px; font-weight: 700; margin-top: 12px;
+        }
+        .msg-box.error { background: var(--danger-soft); color: var(--danger); border: 1px solid #fecaca; }
+        .msg-box.success { background: var(--primary-soft); color: var(--primary-dark); border: 1px solid #bbf7d0; }
+
+        .otp-box {
+            background: var(--info-soft); border: 2px solid #bfdbfe;
+            border-radius: var(--r-md); padding: 20px; margin-bottom: 16px;
+        }
+        .otp-box h4 { color: #1e40af; font-size: 15px; margin-bottom: 6px; }
+        .otp-box p { color: #3b82f6; font-size: 12px; }
+
+        .otp-input {
+            font-size: 20px !important; text-align: center !important; letter-spacing: 6px !important;
+            font-family: var(--font-num) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <!-- Mobile Top Navigation Bar -->
+    <div class="mobile-topbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="logo-circle-sm"><i class="fab fa-whatsapp"></i></div>
+            <span style="font-size: 16px; font-weight: 900; color: var(--dark);">واتساب تكوين</span>
+        </div>
+        <button class="menu-toggle-btn" onclick="toggleMobileSidebar()" aria-label="القائمة">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <%
+        let daysRemaining = 0;
+        let isExpired = true;
+        let expDateFormatted = 'غير محدد';
+        if (user.subscriptionEndsAt) {
+            const d = new Date(user.subscriptionEndsAt);
+            expDateFormatted = d.toISOString().split('T')[0];
+            const diffTime = d - new Date();
+            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysRemaining > 0) isExpired = false;
+            else daysRemaining = 0;
+        }
+        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
+    %>
+
+    <div class="layout">
+        <!-- ===== Sidebar ===== -->
+        <div class="sidebar">
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar()" aria-label="إغلاق القائمة"><i class="fas fa-times"></i></button>
+            <div class="sidebar-brand">
+                <div class="brand-logo"><i class="fab fa-whatsapp"></i></div>
+                <div class="brand-text">
+                    <span class="title">واتساب تكوين</span>
+                    <span class="subtitle">PRO GATEWAY V2</span>
+                </div>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="u-top">
+                    <div class="u-avatar"><%= (user.username || 'U').charAt(0).toUpperCase() %></div>
+                    <div>
+                        <div class="u-name"><%= user.username %></div>
+                        <div class="u-sub"><%= user.role === 'admin' ? 'مدير النظام' : 'عميل' %></div>
+                    </div>
+                </div>
+                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
+                    <%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %>
+                </span>
+                <div class="exp-date">
+                    <i class="far fa-calendar-alt"></i> الانتهاء: <%= expDateFormatted %>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/dashboard"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
+                <a href="/profile" class="active"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
+                <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+            </div>
+        </div>
+
+        <!-- ===== Main Content ===== -->
+        <div class="main">
+            <div class="page-header">
+                <div class="page-header-text">
+                    <h1>تحديث البيانات 📝</h1>
+                    <p>إدارة معلومات حسابك و更改 رقم جوالك</p>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+                <!-- معلومات الحساب -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <div class="icon-box" style="background: var(--primary-soft); color: var(--primary);">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div>
+                            <h3>معلومات الحساب</h3>
+                            <p>بيانات حسابك الحالية</p>
+                        </div>
+                    </div>
+                    <div class="profile-card-body">
+                        <div class="info-row">
+                            <span class="info-label">اسم المستخدم</span>
+                            <span class="info-value"><%= user.username %></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">رقم الجوال الحالي</span>
+                            <span class="info-value" style="color: var(--primary);"><%= user.phone || 'غير محدد' %></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">نوع الحساب</span>
+                            <span class="info-value" style="direction:rtl; font-family: var(--font);"><%= user.role === 'admin' ? 'مدير النظام' : 'عميل' %></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">الحالة</span>
+                            <span class="info-value" style="direction:rtl; font-family: var(--font);">
+                                <span style="color: <%= user.isActive ? 'var(--whatsapp)' : 'var(--danger)' %>;">
+                                    <%= user.isActive ? '✅ مفعّل' : '⛔ معطّل' %>
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">تاريخ الإنشاء</span>
+                            <span class="info-value" style="direction:rtl; font-family: var(--font);"><%= user.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-SA') : 'غير معروف' %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تغيير رقم الجوال -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <div class="icon-box" style="background: var(--info-soft); color: var(--info);">
+                            <i class="fas fa-phone-alt"></i>
+                        </div>
+                        <div>
+                            <h3>تغيير رقم الجوال</h3>
+                            <p>سيصلك رمز تحقق على الرقم الجديد</p>
+                        </div>
+                    </div>
+                    <div class="profile-card-body">
+                        <!-- Step 1: إدخال الرقم -->
+                        <div id="phoneStep1">
+                            <div class="form-group">
+                                <label>الرقم الجديد بالصيغة الدولية</label>
+                                <input type="text" id="newPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family: var(--font-num); font-size: 15px;" oninput="validatePhoneInput()">
+                                <div style="font-size:11px; color:var(--ink-400); margin-top:4px;">مثال: 9665xxxxxxxx للسعودية، 9715xxxxxxxx للإمارات</div>
+                                <div id="phoneFormatHint" style="display:none; margin-top:6px; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700;"></div>
+                            </div>
+                            <button onclick="requestPhoneChange()" class="btn btn-primary btn-full" id="sendOtpBtn">
+                                <i class="fas fa-paper-plane"></i> إرسال رمز التحقق
+                            </button>
+                            <div id="phoneMsg" class="msg-box"></div>
+                        </div>
+
+                        <!-- Step 2: التحقق -->
+                        <div id="phoneStep2" style="display:none;">
+                            <div class="otp-box">
+                                <h4><i class="fas fa-shield-alt"></i> تم إرسال الرمز</h4>
+                                <p>أدخل الرمز المكون من 4 أرقام الذي وصلك على الواتساب</p>
+                            </div>
+                            <div class="form-group">
+                                <label>رمز التحقق</label>
+                                <input type="text" id="phoneOtpInput" placeholder="1234" maxlength="4" dir="ltr" class="otp-input">
+                            </div>
+                            <button onclick="verifyPhoneChange()" class="btn btn-green btn-full" id="verifyOtpBtn">
+                                <i class="fas fa-check-circle"></i> تأكيد وتغيير الرقم
+                            </button>
+                            <div id="otpMsg" class="msg-box" style="margin-top:12px;"></div>
+                            <button onclick="cancelPhoneChange()" style="background:none; border:none; color:var(--ink-400); font-size:12px; cursor:pointer; font-family:inherit; font-weight:700; margin-top:12px; width:100%; text-align:center;">
+                                <i class="fas fa-arrow-right"></i> إلغاء والعودة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.innerHTML = type === 'success' ? '✅ ' + message : '❌ ' + message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 5000);
+        }
+
+        function showMsg(id, msg, type) {
+            const div = document.getElementById(id);
+            div.style.display = 'block';
+            div.className = 'msg-box ' + type;
+            div.textContent = msg;
+        }
+        function hideMsg(id) { document.getElementById(id).style.display = 'none'; }
+
+        function validatePhoneInput() {
+            const input = document.getElementById('newPhoneInput');
+            const hint = document.getElementById('phoneFormatHint');
+            const val = input.value.replace(/\D/g, '');
+            if (val.length === 0) { hint.style.display = 'none'; return; }
+
+            const validPrefixes = ['966', '971', '965', '973', '974', '968', '967', '20', '962', '963', '964', '961', '212', '216', '213'];
+            const valid = validPrefixes.some(p => val.startsWith(p));
+            hint.style.display = 'block';
+            if (valid) {
+                hint.style.background = '#ecfdf5';
+                hint.style.color = '#059669';
+                hint.style.border = '1px solid #bbf7d0';
+                hint.innerHTML = '✅ صيغة صحيحة';
+            } else {
+                hint.style.background = '#fef2f2';
+                hint.style.color = '#ef4444';
+                hint.style.border = '1px solid #fecaca';
+                hint.innerHTML = '⚠️ يجب أن يبدأ برقم الدولة مثل 966 للسعودية';
+            }
+        }
+
+        async function requestPhoneChange() {
+            const phone = document.getElementById('newPhoneInput').value.trim();
+            if (!phone) { showMsg('phoneMsg', 'يرجى إدخال رقم الجوال الجديد', 'error'); return; }
+            const cleanPhone = phone.replace(/\D/g, '');
+
+            const validPrefixes = ['966', '971', '965', '973', '974', '968', '967', '20', '962', '963', '964', '961', '212', '216', '213'];
+            const valid = validPrefixes.some(p => cleanPhone.startsWith(p));
+            if (!valid) { showMsg('phoneMsg', 'الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx (مع رمز الدولة)', 'error'); return; }
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) { showMsg('phoneMsg', 'رقم الجوال غير صحيح. تأكد من الصيغة الدولية', 'error'); return; }
+
+            const btn = document.getElementById('sendOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+            hideMsg('phoneMsg');
+
+            try {
+                const res = await fetch('/api/change-phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPhone: cleanPhone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('phoneStep1').style.display = 'none';
+                    document.getElementById('phoneStep2').style.display = 'block';
+                } else {
+                    showMsg('phoneMsg', data.error || 'حدث خطأ', 'error');
+                }
+            } catch (e) {
+                showMsg('phoneMsg', 'تعذر الاتصال بالخادم', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال رمز التحقق';
+        }
+
+        async function verifyPhoneChange() {
+            const otp = document.getElementById('phoneOtpInput').value.trim();
+            if (!otp || otp.length !== 4) { showMsg('otpMsg', 'أدخل رمز التحقق المكون من 4 أرقام', 'error'); return; }
+
+            const btn = document.getElementById('verifyOtpBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const res = await fetch('/api/verify-phone-change', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم تغيير رقم الجوال بنجاح ✅');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showMsg('otpMsg', data.error || 'الرمز غير صحيح', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد وتغيير الرقم';
+                }
+            } catch (e) {
+                showMsg('otpMsg', 'تعذر الاتصال بالخادم', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> تأكيد وتغيير الرقم';
+            }
+        }
+
+        function cancelPhoneChange() {
+            document.getElementById('phoneStep1').style.display = 'block';
+            document.getElementById('phoneStep2').style.display = 'none';
+            document.getElementById('phoneOtpInput').value = '';
+            hideMsg('otpMsg');
+            hideMsg('phoneMsg');
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+        document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
+            link.addEventListener('click', () => {
+                const sidebar = document.querySelector('.sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
