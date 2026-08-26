@@ -14,8 +14,6 @@ const cors = require('cors');
 const multer = require('multer');
 const crypto = require('crypto');
 const XLSX = require('xlsx');
-const rateLimit = require('express-rate-limit');
-const MongoStore = require('connect-mongo');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
 const Settings = require('./models/Settings');
@@ -27,7 +25,7 @@ const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode,
 const app = express();
 const server = http.createServer(app);
 
-const io = socketIo(server, { maxHttpBufferSize: 5 * 1024 * 1024 });
+const io = socketIo(server, { maxHttpBufferSize: 50 * 1024 * 1024 });
 app.use(cors());
 
 app.use((req, res, next) => {
@@ -44,49 +42,6 @@ const SYSTEM_ID = '111111111111111111111111';
 const MAX_CAMPAIGN_RETRIES = 3;
 const runningCampaigns = new Set();
 const countdownTimers = new Map();
-
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: { error: 'تم حظرك مؤقتاً بسبب محاولات كثيرة. حاول بعد 15 دقيقة' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const otpLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 5,
-    message: { error: 'تم حظرك مؤقتاً. حاول بعد 10 دقائق' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const apiSendLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 5,
-    message: { error: 'تم تجاوز الحد المسموح. حاول بعد دقيقة' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const otpAttempts = new Map();
-const OTP_MAX_ATTEMPTS = 5;
-const OTP_LOCKOUT_MS = 15 * 60 * 1000;
-
-function checkOtpAttempts(identifier) {
-    const data = otpAttempts.get(identifier);
-    if (!data) return { blocked: false, attempts: 0 };
-    if (Date.now() > data.lockedUntil) { otpAttempts.delete(identifier); return { blocked: false, attempts: 0 }; }
-    return { blocked: true, attempts: data.attempts, remainingMs: data.lockedUntil - Date.now() };
-}
-
-function recordOtpAttempt(identifier) {
-    const data = otpAttempts.get(identifier) || { attempts: 0, lockedUntil: 0 };
-    data.attempts++;
-    if (data.attempts >= OTP_MAX_ATTEMPTS) data.lockedUntil = Date.now() + OTP_LOCKOUT_MS;
-    otpAttempts.set(identifier, data);
-    return data;
-}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -606,17 +561,8 @@ async function sendSystemOTP(phone, message) {
 }
 
 async function createDefaultAdmin() {
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    if (!adminPassword) {
-        console.warn('⚠️ ADMIN_PASSWORD غير معرّف، لن يتم إنشاء حساب الأدمن تلقائياً');
-        return;
-    }
-    const admin = await User.findOne({ username: adminUsername });
-    if (!admin) {
-        await User.create({ username: adminUsername, password: adminPassword, role: 'admin' });
-        console.log('✅ تم إنشاء حساب الأدمن:', adminUsername);
-    }
+    const admin = await User.findOne({ username: 'admin' });
+    if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
 }
 createDefaultAdmin();
 
@@ -720,11 +666,9 @@ async function getOwnedCampaign(userId, campaignId) {
     return Campaign.findOne({ _id: campaignId, userId });
 }
 
-const MONGO_URI = process.env.MONGODB_URI;
-if (!MONGO_URI) {
-    console.error('❌ MONGODB_URI غير معرّف في ملف .env');
-    process.exit(1);
-}
+const MONGO_URI = (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('127.0.0.1') && !process.env.MONGODB_URI.includes('localhost'))
+    ? process.env.MONGODB_URI
+    : 'mongodb+srv://tur100:Sa123456@cluster0.asfixge.mongodb.net/test?appName=Cluster0';
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
@@ -750,22 +694,12 @@ mongoose.connect(MONGO_URI)
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({
-    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    secret: process.env.SESSION_SECRET || 'wats_secret_123',
     resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: MONGO_URI,
-        ttl: 24 * 60 * 60,
-        autoRemove: 'native'
-    }),
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
-    }
+    saveUninitialized: false
 }));
 
 const requireAuth = (req, res, next) => {
@@ -786,7 +720,7 @@ app.get('/', async (req, res) => {
 });
 
 app.get('/register', (req, res) => res.render('register', { error: null }));
-app.post('/register', otpLimiter, async (req, res) => {
+app.post('/register', async (req, res) => {
     try {
         const { username, phone, password } = req.body;
         const cleanPhone = phone.replace(/\D/g, '');
@@ -816,7 +750,7 @@ app.post('/register', otpLimiter, async (req, res) => {
             username,
             phone: cleanPhone,
             password,
-            apiToken: crypto.randomBytes(32).toString('hex'),
+            apiToken: Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2),
             subscriptionEndsAt: subDate,
             isVerified: false,
             otpCode: otp,
@@ -843,23 +777,12 @@ app.get('/verify', (req, res) => {
     res.render('verify', { error: null, success: null });
 });
 
-app.post('/verify', otpLimiter, async (req, res) => {
+app.post('/verify', async (req, res) => {
     try {
         const user = await User.findById(req.session.verifyUserId);
         if (!user) return res.redirect('/register');
+        if (user.otpCode !== req.body.otp || new Date() > user.otpExpires) return res.render('verify', { error: 'الرمز غير صحيح أو منتهي الصلاحية', success: null });
 
-        const lockCheck = checkOtpAttempts('verify_' + user._id);
-        if (lockCheck.blocked) {
-            const mins = Math.ceil(lockCheck.remainingMs / 60000);
-            return res.render('verify', { error: `تم حظرك مؤقتاً. حاول بعد ${mins} دقيقة`, success: null });
-        }
-
-        if (user.otpCode !== req.body.otp || new Date() > user.otpExpires) {
-            recordOtpAttempt('verify_' + user._id);
-            return res.render('verify', { error: 'الرمز غير صحيح أو منتهي الصلاحية', success: null });
-        }
-
-        otpAttempts.delete('verify_' + user._id);
         user.isVerified = true;
         user.otpCode = null;
         user.otpExpires = null;
@@ -872,7 +795,7 @@ app.post('/verify', otpLimiter, async (req, res) => {
     }
 });
 
-app.post('/resend-otp', otpLimiter, async (req, res) => {
+app.post('/resend-otp', async (req, res) => {
     try {
         if (!req.session.verifyUserId) return res.redirect('/register');
         const user = await User.findById(req.session.verifyUserId);
@@ -894,7 +817,7 @@ app.post('/resend-otp', otpLimiter, async (req, res) => {
 });
 
 app.get('/forgot-password', (req, res) => res.render('forgot-password', { error: null }));
-app.post('/forgot-password', otpLimiter, async (req, res) => {
+app.post('/forgot-password', async (req, res) => {
     try {
         const cleanPhone = req.body.phone.replace(/\D/g, '');
         if (cleanPhone.length < 9 || cleanPhone.length > 15) {
@@ -923,7 +846,7 @@ app.get('/reset-password', (req, res) => {
     res.render('reset-password', { error: null });
 });
 
-app.post('/reset-password', otpLimiter, async (req, res) => {
+app.post('/reset-password', async (req, res) => {
     try {
         const { otp, newPassword } = req.body;
         const user = await User.findById(req.session.resetUserId);
@@ -941,7 +864,7 @@ app.post('/reset-password', otpLimiter, async (req, res) => {
 });
 
 app.get('/login', (req, res) => res.render('login', { error: null }));
-app.post('/login', loginLimiter, async (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (user && user.isActive && await user.comparePassword(password)) {
@@ -972,7 +895,7 @@ app.get('/return-to-admin', (req, res) => {
 
 app.post('/refresh-token', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    user.apiToken = crypto.randomBytes(32).toString('hex');
+    user.apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
     await user.save();
     res.redirect('/api-guide');
 });
@@ -1265,7 +1188,7 @@ app.get('/admin', requireAdmin, async (req, res) => {
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
     try {
         const { username, password, phone } = req.body;
-        const apiToken = crypto.randomBytes(32).toString('hex');
+        const apiToken = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
         const settings = await getSettings();
         const subDate = new Date();
         subDate.setDate(subDate.getDate() + settings.freeTrialDays);
@@ -1394,7 +1317,7 @@ app.post('/admin/change-phone/:id', requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/change-phone', requireAuth, otpLimiter, async (req, res) => {
+app.post('/api/change-phone', requireAuth, async (req, res) => {
     try {
         const { newPhone } = req.body;
         if (!newPhone) return res.status(400).json({ success: false, error: 'يرجى إدخال رقم الجوال الجديد' });
@@ -1430,7 +1353,7 @@ app.post('/api/change-phone', requireAuth, otpLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/verify-phone-change', requireAuth, otpLimiter, async (req, res) => {
+app.post('/api/verify-phone-change', requireAuth, async (req, res) => {
     try {
         const { otp } = req.body;
         if (!otp) return res.status(400).json({ success: false, error: 'يرجى إدخال رمز التحقق' });
@@ -1770,7 +1693,7 @@ app.post('/api/campaigns/:id/cancel', requireAuth, async (req, res) => {
     res.json({ success: true });
 });
 
-app.post(['/api/v1/send', '/api/send-message'], apiSendLimiter, upload.array('media', 10), async (req, res) => {
+app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing token' });
     const token = authHeader.split(' ')[1];
@@ -1860,20 +1783,17 @@ app.get('/ping', (req, res) => res.send('pong'));
 
 io.on('connection', (socket) => {
     const sessionUserId = socket.handshake.query.userId;
-    if (!sessionUserId) { socket.disconnect(); return; }
+    if (sessionUserId) {
+        socket.join(sessionUserId);
 
-    const isValid = sessionUserId === SYSTEM_ID || mongoose.Types.ObjectId.isValid(sessionUserId);
-    if (!isValid) { socket.disconnect(); return; }
-
-    socket.join(sessionUserId);
-
-    const sock = getSession(sessionUserId);
-    if (sock && sock.user) {
-        socket.emit('ready', 'WhatsApp is connected');
-    } else if (!sock) {
-        startWhatsAppSession(sessionUserId, io).then(s => {
-            if (s && s.user) socket.emit('ready', 'WhatsApp is connected');
-        }).catch(err => console.error('❌ فشل بدء جلسة واتساب:', err.message));
+        const sock = getSession(sessionUserId);
+        if (sock && sock.user) {
+            socket.emit('ready', 'WhatsApp is connected');
+        } else if (!sock) {
+            startWhatsAppSession(sessionUserId, io).then(s => {
+                if (s && s.user) socket.emit('ready', 'WhatsApp is connected');
+            }).catch(err => console.error('❌ فشل بدء جلسة واتساب:', err.message));
+        }
     }
 });
 

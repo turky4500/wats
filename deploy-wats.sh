@@ -40,21 +40,11 @@ if [ -n "${WATS_ENV_FILE:-}" ]; then
   printf '%s\n' "$WATS_ENV_FILE" > "$APP_DIR/.env"
 fi
 
-if [ ! -f "$APP_DIR/.env" ]; then
-  echo "[ERROR] Missing $APP_DIR/.env"
-  echo "Create it on the server once, or add GitHub secret WATS_ENV_FILE with full .env content."
-  exit 1
+if [ -f "$APP_DIR/.env" ]; then
+  say "Using existing .env on server"
+else
+  say "No .env found; app will rely on built-in defaults from the rolled back version"
 fi
-
-say "Checking required env keys"
-required_keys=(MONGODB_URI ADMIN_USERNAME ADMIN_PASSWORD SESSION_SECRET)
-for key in "${required_keys[@]}"; do
-  if ! grep -Eq "^${key}=" "$APP_DIR/.env"; then
-    echo "[ERROR] Missing env key in .env: $key"
-    exit 1
-  fi
-  echo "OK: $key"
-done
 
 say "Installing dependencies"
 npm install --omit=dev
