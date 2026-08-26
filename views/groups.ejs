@@ -228,8 +228,8 @@
                 <!-- Add Manual -->
                 <div id="viewTabAdd" style="display:none;">
                     <div class="form-group">
-                        <label>الرقم (يدعم: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx)</label>
-                        <input type="text" id="addPhoneInput" placeholder="05xxxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
+                        <label>الرقم (بالصيغة الدولية مثل 9665xxxxxxxx)</label>
+                        <input type="text" id="addPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
                     </div>
                     <div class="form-group">
                         <label>الاسم (اختياري)</label>
@@ -242,58 +242,10 @@
         </div>
     </div>
 
-    <!-- Edit Contact Modal -->
-    <div id="editContactModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
-        <div class="modal-box" style="max-width:400px;">
-            <div class="modal-header">
-                <h3>تعديل جهة الاتصال</h3>
-                <button onclick="document.getElementById('editContactModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="editContactId">
-                <div class="form-group">
-                    <label>الاسم</label>
-                    <input type="text" id="editContactName" placeholder="اسم جهة الاتصال">
-                </div>
-                <div class="form-group">
-                    <label>الرقم</label>
-                    <input type="text" id="editContactPhone" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
-                </div>
-                <div id="editContactMsg" class="msg-box"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-dark" onclick="document.getElementById('editContactModal').classList.remove('show')">إلغاء</button>
-                <button class="btn btn-primary" onclick="saveEditContact()" id="editContactBtn"><i class="fas fa-save"></i> حفظ</button>
-            </div>
-        </div>
-    </div>
-
     <script src="/js/app.js"></script>
     <script>
         let currentGroupId = null;
         let importedContacts = [];
-
-        function normalizePhone(raw) {
-            const clean = raw.replace(/\D/g, '');
-            if (/^966\d{9,11}$/.test(clean)) return clean;
-            if (/^971\d{8,10}$/.test(clean)) return clean;
-            if (/^965\d{7,9}$/.test(clean)) return clean;
-            if (/^973\d{7,9}$/.test(clean)) return clean;
-            if (/^974\d{7,9}$/.test(clean)) return clean;
-            if (/^968\d{7,9}$/.test(clean)) return clean;
-            if (/^967\d{7,9}$/.test(clean)) return clean;
-            if (/^20\d{9,10}$/.test(clean)) return clean;
-            if (/^962\d{7,9}$/.test(clean)) return clean;
-            if (/^963\d{7,9}$/.test(clean)) return clean;
-            if (/^964\d{7,9}$/.test(clean)) return clean;
-            if (/^961\d{6,8}$/.test(clean)) return clean;
-            if (/^212\d{8,9}$/.test(clean)) return clean;
-            if (/^216\d{7,9}$/.test(clean)) return clean;
-            if (/^213\d{8,10}$/.test(clean)) return clean;
-            if (/^5\d{8}$/.test(clean)) return '966' + clean;
-            if (/^05\d{8}$/.test(clean)) return '966' + clean.substring(1);
-            return null;
-        }
 
         function showToast(message, type) {
             const c = document.getElementById('toast-container');
@@ -376,7 +328,7 @@
             }
             let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th></th></tr></thead><tbody>';
             contacts.forEach((c, i) => {
-                html += '<tr><td>' + (i+1) + '</td><td>' + (c.name || '—') + '</td><td dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</td><td style="display:flex;gap:4px;"><button class="btn btn-primary" style="padding:4px 8px;font-size:10px;" onclick="editContact(\'' + c._id + '\', \'' + (c.name || '').replace(/'/g, "\\'") + '\', \'' + c.phone + '\')"><i class="fas fa-pen"></i></button><button class="btn btn-red" style="padding:4px 8px;font-size:10px;" onclick="removeContact(\'' + c._id + '\')"><i class="fas fa-times"></i></button></td></tr>';
+                html += '<tr><td>' + (i+1) + '</td><td>' + (c.name || '—') + '</td><td dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</td><td><button class="btn btn-red" style="padding:4px 8px;font-size:10px;" onclick="removeContact(\'' + c._id + '\')"><i class="fas fa-times"></i></button></td></tr>';
             });
             html += '</tbody></table>';
             container.innerHTML = html;
@@ -399,43 +351,6 @@
                     }
                 }
             } catch (e) { showToast('خطأ', 'error'); }
-        }
-
-        function editContact(contactId, name, phone) {
-            document.getElementById('editContactId').value = contactId;
-            document.getElementById('editContactName').value = name;
-            document.getElementById('editContactPhone').value = phone;
-            hideMsg('editContactMsg');
-            document.getElementById('editContactModal').classList.add('show');
-        }
-
-        async function saveEditContact() {
-            const contactId = document.getElementById('editContactId').value;
-            const name = document.getElementById('editContactName').value.trim();
-            const phone = document.getElementById('editContactPhone').value.trim();
-            if (!phone) { showMsg('editContactMsg', 'أدخل رقم الجوال', 'error'); return; }
-            const normalized = normalizePhone(phone);
-            if (!normalized) { showMsg('editContactMsg', 'الرقم غير صحيح. الصيغة: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx', 'error'); return; }
-            const btn = document.getElementById('editContactBtn');
-            btn.disabled = true;
-            try {
-                const res = await fetch('/api/groups/' + currentGroupId + '/contacts/' + contactId, {
-                    method: 'PUT', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ name, phone: normalized })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('تم التحديث');
-                    document.getElementById('editContactModal').classList.remove('show');
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
-                } else { showMsg('editContactMsg', data.error || 'خطأ', 'error'); }
-            } catch (e) { showMsg('editContactMsg', 'خطأ', 'error'); }
-            btn.disabled = false;
         }
 
         function switchViewTab(tab) {
@@ -464,7 +379,6 @@
                     importedContacts = data.contacts;
                     let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
                     html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الملف</div>';
-                    if (data.skipped > 0) html += '<div style="font-weight:700;color:var(--danger);margin-bottom:8px;font-size:13px;">⚠️ تم تخطي ' + data.skipped + ' رقم غير صحيح</div>';
                     html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
                     data.contacts.slice(0, 20).forEach((c, i) => {
                         html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
@@ -510,14 +424,18 @@
             const phone = document.getElementById('addPhoneInput').value.trim();
             const name = document.getElementById('addNameInput').value.trim();
             if (!phone) { showMsg('addMsg', 'أدخل رقم الجوال', 'error'); return; }
-            const normalized = normalizePhone(phone);
-            if (!normalized) {
-                showMsg('addMsg', 'الرقم غير صحيح. الصيغة: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx', 'error'); return;
+            const cleanPhone = phone.replace(/\D/g, '');
+            const validPrefixes = ['966','971','965','973','974','968','967','20','962','963','964','961','212','216','213'];
+            if (!validPrefixes.some(p => cleanPhone.startsWith(p))) {
+                showMsg('addMsg', 'الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx', 'error'); return;
+            }
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+                showMsg('addMsg', 'رقم غير صحيح', 'error'); return;
             }
             try {
                 const res = await fetch('/api/groups/' + currentGroupId + '/contacts', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ contacts: [{ name, phone: normalized }] })
+                    body: JSON.stringify({ contacts: [{ name, phone: cleanPhone }] })
                 });
                 const data = await res.json();
                 if (data.success) {

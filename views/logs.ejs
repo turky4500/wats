@@ -3,551 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سجل الرسائل | واتساب تكوين</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>أرشيف الرسائل | واتساب تكوين</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/theme.css">
     <style>
-        .log-card {
-            background: var(--card); border-radius: var(--r-lg); border: 1px solid var(--ink-100);
-            box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; transition: all 0.2s;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #25d366; --primary-dark: #1da851; --primary-light: #dcfce7;
+            --accent: #6366f1; --accent-light: #eef2ff;
+            --blue: #3b82f6; --blue-light: #eff6ff;
+            --danger: #ef4444; --danger-light: #fef2f2;
+            --dark: #0f172a; --dark2: #1e293b; --gray: #64748b; --gray-light: #94a3b8;
+            --bg: #f1f5f9; --card: #ffffff;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08);
+            --radius: 16px;
         }
-        .log-card:hover { border-color: var(--ink-200); box-shadow: var(--shadow-lg); }
-        .log-card-header {
-            padding: 16px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer;
-            transition: background 0.15s;
-        }
-        .log-card-header:hover { background: var(--ink-50); }
-        .log-status-dot {
-            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-        }
-        .log-status-dot.success { background: var(--whatsapp); box-shadow: 0 0 8px rgba(37,211,102,0.4); }
-        .log-status-dot.failed { background: var(--danger); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-        .log-card-info { flex: 1; min-width: 0; }
-        .log-card-phone {
-            font-weight: 900; font-size: 15px; direction: ltr; display: inline-block;
-            font-family: 'Outfit', monospace; color: var(--ink-800);
-        }
-        .log-card-preview {
-            font-size: 13px; color: var(--ink-400); margin-top: 3px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;
-        }
-        .log-card-meta {
-            display: flex; align-items: center; gap: 12px; flex-shrink: 0;
-        }
-        .log-card-time {
-            font-size: 12px; color: var(--ink-300); direction: ltr; white-space: nowrap;
-        }
-        .log-status-badge {
-            padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800;
-        }
-        .log-status-badge.success { background: #dcfce7; color: #059669; }
-        .log-status-badge.failed { background: #fef2f2; color: #dc2626; }
-        .log-expand-icon {
-            color: var(--ink-300); transition: transform 0.2s; flex-shrink: 0; font-size: 14px;
-        }
-        .log-card.expanded .log-expand-icon { transform: rotate(180deg); }
-        .log-card-body {
-            display: none; padding: 0 20px 20px 20px; border-top: 1px solid var(--ink-50);
-        }
-        .log-card.expanded .log-card-body { display: block; }
-        .log-detail-row {
-            display: flex; gap: 12px; margin-top: 14px; align-items: flex-start;
-        }
-        .log-detail-label {
-            font-size: 11px; font-weight: 800; color: var(--ink-400); text-transform: uppercase;
-            letter-spacing: 0.3px; min-width: 80px; padding-top: 2px;
-        }
-        .log-detail-value {
-            font-size: 14px; color: var(--ink-700); line-height: 1.7; flex: 1;
-        }
-        .log-message-box {
-            background: var(--ink-50); border: 1px solid var(--ink-100); border-radius: var(--r-sm);
-            padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap;
-            word-wrap: break-word; color: var(--ink-700); max-height: 300px; overflow-y: auto;
-        }
-        .log-error-box {
-            background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--r-sm);
-            padding: 12px; font-size: 13px; color: #991b1b; margin-top: 8px;
-        }
-        .log-actions {
-            display: flex; gap: 8px; margin-top: 14px; padding-top: 14px;
-            border-top: 1px solid var(--ink-50);
-        }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
 
-        .stats-row-custom {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px; margin-bottom: 24px;
-        }
-        .stat-box {
-            background: var(--card); border-radius: var(--r-md); padding: 20px;
-            box-shadow: var(--shadow); border: 1px solid var(--ink-100);
-            display: flex; align-items: center; gap: 14px;
-        }
-        .stat-icon-box {
-            width: 48px; height: 48px; border-radius: var(--r-sm); display: flex;
-            align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
-        }
-        .stat-num { font-size: 28px; font-weight: 900; line-height: 1; }
-        .stat-label { font-size: 12px; color: var(--ink-400); font-weight: 700; margin-top: 2px; }
+        /* Top Bar */
+        .topbar { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); color: white; padding: 0 40px; display: flex; justify-content: space-between; align-items: center; height: 65px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .topbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 18px; }
+        .topbar-actions { display: flex; gap: 10px; }
+        .topbar-actions a { color: rgba(255,255,255,0.7); text-decoration: none; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .topbar-actions a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .topbar-actions .btn-back { background: rgba(255,255,255,0.1); color: white; }
 
-        .filter-bar {
-            background: var(--card); border-radius: var(--r-md); padding: 16px 20px;
-            box-shadow: var(--shadow); border: 1px solid var(--ink-100); margin-bottom: 20px;
-            display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
-        }
-        .filter-bar .fg { flex: 1; min-width: 150px; }
-        .filter-bar .fg label {
-            display: block; font-size: 11px; font-weight: 800; color: var(--ink-400);
-            margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;
-        }
-        .filter-bar .fg input {
-            width: 100%; padding: 10px 14px; border: 2px solid var(--ink-100); border-radius: var(--r-sm);
-            font-family: inherit; font-size: 14px; outline: none; transition: border 0.2s;
-        }
-        .filter-bar .fg input:focus { border-color: var(--primary); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px 40px; }
 
-        .toolbar-row {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
-        }
-        .toolbar-row h2 {
-            font-size: 20px; font-weight: 900; display: flex; align-items: center; gap: 8px;
-        }
-        .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            padding: 9px 18px; border: none; border-radius: var(--r-sm); font-family: inherit;
-            font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; color: white;
-        }
+        /* Page Header */
+        .page-header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .page-header h1 { font-size: 26px; font-weight: 900; color: var(--dark); display: flex; align-items: center; gap: 10px; }
+        .page-header .subtitle { color: var(--gray); font-size: 14px; margin-top: 4px; }
+
+        /* Filter Card */
+        .filter-card { background: linear-gradient(135deg, var(--blue-light) 0%, #f0f7ff 100%); border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 22px 28px; margin-bottom: 25px; }
+        .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .filter-group { flex: 1; min-width: 180px; }
+        .filter-group label { display: block; font-weight: 700; font-size: 13px; color: #1e40af; margin-bottom: 6px; }
+        .filter-group input { width: 100%; padding: 11px 14px; border: 2px solid #93c5fd; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
+        .filter-group input:focus { border-color: var(--blue); }
+        .filter-actions { display: flex; gap: 8px; }
+
+        /* Stats Row */
+        .log-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .log-stat { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; }
+        .log-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .log-stat-info .value { font-size: 24px; font-weight: 900; color: var(--dark); line-height: 1; }
+        .log-stat-info .label { font-size: 12px; color: var(--gray); font-weight: 600; }
+
+        /* Table Card */
+        .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; overflow: hidden; }
+        .table-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-header h3 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead th { background: #f8fafc; color: var(--gray); font-weight: 700; padding: 14px 20px; text-align: right; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+        tbody td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: #fafbff; }
+
+        .msg-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dark2); }
+        .phone-cell { font-weight: 800; color: var(--dark); direction: ltr; font-family: 'Courier New', monospace; font-size: 13px; }
+        .time-cell { color: var(--gray); font-size: 13px; direction: ltr; white-space: nowrap; }
+
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+        .badge-success { background: var(--primary-light); color: #059669; }
+        .badge-failed { background: var(--danger-light); color: #dc2626; }
+        .err-detail { font-size: 11px; color: var(--danger); margin-top: 4px; display: block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state .icon { font-size: 50px; margin-bottom: 15px; }
+        .empty-state h4 { color: var(--dark2); font-size: 18px; margin-bottom: 8px; }
+        .empty-state p { color: var(--gray-light); font-size: 14px; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; transition: all 0.2s; color: white; }
         .btn:hover { transform: translateY(-1px); }
-        .btn-green { background: var(--whatsapp); }
-        .btn-red { background: var(--danger); }
         .btn-blue { background: var(--blue); }
-        .btn-outline {
-            background: white; color: var(--ink-600); border: 2px solid var(--ink-100);
-        }
-        .btn-outline:hover { border-color: var(--ink-300); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .btn-red { background: var(--danger); }
+        .btn-dark { background: var(--dark2); }
+        .btn-outline { background: white; color: var(--dark2); border: 2px solid #e2e8f0; }
+        .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
 
-        .selection-bar {
-            background: #ecfdf5; border: 1px solid #86efac; border-radius: var(--r-sm);
-            padding: 10px 16px; display: none; align-items: center; gap: 10px;
-            margin-bottom: 12px; font-size: 13px; font-weight: 700; color: #065f46;
-        }
-        .selection-bar.active { display: flex; }
+        /* Resend feature */
+        .btn-green { background: var(--primary); }
+        .btn-green:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; transform: none !important; }
+        .row-checkbox, .check-all { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+        .selection-info { background: var(--primary-light); border: 1px solid var(--primary); color: #065f46; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; display: none; align-items: center; gap: 8px; }
+        .selection-info.active { display: inline-flex; }
+        .header-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        .row-check { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--card); border-radius: var(--radius); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); width: 100%; max-width: 720px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.2s ease-out; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-head { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--primary-light), #f0fdf4); }
+        .modal-head h3 { font-size: 17px; font-weight: 800; color: var(--dark); display: flex; align-items: center; gap: 8px; }
+        .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray); padding: 4px 10px; border-radius: 6px; transition: all 0.2s; }
+        .modal-close:hover { background: rgba(0,0,0,0.05); color: var(--dark); }
+        .modal-body { padding: 22px 25px; overflow-y: auto; flex: 1; }
+        .modal-foot { padding: 16px 25px; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-        .empty-state {
-            text-align: center; padding: 60px 20px; color: var(--ink-300);
-        }
-        .empty-state i { font-size: 48px; margin-bottom: 16px; display: block; }
-        .empty-state h3 { font-size: 18px; font-weight: 800; color: var(--ink-500); margin-bottom: 8px; }
-        .empty-state p { font-size: 14px; }
-
-        .modal-overlay {
-            display:none; position:fixed; inset:0; background:rgba(11,18,32,0.55);
-            backdrop-filter:blur(4px); align-items:center; justify-content:center; z-index:1000;
-        }
-        .modal-overlay.show { display:flex; }
-        .modal-box {
-            background:white; border-radius:var(--r-lg); width:100%; max-width:700px;
-            max-height:85vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn 0.25s ease;
-        }
-        @keyframes modalIn { from{opacity:0;transform:scale(0.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .modal-header {
-            padding:20px 24px; border-bottom:1px solid var(--ink-50);
-            display:flex; justify-content:space-between; align-items:center;
-        }
-        .modal-header h3 { font-size:17px; font-weight:900; }
-        .modal-body { padding:24px; }
-        .modal-footer {
-            padding:14px 24px; border-top:1px solid var(--ink-50);
-            display:flex; gap:10px; justify-content:flex-end;
-        }
-        .resend-item {
-            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
-            padding: 14px 16px; margin-bottom: 12px;
-        }
+        .resend-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; position: relative; }
+        .resend-item.removed { opacity: 0.4; }
+        .resend-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .resend-item-head strong { font-size: 12px; color: var(--gray); font-weight: 700; }
+        .resend-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; }
+        .resend-remove:hover { background: var(--danger-light); }
         .resend-field { margin-bottom: 8px; }
-        .resend-field label {
-            display: block; font-size: 11px; font-weight: 700; color: #64748b;
-            margin-bottom: 4px; text-transform: uppercase;
-        }
-        .resend-field input, .resend-field textarea {
-            width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-            font-family: inherit; font-size: 13px; outline: none; resize: vertical;
-        }
+        .resend-field label { display: block; font-size: 11px; font-weight: 700; color: var(--gray); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .resend-field input, .resend-field textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 13px; outline: none; background: white; transition: border 0.15s; resize: vertical; }
+        .resend-field input { direction: ltr; font-family: 'Courier New', monospace; font-weight: 700; }
+        .resend-field textarea { min-height: 60px; line-height: 1.6; }
         .resend-field input:focus, .resend-field textarea:focus { border-color: var(--primary); }
-        .progress-bar {
-            width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px;
-            overflow: hidden; margin: 12px 0; display: none;
-        }
-        .progress-bar.active { display: block; }
-        .progress-fill {
-            height: 100%; background: var(--whatsapp); width: 0; transition: width 0.4s ease;
-        }
-        .result-box {
-            padding: 14px; border-radius: var(--r-sm); margin-top: 10px; display: none; font-size: 13px;
-        }
-        .result-box.active { display: block; }
-        .result-box.success { background: #dcfce7; color: #065f46; border: 1px solid #86efac; }
-        .result-box.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .result-box.partial { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .resend-item.invalid { border-color: var(--danger); background: var(--danger-light); }
 
+        .progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 15px 0; display: none; }
+        .progress-bar.active { display: block; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); width: 0; transition: width 0.4s ease; }
+
+        .result-box { padding: 14px 18px; border-radius: 10px; margin-top: 12px; display: none; font-size: 14px; }
+        .result-box.active { display: block; }
+        .result-box.success { background: var(--primary-light); color: #065f46; border: 1px solid var(--primary); }
+        .result-box.partial { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+        .result-box.error { background: var(--danger-light); color: #991b1b; border: 1px solid var(--danger); }
+        .result-box h4 { font-weight: 800; margin-bottom: 6px; }
+        .result-box ul { margin: 8px 0 0 0; padding: 0; list-style: none; max-height: 150px; overflow-y: auto; }
+        .result-box li { padding: 4px 0; font-size: 12px; direction: ltr; text-align: right; border-bottom: 1px dashed rgba(0,0,0,0.08); }
+        .result-box li:last-child { border-bottom: none; }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .log-card-preview { max-width: 200px; }
-            .stats-row-custom { grid-template-columns: repeat(2, 1fr); }
-            .toolbar-row { flex-direction: column; align-items: flex-start; }
+            .topbar { padding: 0 20px; }
+            .container { padding: 20px; }
+            .filter-form { flex-direction: column; }
+            .filter-group { min-width: 100%; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .table-header { flex-direction: column; align-items: flex-start; }
         }
     </style>
 </head>
 <body>
-    <div class="mobile-topbar">
-        <div style="display:flex;align-items:center;gap:10px;">
-            <div class="logo-circle-sm"><i class="fab fa-whatsapp"></i></div>
-            <span style="font-size:16px;font-weight:900;color:var(--dark);">واتساب تكوين</span>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-brand">
+            <span>📜</span>
+            <span>أرشيف الرسائل</span>
+            <% if(isAdminView) { %><span style="opacity:0.5; font-size:13px;">— <%= user.username %></span><% } %>
         </div>
-        <button class="menu-toggle-btn" onclick="toggleMobileSidebar()"><i class="fas fa-bars"></i></button>
+        <div class="topbar-actions">
+            <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn-back">← العودة للوحة</a>
+        </div>
     </div>
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
 
-    <%
-        let daysRemaining = 0; let isExpired = true; let expDateFormatted = 'غير محدد';
-        if (user.subscriptionEndsAt) {
-            const d = new Date(user.subscriptionEndsAt); expDateFormatted = d.toISOString().split('T')[0];
-            const diffTime = d - new Date(); daysRemaining = Math.ceil(diffTime / (1000*60*60*24));
-            if (daysRemaining > 0) isExpired = false; else daysRemaining = 0;
-        }
-        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
-    %>
-
-    <div class="layout">
-        <div class="sidebar">
-            <button class="sidebar-close-btn" onclick="toggleMobileSidebar()"><i class="fas fa-times"></i></button>
-            <div class="sidebar-brand">
-                <div class="brand-logo"><i class="fab fa-whatsapp"></i></div>
-                <div class="brand-text"><span class="title">واتساب تكوين</span><span class="subtitle">PRO GATEWAY V2</span></div>
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1>📋 سجل الإرسال</h1>
+                <p class="subtitle">
+                    <% if(isAdminView) { %>سجلات العميل: <strong><%= user.username %></strong><% } else { %>جميع رسائلك المرسلة<% } %>
+                    <% if(query.dateFrom) { %> — تصفية: <%= query.dateFrom %> إلى <%= query.dateTo %><% } %>
+                </p>
             </div>
-            <div class="sidebar-user">
-                <div class="u-top">
-                    <div class="u-avatar"><%= (user.username || 'U').charAt(0).toUpperCase() %></div>
-                    <div><div class="u-name"><%= user.username %></div><div class="u-sub">عميل</div></div>
-                </div>
-                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>"><%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %></span>
-                <div class="exp-date"><i class="far fa-calendar-alt"></i> الانتهاء: <%= expDateFormatted %></div>
-            </div>
-            <div class="sidebar-nav">
-                <a href="/dashboard"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
-                <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
-                <a href="/logs" class="active"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
-                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
-                <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
-            </div>
-            <div class="sidebar-footer"><a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></div>
         </div>
 
-        <div class="main">
-            <%
-                let sCount = 0, fCount = 0;
-                logs.forEach(l => { if(l.status === 'success') sCount++; else fCount++; });
-            %>
+        <!-- Quick Stats -->
+        <%
+            let sCount = 0, fCount = 0;
+            logs.forEach(l => { if(l.status === 'success') sCount++; else fCount++; });
+        %>
+        <div class="log-stats">
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--blue-light); color: var(--blue);">📨</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= logs.length %></div>
+                    <div class="label">إجمالي (معروض)</div>
+                </div>
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--primary-light); color: var(--primary);">✅</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= sCount %></div>
+                    <div class="label">ناجحة</div>
+                </div>
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= fCount %></div>
+                    <div class="label">فاشلة</div>
+                </div>
+            </div>
+            <div class="log-stat">
+                <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= logs.length > 0 ? Math.round((sCount/logs.length)*100) : 0 %>%</div>
+                    <div class="label">نسبة النجاح</div>
+                </div>
+            </div>
+        </div>
 
-            <div class="toolbar-row">
-                <h2><i class="fas fa-history" style="color:var(--primary);"></i> سجل الرسائل</h2>
-                <div class="toolbar-actions">
-                    <span class="selection-bar" id="selectionInfo">
-                        <i class="fas fa-check-circle"></i> <span id="selectionCount">0</span> محددة
-                    </span>
-                    <% if(!isAdminView) { %>
-                        <button class="btn btn-green" id="btnResendSelected" disabled onclick="openResendModal()"><i class="fas fa-redo"></i> إعادة إرسال</button>
-                        <button class="btn btn-outline" id="btnSelectFailed" onclick="selectFailedOnly()"><i class="fas fa-times-circle"></i> تحديد الفاشلة</button>
+        <!-- Filter -->
+        <div class="filter-card">
+            <form method="GET" action="" class="filter-form">
+                <div class="filter-group">
+                    <label>📅 من تاريخ</label>
+                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>" required>
+                </div>
+                <div class="filter-group">
+                    <label>📅 إلى تاريخ</label>
+                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>" required>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-blue">🔍 بحث</button>
+                    <% if(query.dateFrom) { %>
+                        <a href="?" class="btn btn-outline">✕ إلغاء</a>
                     <% } %>
-                    <form action="/logs/delete" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف جميع السجلات؟');" style="margin:0;">
-                        <% if(isAdminView) { %><input type="hidden" name="targetUserId" value="<%= user._id %>"><% } %>
-                        <button type="submit" class="btn btn-red"><i class="fas fa-trash"></i> تفريغ</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>📄 قائمة الرسائل</h3>
+                <div class="header-tools">
+                    <span class="selection-info" id="selectionInfo">✓ <span id="selectionCount">0</span> محددة</span>
+                    <% if(!isAdminView) { %>
+                        <button type="button" class="btn btn-green" id="btnResendSelected" disabled>🔄 إعادة إرسال المحدد</button>
+                        <button type="button" class="btn btn-outline" id="btnSelectFailed">❌ تحديد الفاشلة فقط</button>
+                    <% } %>
+                    <form action="/logs/delete" method="POST" onsubmit="return confirm('⚠️ هل أنت متأكد من حذف جميع السجلات؟ لا يمكن التراجع!');" style="margin:0;">
+                        <% if(isAdminView) { %>
+                            <input type="hidden" name="targetUserId" value="<%= user._id %>">
+                        <% } %>
+                        <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف</button>
                     </form>
                 </div>
             </div>
 
-            <div class="stats-row-custom">
-                <div class="stat-box">
-                    <div class="stat-icon-box" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-envelope"></i></div>
-                    <div><div class="stat-num"><%= logs.length %></div><div class="stat-label">إجمالي الرسائل</div></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-icon-box" style="background:#dcfce7;color:#059669;"><i class="fas fa-check-circle"></i></div>
-                    <div><div class="stat-num" style="color:#059669;"><%= sCount %></div><div class="stat-label">رسائل ناجحة</div></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-icon-box" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-times-circle"></i></div>
-                    <div><div class="stat-num" style="color:#dc2626;"><%= fCount %></div><div class="stat-label">رسائل فاشلة</div></div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-icon-box" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-chart-line"></i></div>
-                    <div><div class="stat-num" style="color:#16a34a;"><%= logs.length > 0 ? Math.round((sCount/logs.length)*100) : 0 %>%</div><div class="stat-label">نسبة النجاح</div></div>
-                </div>
-            </div>
-
-            <div class="filter-bar">
-                <div class="fg">
-                    <label><i class="far fa-calendar"></i> من تاريخ</label>
-                    <input type="date" name="dateFrom" id="filterFrom" value="<%= query.dateFrom || '' %>">
-                </div>
-                <div class="fg">
-                    <label><i class="far fa-calendar"></i> إلى تاريخ</label>
-                    <input type="date" name="dateTo" id="filterTo" value="<%= query.dateTo || '' %>">
-                </div>
-                <div class="fg">
-                    <label><i class="fas fa-search"></i> بحث بالرقم</label>
-                    <input type="text" id="filterPhone" placeholder="أدخل الرقم..." oninput="filterLogs()">
-                </div>
-                <button class="btn btn-blue" onclick="applyDateFilter()" style="height:42px;"><i class="fas fa-search"></i> بحث</button>
-                <% if(query.dateFrom) { %>
-                    <a href="/logs" class="btn btn-outline" style="height:42px;"><i class="fas fa-times"></i> إلغاء</a>
-                <% } %>
-            </div>
-
             <% if(logs.length === 0) { %>
                 <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h3>لا توجد رسائل بعد</h3>
-                    <p>ستظهر رسائلك هنا بعد إرسال أول حملة</p>
+                    <div class="icon">📭</div>
+                    <h4>لا توجد سجلات</h4>
+                    <p>لم يتم العثور على رسائل مطابقة للبحث</p>
                 </div>
             <% } else { %>
-                <div id="logsList">
-                    <% logs.forEach((log, idx) => { %>
-                    <div class="log-card" data-id="<%= log._id %>" data-to="<%= log.to %>" data-body="<%= log.body.replace(/"/g, '&quot;').replace(/'/g, '&#39;') %>" data-status="<%= log.status %>">
-                        <div class="log-card-header" onclick="toggleLogCard(this.parentElement)">
-                            <input type="checkbox" class="row-check" value="<%= log._id %>" onclick="event.stopPropagation();updateSelection();" style="margin-left:8px;">
-                            <div class="log-status-dot <%= log.status %>"></div>
-                            <div class="log-card-info">
-                                <div class="log-card-phone"><%= log.to %></div>
-                                <div class="log-card-preview"><%= log.body %></div>
-                            </div>
-                            <div class="log-card-meta">
-                                <span class="log-status-badge <%= log.status %>"><%= log.status === 'success' ? 'ناجح' : 'فاشل' %></span>
-                                <span class="log-card-time"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></span>
-                                <i class="fas fa-chevron-down log-expand-icon"></i>
-                            </div>
-                        </div>
-                        <div class="log-card-body">
-                            <div class="log-detail-row">
-                                <div class="log-detail-label">الرقم</div>
-                                <div class="log-detail-value" dir="ltr" style="font-family:'Outfit',monospace;font-weight:800;"><%= log.to %></div>
-                            </div>
-                            <div class="log-detail-row">
-                                <div class="log-detail-label">التاريخ</div>
-                                <div class="log-detail-value"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'long' }) %></div>
-                            </div>
-                            <div class="log-detail-row">
-                                <div class="log-detail-label">الحالة</div>
-                                <div class="log-detail-value">
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"><input type="checkbox" class="check-all" id="checkAll" title="تحديد الكل"></th>
+                                <th>#</th>
+                                <th>التاريخ والوقت</th>
+                                <th>المستلم</th>
+                                <th>محتوى الرسالة</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% logs.forEach((log, idx) => { %>
+                            <tr data-log-id="<%= log._id %>" data-to="<%= log.to %>" data-body="<%= log.body.replace(/"/g, '&quot;') %>" data-status="<%= log.status %>">
+                                <td><input type="checkbox" class="row-checkbox" value="<%= log._id %>"></td>
+                                <td style="color: var(--gray-light); font-weight: 700;"><%= idx + 1 %></td>
+                                <td class="time-cell"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                                <td class="phone-cell"><%= log.to %></td>
+                                <td class="msg-cell" title="<%= log.body %>"><%= log.body %></td>
+                                <td>
                                     <% if (log.status === 'success') { %>
-                                        <span style="color:#059669;font-weight:800;"><i class="fas fa-check-circle"></i> تم الإرسال بنجاح</span>
+                                        <span class="badge badge-success">✅ ناجح</span>
                                     <% } else { %>
-                                        <span style="color:#dc2626;font-weight:800;"><i class="fas fa-times-circle"></i> فشل الإرسال</span>
+                                        <span class="badge badge-failed">❌ فاشل</span>
+                                        <% if (log.errorDetails) { %>
+                                            <span class="err-detail" title="<%= log.errorDetails %>"><%= log.errorDetails %></span>
+                                        <% } %>
                                     <% } %>
-                                </div>
-                            </div>
-                            <div class="log-detail-row">
-                                <div class="log-detail-label">الرسالة</div>
-                                <div class="log-detail-value">
-                                    <div class="log-message-box"><%= log.body %></div>
-                                </div>
-                            </div>
-                            <% if (log.errorDetails) { %>
-                            <div class="log-detail-row">
-                                <div class="log-detail-label">الخطأ</div>
-                                <div class="log-detail-value">
-                                    <div class="log-error-box"><i class="fas fa-exclamation-triangle"></i> <%= log.errorDetails %></div>
-                                </div>
-                            </div>
-                            <% } %>
-                            <% if(!isAdminView) { %>
-                            <div class="log-actions">
-                                <button class="btn btn-green" style="padding:7px 14px;font-size:12px;" onclick="openSingleResend('<%= log.to %>', `<%= log.body.replace(/`/g, '\\`') %>`)"><i class="fas fa-redo"></i> إعادة إرسال</button>
-                            </div>
-                            <% } %>
-                        </div>
-                    </div>
-                    <% }) %>
+                                </td>
+                            </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
                 </div>
             <% } %>
         </div>
     </div>
 
-    <!-- Resend Modal -->
-    <div id="resendModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3><i class="fas fa-redo" style="color:var(--primary);"></i> إعادة إرسال الرسائل</h3>
-                <button onclick="document.getElementById('resendModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
+    <!-- Modal: إعادة إرسال -->
+    <div class="modal-overlay" id="resendModal">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>🔄 إعادة إرسال الرسائل</h3>
+                <button type="button" class="modal-close" id="modalClose" title="إغلاق">✕</button>
             </div>
-            <div class="modal-body">
-                <p style="color:var(--ink-400);font-size:13px;margin-bottom:14px;">راجع الأرقام والنصوص قبل الإرسال. يمكنك التعديل قبل التأكيد.</p>
+            <div class="modal-body" id="modalBody">
+                <p style="color: var(--gray); font-size: 13px; margin-bottom: 14px;">
+                    راجع الأرقام والنصوص قبل الإرسال. يمكنك تعديل أي رقم أو نص، أو إزالة عنصر من القائمة.
+                </p>
                 <div id="resendItemsContainer"></div>
                 <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
                 <div class="result-box" id="resultBox"></div>
             </div>
-            <div class="modal-footer">
-                <span id="modalCounter" style="color:var(--ink-400);font-size:13px;font-weight:700;"></span>
-                <div style="display:flex;gap:8px;">
-                    <button class="btn btn-outline" onclick="document.getElementById('resendModal').classList.remove('show')">إلغاء</button>
-                    <button class="btn btn-green" id="btnConfirmResend" onclick="doResend()"><i class="fas fa-paper-plane"></i> إرسال الآن</button>
+            <div class="modal-foot">
+                <span id="modalCounter" style="color: var(--gray); font-size: 13px; font-weight: 700;"></span>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-outline" id="btnCancelResend">إلغاء</button>
+                    <button type="button" class="btn btn-green" id="btnConfirmResend">📤 إرسال الآن</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        function toggleMobileSidebar() {
-            document.querySelector('.sidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('active');
-        }
-
-        function toggleLogCard(card) {
-            card.classList.toggle('expanded');
-        }
-
-        function filterLogs() {
-            const query = document.getElementById('filterPhone').value.trim();
-            const cards = document.querySelectorAll('.log-card');
-            cards.forEach(c => {
-                const phone = c.dataset.to || '';
-                c.style.display = !query || phone.includes(query) ? '' : 'none';
-            });
-        }
-
-        function applyDateFilter() {
-            const from = document.getElementById('filterFrom').value;
-            const to = document.getElementById('filterTo').value;
-            if (!from || !to) { alert('يرجى تحديد التاريخين'); return; }
-            window.location.href = `/logs?dateFrom=${from}&dateTo=${to}`;
-        }
+    (function() {
+        const checkAll = document.getElementById('checkAll');
+        const rowCheckboxes = () => Array.from(document.querySelectorAll('.row-checkbox'));
+        const selectionInfo = document.getElementById('selectionInfo');
+        const selectionCount = document.getElementById('selectionCount');
+        const btnResendSelected = document.getElementById('btnResendSelected');
+        const btnSelectFailed = document.getElementById('btnSelectFailed');
 
         function updateSelection() {
-            const checks = Array.from(document.querySelectorAll('.row-check'));
-            const selected = checks.filter(c => c.checked);
-            document.getElementById('selectionCount').textContent = selected.length;
-            document.getElementById('selectionInfo').classList.toggle('active', selected.length > 0);
-            document.getElementById('btnResendSelected').disabled = selected.length === 0;
-            const allCb = document.querySelector('.check-all');
-            if (allCb) {
-                allCb.checked = selected.length > 0 && selected.length === checks.length;
-                allCb.indeterminate = selected.length > 0 && selected.length < checks.length;
+            const selected = rowCheckboxes().filter(c => c.checked);
+            const count = selected.length;
+            if (selectionCount) selectionCount.textContent = count;
+            if (selectionInfo) selectionInfo.classList.toggle('active', count > 0);
+            if (btnResendSelected) btnResendSelected.disabled = count === 0;
+            if (checkAll) {
+                const all = rowCheckboxes();
+                checkAll.checked = count > 0 && count === all.length;
+                checkAll.indeterminate = count > 0 && count < all.length;
             }
         }
 
-        function selectFailedOnly() {
-            document.querySelectorAll('.log-card').forEach(c => {
-                const cb = c.querySelector('.row-check');
-                if (cb) cb.checked = c.dataset.status === 'failed';
+        if (checkAll) {
+            checkAll.addEventListener('change', () => {
+                rowCheckboxes().forEach(c => { c.checked = checkAll.checked; });
+                updateSelection();
             });
-            updateSelection();
+        }
+        rowCheckboxes().forEach(c => c.addEventListener('change', updateSelection));
+
+        if (btnSelectFailed) {
+            btnSelectFailed.addEventListener('click', () => {
+                rowCheckboxes().forEach(c => {
+                    const tr = c.closest('tr');
+                    c.checked = tr && tr.dataset.status === 'failed';
+                });
+                updateSelection();
+            });
         }
 
-        function openResendModal() {
-            const selected = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => {
-                const card = cb.closest('.log-card');
-                return { to: card.dataset.to, body: card.dataset.body };
+        // Modal
+        const modal = document.getElementById('resendModal');
+        const modalClose = document.getElementById('modalClose');
+        const btnCancel = document.getElementById('btnCancelResend');
+        const btnConfirm = document.getElementById('btnConfirmResend');
+        const itemsContainer = document.getElementById('resendItemsContainer');
+        const modalCounter = document.getElementById('modalCounter');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const resultBox = document.getElementById('resultBox');
+
+        function openModal() {
+            const selected = rowCheckboxes().filter(c => c.checked).map(c => {
+                const tr = c.closest('tr');
+                return {
+                    logId: tr.dataset.logId,
+                    to: tr.dataset.to,
+                    body: tr.dataset.body
+                };
             });
             if (selected.length === 0) return;
-            buildResendItems(selected);
-            document.getElementById('resendModal').classList.add('show');
-        }
 
-        function openSingleResend(to, body) {
-            buildResendItems([{ to, body }]);
-            document.getElementById('resendModal').classList.add('show');
-        }
-
-        function buildResendItems(items) {
-            const container = document.getElementById('resendItemsContainer');
-            container.innerHTML = '';
-            items.forEach((item, i) => {
+            itemsContainer.innerHTML = '';
+            selected.forEach((item, i) => {
                 const el = document.createElement('div');
                 el.className = 'resend-item';
-                el.innerHTML = `
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <strong style="font-size:12px;color:var(--ink-400);">#${i+1}</strong>
-                        <button onclick="this.closest('.resend-item').remove();updateResendCounter();" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;"><i class="fas fa-times"></i> إزالة</button>
-                    </div>
-                    <div class="resend-field">
-                        <label>📱 الرقم</label>
-                        <input type="text" class="resend-to" value="${item.to || ''}" dir="ltr" style="font-family:monospace;font-weight:700;">
-                    </div>
-                    <div class="resend-field">
-                        <label>💬 نص الرسالة</label>
-                        <textarea class="resend-body" rows="3">${item.body || ''}</textarea>
-                    </div>`;
-                container.appendChild(el);
+                el.dataset.logId = item.logId;
+                el.innerHTML =
+                    '<div class="resend-item-head">' +
+                        '<strong>#' + (i + 1) + '</strong>' +
+                        '<button type="button" class="resend-remove" title="إزالة من القائمة">✕ إزالة</button>' +
+                    '</div>' +
+                    '<div class="resend-field">' +
+                        '<label>📱 الرقم</label>' +
+                        '<input type="text" class="resend-to" value="' + (item.to || '') + '" placeholder="9665XXXXXXXX">' +
+                    '</div>' +
+                    '<div class="resend-field">' +
+                        '<label>💬 نص الرسالة</label>' +
+                        '<textarea class="resend-body" rows="3" placeholder="نص الرسالة"></textarea>' +
+                    '</div>';
+                el.querySelector('.resend-body').value = item.body || '';
+                el.querySelector('.resend-remove').addEventListener('click', () => {
+                    el.remove();
+                    refreshCounter();
+                });
+                itemsContainer.appendChild(el);
             });
-            updateResendCounter();
-            document.getElementById('resultBox').className = 'result-box';
-            document.getElementById('progressBar').className = 'progress-bar';
+            refreshCounter();
+            resultBox.classList.remove('active', 'success', 'partial', 'error');
+            resultBox.innerHTML = '';
+            progressBar.classList.remove('active');
+            progressFill.style.width = '0%';
+            btnConfirm.disabled = false;
+            btnConfirm.textContent = '📤 إرسال الآن';
+            modal.classList.add('active');
         }
 
-        function updateResendCounter() {
-            const n = document.querySelectorAll('#resendItemsContainer .resend-item').length;
-            document.getElementById('modalCounter').textContent = n + ' رسالة جاهزة';
-            document.getElementById('btnConfirmResend').disabled = n === 0;
+        function refreshCounter() {
+            const n = itemsContainer.querySelectorAll('.resend-item').length;
+            modalCounter.textContent = n + ' رسالة جاهزة';
+            btnConfirm.disabled = n === 0;
         }
+
+        function closeModal() { modal.classList.remove('active'); }
+
+        if (btnResendSelected) btnResendSelected.addEventListener('click', openModal);
+        if (modalClose) modalClose.addEventListener('click', closeModal);
+        if (btnCancel) btnCancel.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
         async function doResend() {
-            const items = Array.from(document.querySelectorAll('#resendItemsContainer .resend-item')).map(el => ({
+            const items = Array.from(itemsContainer.querySelectorAll('.resend-item')).map(el => ({
+                logId: el.dataset.logId,
                 to: el.querySelector('.resend-to').value.trim(),
                 body: el.querySelector('.resend-body').value
             }));
+
+            // التحقق
             let hasInvalid = false;
-            items.forEach(it => {
-                if (!it.to || it.to.replace(/\D/g,'').length < 10 || !it.body.trim()) hasInvalid = true;
+            items.forEach((it, i) => {
+                const el = itemsContainer.children[i];
+                el.classList.remove('invalid');
+                const digits = (it.to || '').replace(/\D/g, '');
+                if (digits.length < 10 || !it.body.trim()) {
+                    el.classList.add('invalid');
+                    hasInvalid = true;
+                }
             });
             if (hasInvalid) {
-                document.getElementById('resultBox').className = 'result-box error active';
-                document.getElementById('resultBox').innerHTML = '<h4>❌ تحقق من الحقول</h4>تأكد من صحة الأرقام ونص الرسالة.';
+                resultBox.className = 'result-box error active';
+                resultBox.innerHTML = '<h4>❌ تحقق من الحقول</h4>هناك رقم غير صالح أو نص فارغ (مظلل بالأحمر).';
                 return;
             }
-            const btn = document.getElementById('btnConfirmResend');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-            document.getElementById('progressBar').className = 'progress-bar active';
-            document.getElementById('progressFill').style.width = '30%';
+
+            btnConfirm.disabled = true;
+            btnConfirm.textContent = '⏳ جاري الإرسال...';
+            progressBar.classList.add('active');
+            progressFill.style.width = '30%';
+            resultBox.classList.remove('active');
+
             try {
                 const res = await fetch('/logs/resend', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ items })
                 });
-                document.getElementById('progressFill').style.width = '90%';
+                progressFill.style.width = '90%';
                 const data = await res.json();
-                document.getElementById('progressFill').style.width = '100%';
+                progressFill.style.width = '100%';
+
                 if (!data.success) {
-                    document.getElementById('resultBox').className = 'result-box error active';
-                    document.getElementById('resultBox').innerHTML = '<h4>❌ فشل</h4>' + (data.error || 'خطأ');
-                } else {
-                    const cls = data.failedCount === 0 ? 'success' : (data.successCount === 0 ? 'error' : 'partial');
-                    let html = `<h4>${cls==='success'?'✅':cls==='error'?'❌':'⚠️'} ناجحة: ${data.successCount} | فاشلة: ${data.failedCount}</h4>`;
-                    document.getElementById('resultBox').className = 'result-box ' + cls + ' active';
-                    document.getElementById('resultBox').innerHTML = html;
-                    if (data.successCount > 0) setTimeout(() => location.reload(), 2000);
+                    resultBox.className = 'result-box error active';
+                    resultBox.innerHTML = '<h4>❌ فشل الإرسال</h4>' + (data.error || 'خطأ غير معروف');
+                    btnConfirm.disabled = false;
+                    btnConfirm.textContent = '📤 إعادة المحاولة';
+                    return;
                 }
-            } catch(e) {
-                document.getElementById('resultBox').className = 'result-box error active';
-                document.getElementById('resultBox').innerHTML = '<h4>❌ خطأ</h4>' + e.message;
+
+                const cls = data.failedCount === 0 ? 'success' : (data.successCount === 0 ? 'error' : 'partial');
+                const icon = cls === 'success' ? '✅' : (cls === 'error' ? '❌' : '⚠️');
+                let html = '<h4>' + icon + ' الإرسال: ' + data.successCount + ' ناجحة / ' + data.failedCount + ' فاشلة (من ' + data.total + ')</h4>';
+                if (data.failedCount > 0) {
+                    html += '<ul>';
+                    data.results.filter(r => !r.success).forEach(r => {
+                        html += '<li>📵 ' + (r.to || '?') + ' — ' + (r.error || 'فشل') + '</li>';
+                    });
+                    html += '</ul>';
+                }
+                if (data.successCount > 0) {
+                    html += '<div style="margin-top:8px; font-size:12px; opacity:0.85;">💡 سيتم تحديث الصفحة بعد 3 ثوان لعرض السجلات الجديدة.</div>';
+                    setTimeout(() => location.reload(), 3000);
+                }
+                resultBox.className = 'result-box ' + cls + ' active';
+                resultBox.innerHTML = html;
+                btnConfirm.textContent = '📤 إرسال مرة أخرى';
+                btnConfirm.disabled = false;
+            } catch (e) {
+                resultBox.className = 'result-box error active';
+                resultBox.innerHTML = '<h4>❌ خطأ في الشبكة</h4>' + (e.message || 'تعذر الاتصال بالخادم');
+                btnConfirm.disabled = false;
+                btnConfirm.textContent = '📤 إعادة المحاولة';
             }
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الآن';
         }
 
-        document.querySelectorAll('.sidebar-nav a, .sidebar-footer a').forEach(link => {
-            link.addEventListener('click', () => {
-                document.querySelector('.sidebar').classList.remove('open');
-                document.getElementById('sidebarOverlay').classList.remove('active');
-            });
-        });
+        if (btnConfirm) btnConfirm.addEventListener('click', doResend);
+        updateSelection();
+    })();
     </script>
     <script src="/js/app.js"></script>
 </body>

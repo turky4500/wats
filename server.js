@@ -360,7 +360,7 @@ async function handleCampaignRecipient(campaign, recipient) {
             throw buildPermanentError('الرقم غير مسجل في واتساب');
         }
 
-        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || [], { name: recipient.recipientName || '' });
+        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || []);
 
         await CampaignRecipient.findByIdAndUpdate(recipient._id, {
             status: 'sent',
@@ -1076,43 +1076,6 @@ app.delete('/api/groups/:id/contacts', requireAuth, async (req, res) => {
     }
 });
 
-app.put('/api/groups/:groupId/contacts/:contactId', requireAuth, async (req, res) => {
-    try {
-        const group = await Group.findOne({ _id: req.params.groupId, userId: req.session.userId });
-        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
-        const contact = group.contacts.id(req.params.contactId);
-        if (!contact) return res.status(404).json({ success: false, error: 'جهة الاتصال غير موجودة' });
-        if (req.body.name !== undefined) contact.name = req.body.name;
-        if (req.body.phone !== undefined) contact.phone = req.body.phone;
-        await group.save();
-        res.json({ success: true });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
-
-function normalizePhoneServer(raw) {
-    const clean = raw.replace(/\D/g, '');
-    if (/^966\d{9,11}$/.test(clean)) return clean;
-    if (/^971\d{8,10}$/.test(clean)) return clean;
-    if (/^965\d{7,9}$/.test(clean)) return clean;
-    if (/^973\d{7,9}$/.test(clean)) return clean;
-    if (/^974\d{7,9}$/.test(clean)) return clean;
-    if (/^968\d{7,9}$/.test(clean)) return clean;
-    if (/^967\d{7,9}$/.test(clean)) return clean;
-    if (/^20\d{9,10}$/.test(clean)) return clean;
-    if (/^962\d{7,9}$/.test(clean)) return clean;
-    if (/^963\d{7,9}$/.test(clean)) return clean;
-    if (/^964\d{7,9}$/.test(clean)) return clean;
-    if (/^961\d{6,8}$/.test(clean)) return clean;
-    if (/^212\d{8,9}$/.test(clean)) return clean;
-    if (/^216\d{7,9}$/.test(clean)) return clean;
-    if (/^213\d{8,10}$/.test(clean)) return clean;
-    if (/^5\d{8}$/.test(clean)) return '966' + clean;
-    if (/^05\d{8}$/.test(clean)) return '966' + clean.substring(1);
-    return null;
-}
-
 app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
@@ -1122,23 +1085,17 @@ app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (
         if (rows.length === 0) return res.status(400).json({ success: false, error: 'الملف فارغ' });
 
         const contacts = [];
-        let skipped = 0;
         for (const row of rows) {
             const phoneKey = Object.keys(row).find(k => /phone|جوال|رقم|mobile|number/i.test(k));
             const nameKey = Object.keys(row).find(k => /name|اسم|اسم العميل|customer/i.test(k));
-            const rawPhone = String(row[phoneKey] || '');
+            const phone = String(row[phoneKey] || '').replace(/\D/g, '');
             const name = nameKey ? String(row[nameKey] || '') : '';
-            const normalized = normalizePhoneServer(rawPhone);
-            if (normalized) {
-                contacts.push({ name, phone: normalized });
-            } else {
-                skipped++;
+            if (phone.length >= 9 && phone.length <= 15) {
+                contacts.push({ name, phone });
             }
         }
         if (contacts.length === 0) return res.status(400).json({ success: false, error: 'لم يتم العثور على أرقام صحيحة في الملف' });
-        let msg = 'تم استخراج ' + contacts.length + ' جهة اتصال';
-        if (skipped > 0) msg += ' (تم تخطي ' + skipped + ' رقم غير صحيح)';
-        res.json({ success: true, contacts, total: contacts.length, skipped });
+        res.json({ success: true, contacts, total: contacts.length });
     } catch (e) {
         res.status(500).json({ success: false, error: 'خطأ في قراءة الملف: ' + e.message });
     }
@@ -1527,18 +1484,6 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
 
         let numbers = req.body.numbers;
         if (typeof numbers === 'string' && numbers.trim().startsWith('[')) numbers = safeJsonParse(numbers, []);
-
-        const contactNames = {};
-        if (Array.isArray(numbers)) {
-            numbers.forEach(item => {
-                if (item && typeof item === 'object' && item.phone) {
-                    const normalized = normalizeSaudiPhoneNumber(item.phone);
-                    if (normalized && item.name) contactNames[normalized] = item.name;
-                }
-            });
-            numbers = numbers.map(item => (item && typeof item === 'object') ? item.phone : item);
-        }
-
         const normalization = normalizeNumbersDetailed(numbers);
         const normalizedNumbers = normalization.numbers;
         const body = (req.body.message || req.body.body || '').trim();
@@ -1599,7 +1544,6 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             campaignId: campaign._id,
             userId: user._id,
             phoneNumber,
-            recipientName: contactNames[phoneNumber] || '',
             status: 'pending',
             retryCount: 0
         })));
