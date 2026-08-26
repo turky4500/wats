@@ -1076,6 +1076,36 @@ app.delete('/api/groups/:id/contacts', requireAuth, async (req, res) => {
     }
 });
 
+app.put('/api/groups/:groupId/contacts/:contactId', requireAuth, async (req, res) => {
+    try {
+        const group = await Group.findOne({ _id: req.params.groupId, userId: req.session.userId });
+        if (!group) return res.status(404).json({ success: false, error: 'المجموعة غير موجودة' });
+
+        const contact = group.contacts.id(req.params.contactId);
+        if (!contact) return res.status(404).json({ success: false, error: 'جهة الاتصال غير موجودة' });
+
+        const phone = String(req.body.phone || '').replace(/\D/g, '');
+        const name = String(req.body.name || '').trim();
+
+        if (!phone) return res.status(400).json({ success: false, error: 'يرجى إدخال رقم الجوال' });
+        if (phone.length < 9 || phone.length > 15) {
+            return res.status(400).json({ success: false, error: 'رقم الجوال غير صحيح' });
+        }
+
+        const duplicate = group.contacts.some(c => c._id.toString() !== req.params.contactId && c.phone === phone);
+        if (duplicate) {
+            return res.status(400).json({ success: false, error: 'هذا الرقم موجود مسبقاً داخل المجموعة' });
+        }
+
+        contact.phone = phone;
+        contact.name = name;
+        await group.save();
+        res.json({ success: true, contact });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });

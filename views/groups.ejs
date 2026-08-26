@@ -242,6 +242,32 @@
         </div>
     </div>
 
+    <!-- Edit Contact Modal -->
+    <div id="editContactModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="modal-box" style="max-width:520px;">
+            <div class="modal-header">
+                <h3>تعديل جهة الاتصال</h3>
+                <button onclick="document.getElementById('editContactModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editContactId">
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input type="text" id="editNameInput" placeholder="اسم جهة الاتصال">
+                </div>
+                <div class="form-group">
+                    <label>الرقم</label>
+                    <input type="text" id="editPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
+                </div>
+                <div id="editMsg" class="msg-box"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-dark" onclick="document.getElementById('editContactModal').classList.remove('show')">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveContactEdit()"><i class="fas fa-save"></i> حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/app.js"></script>
     <script>
         let currentGroupId = null;
@@ -320,15 +346,33 @@
             } catch (e) { showToast('خطأ', 'error'); }
         }
 
+        function escapeHtml(value) {
+            return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function renderContacts(contacts) {
             const container = document.getElementById('contactsList');
             if (!contacts || contacts.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-300);">لا توجد جهات اتصال</div>';
                 return;
             }
-            let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th></th></tr></thead><tbody>';
+
+            let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th>الإجراءات</th></tr></thead><tbody>';
             contacts.forEach((c, i) => {
-                html += '<tr><td>' + (i+1) + '</td><td>' + (c.name || '—') + '</td><td dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</td><td><button class="btn btn-red" style="padding:4px 8px;font-size:10px;" onclick="removeContact(\'' + c._id + '\')"><i class="fas fa-times"></i></button></td></tr>';
+                const contactId = JSON.stringify(String(c._id || ''));
+                const contactName = JSON.stringify(String(c.name || ''));
+                const contactPhone = JSON.stringify(String(c.phone || ''));
+                html += `<tr>
+                    <td>${i + 1}</td>
+                    <td>${escapeHtml(c.name || '—')}</td>
+                    <td dir="ltr" style="font-family:var(--font-num);">${escapeHtml(c.phone || '')}</td>
+                    <td>
+                        <div class="contact-row-actions">
+                            <button class="btn-icon-soft" type="button" onclick='openEditContact(${contactId}, ${contactName}, ${contactPhone})'><i class="fas fa-pen"></i></button>
+                            <button class="btn-icon-soft danger" type="button" onclick='removeContact(${contactId})'><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
@@ -343,12 +387,7 @@
                 const data = await res.json();
                 if (data.success) {
                     showToast('تم الحذف');
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
+                    await refreshCurrentGroup();
                 }
             } catch (e) { showToast('خطأ', 'error'); }
         }
@@ -442,14 +481,60 @@
                     showMsg('addMsg', 'تمت الإضافة بنجاح', 'success');
                     document.getElementById('addPhoneInput').value = '';
                     document.getElementById('addNameInput').value = '';
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
+                    await refreshCurrentGroup();
                 } else { showMsg('addMsg', data.error, 'error'); }
             } catch (e) { showMsg('addMsg', 'خطأ', 'error'); }
+        }
+
+        function openEditContact(contactId, name, phone) {
+            name = name || '';
+            phone = phone || '';
+            document.getElementById('editContactId').value = contactId;
+            document.getElementById('editNameInput').value = name;
+            document.getElementById('editPhoneInput').value = phone;
+            hideMsg('editMsg');
+            document.getElementById('editContactModal').classList.add('show');
+            document.getElementById('editPhoneInput').focus();
+        }
+
+        async function refreshCurrentGroup() {
+            const gRes = await fetch('/api/groups/' + currentGroupId);
+            const gData = await gRes.json();
+            if (gData.success) {
+                document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
+                renderContacts(gData.group.contacts);
+            }
+        }
+
+        async function saveContactEdit() {
+            const contactId = document.getElementById('editContactId').value;
+            const phone = document.getElementById('editPhoneInput').value.trim();
+            const name = document.getElementById('editNameInput').value.trim();
+            if (!phone) { showMsg('editMsg', 'أدخل رقم الجوال', 'error'); return; }
+
+            const cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+                showMsg('editMsg', 'رقم الجوال غير صحيح', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/groups/' + currentGroupId + '/contacts/' + contactId, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name, phone: cleanPhone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم تحديث جهة الاتصال بنجاح');
+                    document.getElementById('editContactModal').classList.remove('show');
+                    await refreshCurrentGroup();
+                } else {
+                    showMsg('editMsg', data.error || 'تعذر حفظ التعديلات', 'error');
+                }
+            } catch (e) {
+                showMsg('editMsg', 'خطأ في الاتصال', 'error');
+            }
         }
 
         function toggleMobileSidebar() {
