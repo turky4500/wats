@@ -360,7 +360,7 @@ async function handleCampaignRecipient(campaign, recipient) {
             throw buildPermanentError('الرقم غير مسجل في واتساب');
         }
 
-        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || []);
+        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || [], { name: recipient.recipientName || '' });
 
         await CampaignRecipient.findByIdAndUpdate(recipient._id, {
             status: 'sent',
@@ -1527,6 +1527,18 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
 
         let numbers = req.body.numbers;
         if (typeof numbers === 'string' && numbers.trim().startsWith('[')) numbers = safeJsonParse(numbers, []);
+
+        const contactNames = {};
+        if (Array.isArray(numbers)) {
+            numbers.forEach(item => {
+                if (item && typeof item === 'object' && item.phone) {
+                    const normalized = normalizeSaudiPhoneNumber(item.phone);
+                    if (normalized && item.name) contactNames[normalized] = item.name;
+                }
+            });
+            numbers = numbers.map(item => (item && typeof item === 'object') ? item.phone : item);
+        }
+
         const normalization = normalizeNumbersDetailed(numbers);
         const normalizedNumbers = normalization.numbers;
         const body = (req.body.message || req.body.body || '').trim();
@@ -1587,6 +1599,7 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             campaignId: campaign._id,
             userId: user._id,
             phoneNumber,
+            recipientName: contactNames[phoneNumber] || '',
             status: 'pending',
             retryCount: 0
         })));

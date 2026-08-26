@@ -10,7 +10,57 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/theme.css">
     <style>
-        /* تجاوزات خاصة بصفحة لوحة التحكم */
+        .welcome-banner {
+            background: linear-gradient(135deg, #0da06a 0%, #075e54 100%);
+            border-radius: var(--r-lg); padding: 28px 32px; color: white;
+            margin-bottom: 24px; position: relative; overflow: hidden;
+        }
+        .welcome-banner::before {
+            content: ''; position: absolute; top: -40px; left: -40px;
+            width: 160px; height: 160px; background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .welcome-banner::after {
+            content: ''; position: absolute; bottom: -60px; right: 60px;
+            width: 200px; height: 200px; background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+        .welcome-banner h1 { font-size: 24px; font-weight: 900; margin-bottom: 6px; position: relative; z-index: 1; }
+        .welcome-banner p { font-size: 14px; opacity: 0.85; position: relative; z-index: 1; }
+        .welcome-banner .clock-chip {
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
+            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 800;
+            display: inline-flex; align-items: center; gap: 6px; position: relative; z-index: 1;
+        }
+        .campaign-builder-card {
+            background: var(--card); border-radius: var(--r-lg); border: 1px solid var(--ink-100);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .campaign-builder-header {
+            background: linear-gradient(135deg, var(--ink-900), var(--ink-700));
+            padding: 22px 28px; color: white;
+        }
+        .campaign-builder-header h3 { font-size: 18px; font-weight: 900; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+        .campaign-builder-header p { font-size: 13px; opacity: 0.7; }
+        .campaign-builder-body { padding: 24px; }
+        .enhanced-step {
+            display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+            border-radius: var(--r-sm); cursor: pointer; transition: all 0.2s;
+        }
+        .enhanced-step:hover { background: var(--ink-50); }
+        .enhanced-step.active { background: var(--primary-soft); }
+        .enhanced-step .step-num {
+            width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+            font-weight: 900; font-size: 14px; border: 2px solid var(--ink-200);
+            background: white; color: var(--ink-400); transition: all 0.3s; flex-shrink: 0;
+        }
+        .enhanced-step.active .step-num {
+            background: linear-gradient(135deg, var(--whatsapp), var(--primary-dark));
+            border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+        }
+        .enhanced-step .step-text { font-size: 14px; font-weight: 800; color: var(--ink-500); }
+        .enhanced-step.active .step-text { color: var(--ink-900); }
+        .step-line { flex: 1; height: 2px; background: var(--ink-100); border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -99,13 +149,16 @@
 
         <!-- ===== Main Content ===== -->
         <div class="main">
-            <div class="page-header">
-                <div class="page-header-text">
-                    <h1>أهلاً بك، <%= user.username %> 👋</h1>
-                    <p>أدِر حملاتك ورسائلك الترويجية بكل سهولة واحترافية</p>
-                </div>
-                <div class="date-chip">
-                    <i class="far fa-clock text-success"></i> <span id="liveTimeClock">--:--</span>
+            <!-- Welcome Banner -->
+            <div class="welcome-banner">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h1>أهلاً بك، <%= user.username %> 👋</h1>
+                        <p>أدِر حملاتك ورسائلك الترويجية بكل سهولة واحترافية</p>
+                    </div>
+                    <div class="clock-chip">
+                        <i class="far fa-clock"></i> <span id="liveTimeClock">--:--</span>
+                    </div>
                 </div>
             </div>
 
@@ -184,24 +237,22 @@
             <!-- ===== Master Main Builder Grid ===== -->
             <div class="master-grid">
                 <!-- Left Column: Step Builder -->
-                <div class="campaign-card">
-                    <div class="campaign-header">
-                        <div>
-                            <h3><i class="fas fa-magic"></i> مُنشئ الحملات والرسائل الذكي</h3>
-                            <p>أدوات احترافية لإرسال رسائلك بدقة وسرعة</p>
-                        </div>
+                <div class="campaign-builder-card">
+                    <div class="campaign-builder-header">
+                        <h3><i class="fas fa-rocket"></i> مُنشئ الحملات الذكي</h3>
+                        <p>أنشئ حملتك في خطوتين بسيطة</p>
                     </div>
-                    <div class="campaign-body">
+                    <div class="campaign-builder-body">
                         <!-- Stepper Bar -->
-                        <div class="steps-container">
-                            <div class="step-item active" id="st-1" onclick="goToStep(1)">
-                                <div class="step-circle">1</div>
-                                <div class="step-label">تحديد المستلمين</div>
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+                            <div class="enhanced-step active" id="st-1" onclick="goToStep(1)">
+                                <div class="step-num">1</div>
+                                <div class="step-text">المستلمين</div>
                             </div>
-                            <div class="step-divider"></div>
-                            <div class="step-item" id="st-2" onclick="goToStep(2)">
-                                <div class="step-circle">2</div>
-                                <div class="step-label">صياغة الرسالة والمرفقات</div>
+                            <div class="step-line"></div>
+                            <div class="enhanced-step" id="st-2" onclick="goToStep(2)">
+                                <div class="step-num">2</div>
+                                <div class="step-text">الرسالة</div>
                             </div>
                         </div>
 
@@ -314,15 +365,16 @@
                 <!-- Right Column: Realistic 3D WhatsApp Phone Mockup -->
                 <div class="phone-mockup-card">
                     <div class="phone-mockup-title">
-                        <span><i class="fab fa-whatsapp text-success me-1"></i> المعاينة المباشرة على الجوال</span>
-                        <span class="badge bg-success text-white px-2 py-1 rounded-pill" style="font-size:10px;">LIVE PREVIEW</span>
+                        <span><i class="fab fa-whatsapp text-success me-1"></i> المعاينة المباشرة</span>
+                        <span style="background:var(--primary-soft);color:var(--primary-dark);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;">LIVE</span>
                     </div>
 
                     <div class="phone-frame">
+                        <div class="phone-notch"></div>
                         <div class="phone-header">
                             <div class="phone-avatar"><i class="fas fa-user"></i></div>
                             <div class="phone-user-info">
-                                <h5>العميل المستهدف</h5>
+                                <h5 id="phonePreviewName">العميل المستهدف</h5>
                                 <p>متصل الآن</p>
                             </div>
                         </div>
@@ -330,7 +382,7 @@
                         <div class="phone-body">
                             <div class="phone-bubble">
                                 <img id="phoneMediaPreview" class="phone-media-preview" alt="المرفق">
-                                <div id="phoneBubbleText">ستظهر رسالتك وتنسيقها هنا لحظياً أثناء الكتابة...</div>
+                                <div id="phoneBubbleText">ستظهر رسالتك هنا أثناء الكتابة...</div>
                                 <div class="phone-bubble-footer">
                                     <span id="phoneTime">--:--</span>
                                     <span class="checks"><i class="fas fa-check-double"></i></span>
@@ -348,6 +400,7 @@
         const socket = io({ query: { userId: "<%= user._id %>" } });
         let isConnected = false;
         let recipientsList = [];
+        let recipientsNames = {};
         let allGroups = [];
 
         // Live Clock
@@ -409,7 +462,7 @@
         // Steps Switcher
         function goToStep(step) {
             document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.enhanced-step').forEach(el => el.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
             document.getElementById(`st-${step}`).classList.add('active');
         }
@@ -471,6 +524,8 @@
                 const data = await res.json();
                 if (!data.success) { showToast(data.error, 'error'); return; }
                 recipientsList = data.group.contacts.map(c => c.phone);
+                recipientsNames = {};
+                data.group.contacts.forEach(c => { if (c.name) recipientsNames[c.phone] = c.name; });
                 renderChips();
                 showToast(`تم تحميل ${recipientsList.length} رقم من مجموعة "${groupName}"`);
             } catch (e) { showToast('خطأ في تحميل المجموعة', 'error'); }
@@ -573,11 +628,15 @@
             const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
             const samplePhone = recipientsList.length > 0 ? recipientsList[0] : '0501234567';
+            const sampleName = (recipientsList.length > 0 && recipientsNames[recipientsList[0]]) ? recipientsNames[recipientsList[0]] : 'العميل العزيز';
+
+            const phoneNameEl = document.getElementById('phonePreviewName');
+            if (phoneNameEl) phoneNameEl.textContent = sampleName;
 
             let formatted = txt
                 .replace(/\{التاريخ\}|\{تاريخ\}|\{DATE\}|\{date\}/gi, `<span class="badge bg-light text-success border px-1 font-monospace">${dateStr}</span>`)
                 .replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, `<span class="badge bg-light text-primary border px-1 font-monospace">${timeStr}</span>`)
-                .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">العميل العزيز</span>`)
+                .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${sampleName}</span>`)
                 .replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${samplePhone}</span>`)
                 .replace(/\*(.*?)\*/g, '<b>$1</b>')
                 .replace(/_(.*?)_/g, '<i>$1</i>')
@@ -662,7 +721,8 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
 
             const formData = new FormData();
-            formData.append('numbers', JSON.stringify(recipientsList));
+            const numbersPayload = recipientsList.map(phone => ({ phone, name: recipientsNames[phone] || '' }));
+            formData.append('numbers', JSON.stringify(numbersPayload));
             formData.append('message', msg);
             
             for (let i = 0; i < mediaFiles.length; i++) {
