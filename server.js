@@ -720,32 +720,142 @@ async function getOwnedCampaign(userId, campaignId) {
     return Campaign.findOne({ _id: campaignId, userId });
 }
 
-const MONGO_URI = (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('127.0.0.1') && !process.env.MONGODB_URI.includes('localhost'))
-    ? process.env.MONGODB_URI
-    : 'mongodb://127.0.0.1:27017/wats';
-mongoose.connect(MONGO_URI)
-    .then(async () => {
-        console.log('✅ متصل بقاعدة بيانات MongoDB');
+// =====================================================================
+// 🗄️ نظام قاعدة البيانات الذكي — MongoDB على السيرفر تلقائياً
+// =====================================================================
+const { ensureLocalMongo } = require('./scripts/ensure-local-mongodb');
+const { migrate } = require('./scripts/migrate-atlas-to-local');
+
+const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/wats';
+const LEGACY_ATLAS_URI = 'mongodb+srv://tur100:Sa123456@cluster0.asfixge.mongodb.net/test?appName=Cluster0';
+
+function isLocalUri(uri) {
+    return !uri || uri.includes('127.0.0.1') || uri.includes('localhost');
+}
+
+function getRemoteConfiguredUri() {
+    const envUri = process.env.MONGODB_URI;
+    if (envUri && !isLocalUri(envUri)) return envUri;
+    return null;
+}
+
+async function updateEnvToLocal() {
+    try {
+        const envFile = path.join(__dirname, '.env');
+        if (!fs.existsSync(envFile)) return false;
+        let content = fs.readFileSync(envFile, 'utf8');
+        const hasKey = /^MONGODB_URI=/m.test(content);
+        if (hasKey) {
+            content = content.replace(/^MONGODB_URI=.*$/m, 'MONGODB_URI=mongodb://127.0.0.1:27017/wats');
+        } else {
+            content += '\nMONGODB_URI=mongodb://127.0.0.1:27017/wats\n';
+        }
+        fs.writeFileSync(envFile, content);
+        console.log('📝 [DB] تم تحديث .env لاستخدام قاعدة البيانات المحلية');
+        return true;
+    } catch (e) {
+        console.error('⚠️ [DB] فشل تحديث .env:', e.message);
+        return false;
+    }
+}
+
+async function isLocalDbEmpty() {
+    try {
+        const count = await mongoose.connection.db.collection('users').countDocuments();
+        return count === 0;
+    } catch (e) {
+        return true;
+    }
+}
+
+/**
+ * الإقلاع الذكي:
+ *  1) يضمن تشغيل MongoDB المحلي على السيرفر (تثبيت/تشغيل تلقائي)
+ *  2) إن كانت القاعدة المحلية فارغة ويوجد مصدر بعيد (أطلس) → ترحيل تلقائي كامل
+ *  3) يحدّث .env لاستخدام المحلي نهائياً
+ *  4) عند أي فشل → يتراجع للقاعدة البعيدة (بدون انقطاع الخدمة)
+ */
+async function initDatabase() {
+    const remoteUri = getRemoteConfiguredUri();
+
+    console.log('🗄️ [DB] بدء نظام قاعدة البيانات الذكي...');
+    const localReady = await ensureLocalMongo();
+
+    if (localReady) {
         try {
-            await getSettings();
+            await mongoose.connect(LOCAL_MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+            console.log('✅ متصل بقاعدة البيانات المحلية: ' + LOCAL_MONGO_URI);
 
-            let sysSock = getSession(SYSTEM_ID);
-            if (!sysSock) startWhatsAppSession(SYSTEM_ID, io).catch(err => console.error('❌ فشل بدء جلسة النظام:', err.message));
-
-            const users = await User.find({ role: 'user', isActive: true });
-            for (const user of users) {
-                const userSock = getSession(user._id.toString());
-                if (!userSock) startWhatsAppSession(user._id.toString(), io).catch(err => console.error('❌ فشل بدء جلسة المستخدم:', err.message));
+            // هل يوجد مصدر بعيد يجب ترحيله؟
+            if (remoteUri) {
+                const empty = await isLocalDbEmpty();
+                if (empty) {
+                    console.log('🔄 [DB] القاعدة المحلية فارغة — بدء الترحيل من: ' + remoteUri.replace(/\/\/[^@]+@/, '//***@'));
+                    try {
+                        await migrate(remoteUri, LOCAL_MONGO_URI, { dryRun: false });
+                        console.log('🎉 [DB] تم الترحيل بنجاح — التبديل للمحلي نهائياً');
+                        await updateEnvToLocal();
+                    } catch (migErr) {
+                        console.error('⚠️ [DB] فشل الترحيل، سنعود للمصدر البعيد مؤقتاً:', migErr.message);
+                        await mongoose.disconnect();
+                        await mongoose.connect(remoteUri, { serverSelectionTimeoutMS: 20000 });
+                        console.log('✅ متصل بالمصدر البعيد (احتياط): ' + remoteUri.replace(/\/\/[^@]+@/, '//***@'));
+                    }
+                } else {
+                    console.log('ℹ️ [DB] القاعدة المحلية تحتوي بيانات — لا حاجة للترحيل');
+                    await updateEnvToLocal();
+                }
             }
+            return LOCAL_MONGO_URI;
+        } catch (e) {
+            console.error('⚠️ [DB] تعذر الاتصال بالمحلي:', e.message);
+            if (remoteUri) {
+                await mongoose.connect(remoteUri, { serverSelectionTimeoutMS: 20000 });
+                console.log('✅ متصل بالمصدر البعيد (احتياط): ' + remoteUri.replace(/\/\/[^@]+@/, '//***@'));
+                return remoteUri;
+            }
+            throw e;
+        }
+    } else {
+        // MongoDB المحلي غير متاح — هل نعود للمصدر البعيد؟
+        if (remoteUri) {
+            await mongoose.connect(remoteUri, { serverSelectionTimeoutMS: 20000 });
+            console.log('⚠️ [DB] MongoDB المحلي غير متاح — استخدمنا المصدر البعيد مؤقتاً: ' + remoteUri.replace(/\/\/[^@]+@/, '//***@'));
+            console.log('   💡 لحل دائم: تأكد من تثبيت MongoDB على السيرفر (scripts/setup-mongodb.sh)');
+            return remoteUri;
+        }
+        // المحاولة الأخيرة: الاتصال بأطلس الافتراضي (للتراجع الآمن فقط)
+        await mongoose.connect(LEGACY_ATLAS_URI, { serverSelectionTimeoutMS: 20000 });
+        console.log('⚠️ [DB] متصل بأطلس (ملاذ أخير): ' + LEGACY_ATLAS_URI.replace(/\/\/[^@]+@/, '//***@'));
+        return LEGACY_ATLAS_URI;
+    }
+}
 
-            setTimeout(() => {
-                resumeActiveCampaigns().catch(err => console.error('خطأ في استئناف الحملات:', err));
-                processScheduledCampaigns().catch(err => console.error('خطأ في تشغيل الحملات المجدولة:', err));
-            }, 12000);
+initDatabase()
+    .then(() => {
+        console.log('✅ قاعدة البيانات جاهزة');
+        try {
+            (async () => {
+                await getSettings();
+
+                let sysSock = getSession(SYSTEM_ID);
+                if (!sysSock) startWhatsAppSession(SYSTEM_ID, io).catch(err => console.error('❌ فشل بدء جلسة النظام:', err.message));
+
+                const users = await User.find({ role: 'user', isActive: true });
+                for (const user of users) {
+                    const userSock = getSession(user._id.toString());
+                    if (!userSock) startWhatsAppSession(user._id.toString(), io).catch(err => console.error('❌ فشل بدء جلسة المستخدم:', err.message));
+                }
+
+                setTimeout(() => {
+                    resumeActiveCampaigns().catch(err => console.error('خطأ في استئناف الحملات:', err));
+                    processScheduledCampaigns().catch(err => console.error('خطأ في تشغيل الحملات المجدولة:', err));
+                }, 12000);
+            })().catch(e => console.error('خطأ:', e));
         } catch (e) {
             console.error('خطأ:', e);
         }
-    }).catch(err => console.error('❌ خطأ في الاتصال:', err));
+    }).catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
