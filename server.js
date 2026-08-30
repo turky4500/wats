@@ -1290,6 +1290,110 @@ app.post('/api/groups/import-excel/sheets', requireAuth, upload.single('file'), 
     }
 });
 
+// 🔍 كشف تلقائي ذكي: يفحص كل الأعمدة ويحدد عمود الأرقام وعمود الأسماء
+// (يبحث عن أي عمود قيمه أرقام تشبه هواتف — تبدأ بـ 966 أو 05 أو 5 — ويعرض النتيجة)
+function detectExcelColumns(workbook, sheetName) {
+    const sheet = workbook.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    const numCols = rawRows.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 0), 0);
+
+    const PHONE_HEADER = /phone|mobile|tel|whats|رقم|جوال|هاتف|واتس|contact/i;
+    const NAME_HEADER = /name|اسم|عميل|customer|client/i;
+
+    const columns = [];
+    for (let c = 0; c < numCols; c++) {
+        let phoneLike = 0, textLike = 0, total = 0, samplePhone = '', sampleText = '';
+        for (const row of rawRows) {
+            const v = row && row[c];
+            if (v === undefined || v === null || String(v).trim() === '') continue;
+            total++;
+            const sv = String(v).trim();
+            const digits = sv.replace(/\D/g, '');
+            if (digits.length >= 9 && digits.length <= 15) { phoneLike++; if (!samplePhone) samplePhone = sv; }
+            else if (/[a-zA-Z\u0600-\u06FF]/.test(sv)) { textLike++; if (!sampleText) sampleText = sv; }
+        }
+        const header = String((rawRows[0] && rawRows[0][c]) || '').trim();
+        // العدد الفعلي للأرقام/النصوص هو العامل الحاسم — عنوان العمود مجرد كسر تعادل
+        const phoneScore = phoneLike * 1000 + (PHONE_HEADER.test(header) ? 500 : 0);
+        const nameScore = textLike * 10 + (NAME_HEADER.test(header) ? 100 : 0);
+        columns.push({
+            key: XLSX.utils.encode_col(c),
+            header: header || null,
+            phoneLike,
+            textLike,
+            total,
+            samplePhone: samplePhone || null,
+            sampleText: sampleText || null,
+            phoneScore,
+            nameScore
+        });
+    }
+
+    const phoneSorted = [...columns].sort((a, b) => b.phoneScore - a.phoneScore);
+    const phoneCol = phoneSorted[0] && phoneSorted[0].phoneLike > 0 ? phoneSorted[0].key : null;
+    const others = columns.filter(c => c.key !== phoneCol).sort((a, b) => b.nameScore - a.nameScore);
+    const nameCol = others[0] && others[0].textLike > 0 ? others[0].key : null;
+    return { columns, phoneCol, nameCol };
+}
+
+// استخراج جهات الاتصال من ورقة محددة باستخدام الأعمدة المكتشفة أو المحددة يدوياً
+function extractContactsFromSheet(workbook, sheetName, phoneCol, nameCol) {
+    const sheet = workbook.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    const pIdx = phoneCol ? XLSX.utils.decode_col(phoneCol) : -1;
+    const nIdx = nameCol ? XLSX.utils.decode_col(nameCol) : -1;
+    const seen = new Set();
+    const contacts = [];
+
+    for (const row of rawRows) {
+        if (!Array.isArray(row)) continue;
+        const pv = pIdx >= 0 ? row[pIdx] : '';
+        const digits = String(pv ?? '').replace(/\D/g, '');
+        if (digits.length < 9 || digits.length > 15) continue;
+
+        let normalized = digits;
+        if (normalized.startsWith('00')) normalized = normalized.slice(2);
+        if (normalized.startsWith('0')) normalized = '966' + normalized.slice(1);
+        else if (normalized.length === 9 && normalized.startsWith('5')) normalized = '966' + normalized;
+        if (normalized.length < 9 || normalized.length > 15) continue;
+        if (seen.has(normalized)) continue;
+        seen.add(normalized);
+
+        const nv = nIdx >= 0 ? row[nIdx] : '';
+        const name = String(nv ?? '').trim();
+        contacts.push({
+            name: name && /[a-zA-Z\u0600-\u06FF]/.test(name) ? name : '',
+            phone: normalized
+        });
+    }
+    return contacts;
+}
+
+// 🔍 نقطة كشف الأعمدة (تُظهر للمستخدم الأعمدة المكتشفة + معاينة قبل الحفظ)
+app.post('/api/groups/import-excel/detect', requireAuth, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const requestedSheet = req.body.sheetName;
+        const sheetName = requestedSheet && workbook.SheetNames.includes(requestedSheet) ? requestedSheet : workbook.SheetNames[0];
+        if (!sheetName) return res.status(400).json({ success: false, error: 'لا توجد أوراق عمل في الملف' });
+
+        const detection = detectExcelColumns(workbook, sheetName);
+        const contacts = extractContactsFromSheet(workbook, sheetName, detection.phoneCol, detection.nameCol);
+        res.json({
+            success: true,
+            sheetName,
+            columns: detection.columns,
+            phoneCol: detection.phoneCol,
+            nameCol: detection.nameCol,
+            total: contacts.length,
+            contacts: contacts.slice(0, 30)
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'خطأ في قراءة الملف: ' + e.message });
+    }
+});
+
 app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
@@ -1299,21 +1403,26 @@ app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (
         const sheetName = requestedSheet && workbook.SheetNames.includes(requestedSheet)
             ? requestedSheet
             : workbook.SheetNames[0];
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        if (rows.length === 0) return res.status(400).json({ success: false, error: 'الملف فارغ' });
 
-        const contacts = [];
-        for (const row of rows) {
-            const phoneKey = Object.keys(row).find(k => /phone|جوال|رقم|mobile|number/i.test(k));
-            const nameKey = Object.keys(row).find(k => /name|اسم|اسم العميل|customer/i.test(k));
-            const phone = String(row[phoneKey] || '').replace(/\D/g, '');
-            const name = nameKey ? String(row[nameKey] || '') : '';
-            if (phone.length >= 9 && phone.length <= 15) {
-                contacts.push({ name, phone });
-            }
+        // تحديد الأعمدة: إما يدوياً من المستخدم، أو كشف تلقائي ذكي
+        let phoneCol = req.body.phoneCol;
+        let nameCol = req.body.nameCol || null;
+        let validCol = false;
+        try { if (phoneCol) XLSX.utils.decode_col(phoneCol); validCol = !!phoneCol; } catch (e) { validCol = false; }
+        if (!validCol) {
+            const det = detectExcelColumns(workbook, sheetName);
+            phoneCol = det.phoneCol;
+            if (!nameCol) nameCol = det.nameCol;
         }
-        if (contacts.length === 0) return res.status(400).json({ success: false, error: 'لم يتم العثور على أرقام صحيحة في الملف' });
-        res.json({ success: true, contacts, total: contacts.length });
+        if (!phoneCol) {
+            return res.status(400).json({ success: false, error: 'لم يتم العثور على عمود يحتوي أرقام هواتف — اختر العمود يدوياً من القائمة' });
+        }
+
+        const contacts = extractContactsFromSheet(workbook, sheetName, phoneCol, nameCol);
+        if (contacts.length === 0) {
+            return res.status(400).json({ success: false, error: 'لم يتم العثور على أرقام صحيحة في الورقة المحددة' });
+        }
+        res.json({ success: true, contacts, total: contacts.length, sheetName, phoneCol, nameCol });
     } catch (e) {
         res.status(500).json({ success: false, error: 'خطأ في قراءة الملف: ' + e.message });
     }

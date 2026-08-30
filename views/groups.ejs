@@ -219,7 +219,7 @@
                     <div class="drop-zone" onclick="document.getElementById('excelImportFile').click()">
                         <div style="font-size:30px;margin-bottom:8px;">📁</div>
                         <h4>اختر ملف Excel أو CSV</h4>
-                        <p>الملف يجب أن يحتوي على عمود "phone" أو "جوال" أو "رقم"</p>
+                        <p>نكتشف عمود الأرقام والأسماء تلقائياً — ويمكنك اختيارهما يدوياً</p>
                     </div>
                     <input type="file" id="excelImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
                     <div id="importPreview" style="display:none;margin-top:12px;"></div>
@@ -274,6 +274,7 @@
         let currentGroupId = null;
         let importedContacts = [];
         let currentExcelFile = null;
+        let currentSheetName = null;
 
         function showToast(message, type) {
             const c = document.getElementById('toast-container');
@@ -442,37 +443,125 @@
             event.target.value = '';
         }
 
-        // قراءة الأرقام من الورقة المختارة
+        // قراءة الأرقام من الورقة المختارة مع كشف تلقائي للأعمدة
         async function readExcelSheet() {
             const select = document.getElementById('sheetSelect');
             const sheetName = select ? select.value : '';
             if (!currentExcelFile) { showMsg('importMsg', 'أعد اختيار الملف أولاً', 'error'); return; }
-            showMsg('importMsg', 'جاري استخراج الأرقام من ورقة "' + sheetName + '"...', 'success');
+            currentSheetName = sheetName;
+            showMsg('importMsg', 'جاري تحليل الأعمدة في ورقة "' + sheetName + '"...', 'success');
             const formData = new FormData();
             formData.append('file', currentExcelFile);
             formData.append('sheetName', sheetName);
+            try {
+                const res = await fetch('/api/groups/import-excel/detect', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!data.success) {
+                    showMsg('importMsg', data.error || 'خطأ', 'error');
+                    return;
+                }
+                renderColumnPicker(data);
+                hideMsg('importMsg');
+            } catch (e) { showMsg('importMsg', 'خطأ في تحليل الملف', 'error'); }
+        }
+
+        // عرض منتقي الأعمدة (مع الكشف التلقائي) + معاينة
+        function renderColumnPicker(data) {
+            importedContacts = data.contacts;
+            let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
+
+            // شريط حالة الكشف
+            if (data.phoneCol) {
+                html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:10px;">🔍 تم الكشف تلقائياً: الأرقام في العمود ' + data.phoneCol + (data.nameCol ? ' والأسماء في ' + data.nameCol : ' (بدون أسماء)') + '</div>';
+            } else {
+                html += '<div style="font-weight:800;color:#d97706;margin-bottom:10px;">⚠️ لم نجد عمود أرقام تلقائياً — اختره يدوياً:</div>';
+            }
+
+            // قائمة الأعمدة
+            html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">';
+            html += '<div style="flex:1;min-width:170px;">';
+            html += '<label style="font-size:11.5px;font-weight:800;color:var(--ink-500);display:block;margin-bottom:4px;">📱 عمود الأرقام</label>';
+            html += '<select id="phoneColSelect" style="width:100%;padding:9px 11px;border:2px solid #bbf7d0;border-radius:10px;font-family:inherit;font-size:13px;background:white;">';
+            html += '<option value="">— اختر العمود —</option>';
+            data.columns.forEach(c => {
+                const label = 'العمود ' + c.key + (c.header ? ' (' + escapeHtml(c.header) + ')' : '') + (c.samplePhone ? ' — مثل: ' + escapeHtml(c.samplePhone) : '');
+                html += '<option value="' + c.key + '"' + (c.key === data.phoneCol ? ' selected' : '') + '>' + label + '</option>';
+            });
+            html += '</select></div>';
+
+            html += '<div style="flex:1;min-width:170px;">';
+            html += '<label style="font-size:11.5px;font-weight:800;color:var(--ink-500);display:block;margin-bottom:4px;">👤 عمود الاسم (اختياري)</label>';
+            html += '<select id="nameColSelect" style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:13px;background:white;">';
+            html += '<option value="">— بدون أسماء —</option>';
+            data.columns.forEach(c => {
+                if (c.key === data.phoneCol) return;
+                const label = 'العمود ' + c.key + (c.header ? ' (' + escapeHtml(c.header) + ')' : '') + (c.sampleText ? ' — مثل: ' + escapeHtml(c.sampleText) : '');
+                html += '<option value="' + c.key + '"' + (c.key === data.nameCol ? ' selected' : '') + '>' + label + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+
+            // زر إعادة الاستخراج
+            html += '<button class="btn btn-blue btn-full" style="margin-bottom:10px;" onclick="reExtractWithColumns()"><i class="fas fa-sync"></i> إعادة الاستخراج بهذه الأعمدة</button>';
+
+            // معاينة النتائج
+            html += '<div id="importPreviewBox">';
+            html += renderImportPreview();
+            html += '</div>';
+            html += '</div>';
+
+            document.getElementById('importPreview').innerHTML = html;
+            document.getElementById('importPreview').style.display = 'block';
+
+            // تغيير القائمة يعيد الاستخراج تلقائياً
+            document.getElementById('phoneColSelect').onchange = reExtractWithColumns;
+            document.getElementById('nameColSelect').onchange = reExtractWithColumns;
+        }
+
+        function renderImportPreview() {
+            if (!importedContacts.length) {
+                return '<div style="color:#d97706;font-size:13px;font-weight:700;padding:8px 0;">لا توجد أرقام صحيحة في هذه الأعمدة</div>';
+            }
+            let html = '<div style="font-weight:800;color:var(--primary-dark);margin:6px 0;">✅ تم العثور على ' + importedContacts.length + ' جهة اتصال</div>';
+            html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
+            importedContacts.slice(0, 20).forEach((c, i) => {
+                html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
+            });
+            if (importedContacts.length > 20) html += '<div style="padding:4px 0;color:var(--ink-400);">...و ' + (importedContacts.length - 20) + ' جهة اتصال أخرى</div>';
+            html += '</div>';
+            html += '<button class="btn btn-green btn-full" style="margin-top:12px;" onclick="saveImportedContacts()"><i class="fas fa-save"></i> حفظ في المجموعة (' + importedContacts.length + ' جهة اتصال)</button>';
+            return html;
+        }
+
+        // إعادة الاستخراج بالأعمدة المختارة يدوياً
+        async function reExtractWithColumns() {
+            const phoneCol = document.getElementById('phoneColSelect').value;
+            const nameCol = document.getElementById('nameColSelect').value;
+            if (!phoneCol) {
+                showMsg('importMsg', 'اختر عمود الأرقام أولاً', 'error');
+                return;
+            }
+            showMsg('importMsg', 'جاري إعادة الاستخراج...', 'success');
+            const formData = new FormData();
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', currentSheetName);
+            formData.append('phoneCol', phoneCol);
+            formData.append('nameCol', nameCol);
             try {
                 const res = await fetch('/api/groups/import-excel', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (data.success) {
                     importedContacts = data.contacts;
-                    let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
-                    html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الورقة: ' + escapeHtml(sheetName) + '</div>';
-                    html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
-                    data.contacts.slice(0, 20).forEach((c, i) => {
-                        html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
-                    });
-                    if (data.total > 20) html += '<div style="padding:4px 0;color:var(--ink-400);">...و ' + (data.total - 20) + ' جهة اتصال أخرى</div>';
-                    html += '</div>';
-                    html += '<button class="btn btn-green btn-full" style="margin-top:12px;" onclick="saveImportedContacts()"><i class="fas fa-save"></i> حفظ في المجموعة (' + data.total + ' جهة اتصال)</button>';
-                    html += '</div>';
-                    document.getElementById('importPreview').innerHTML = html;
-                    document.getElementById('importPreview').style.display = 'block';
+                    const box = document.getElementById('importPreviewBox');
+                    if (box) box.innerHTML = renderImportPreview();
                     hideMsg('importMsg');
                 } else {
-                    showMsg('importMsg', data.error || 'خطأ', 'error');
+                    importedContacts = [];
+                    const box = document.getElementById('importPreviewBox');
+                    if (box) box.innerHTML = '<div style="color:#d97706;font-size:13px;font-weight:700;padding:8px 0;">' + escapeHtml(data.error || 'خطأ') + '</div>';
+                    hideMsg('importMsg');
                 }
-            } catch (e) { showMsg('importMsg', 'خطأ في قراءة الملف', 'error'); }
+            } catch (e) { showMsg('importMsg', 'خطأ في القراءة', 'error'); }
         }
 
         async function saveImportedContacts() {
