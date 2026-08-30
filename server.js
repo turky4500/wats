@@ -13,6 +13,8 @@ const session = require('express-session');
 const cors = require('cors');
 const multer = require('multer');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const XLSX = require('xlsx');
 const User = require('./models/User');
 const MessageLog = require('./models/MessageLog');
@@ -136,31 +138,63 @@ function decodeFileName(name) {
     return fname;
 }
 
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+function sanitizeFilename(name) {
+    return String(name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+}
+
 function extractMediaFromRequest(req, persist = false) {
     let mediaArray = [];
 
     if (req.files && req.files.length > 0) {
-        mediaArray = req.files.map(file => ({
-            mimetype: file.mimetype,
-            filename: decodeFileName(file.originalname),
-            ...(persist ? { data: file.buffer.toString('base64') } : { buffer: file.buffer })
-        }));
+        mediaArray = req.files.map(file => {
+            const safeName = Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + sanitizeFilename(file.originalname);
+            if (persist) {
+                const fullPath = path.join(UPLOADS_DIR, safeName);
+                fs.writeFileSync(fullPath, file.buffer);
+                return {
+                    mimetype: file.mimetype,
+                    filename: decodeFileName(file.originalname),
+                    path: path.join('uploads', safeName)
+                };
+            }
+            return {
+                mimetype: file.mimetype,
+                filename: decodeFileName(file.originalname),
+                buffer: file.buffer
+            };
+        });
     } else if (req.body.media) {
         let bodyMedia = req.body.media;
         if (typeof bodyMedia === 'string') {
             bodyMedia = safeJsonParse(bodyMedia, []);
         }
         if (Array.isArray(bodyMedia)) {
-            mediaArray = bodyMedia.map(item => ({
-                mimetype: item.mimetype,
-                filename: item.filename || 'file',
-                data: item.data,
-                ...(item.buffer ? { buffer: item.buffer } : {})
-            }));
+            mediaArray = bodyMedia.map(item => {
+                if (persist && item.data) {
+                    const base64Data = String(item.data).includes(',') ? String(item.data).split(',')[1] : item.data;
+                    const safeName = Date.now() + '-' + Math.round(Math.random() * 1e9) + '-' + sanitizeFilename(item.filename);
+                    const fullPath = path.join(UPLOADS_DIR, safeName);
+                    fs.writeFileSync(fullPath, Buffer.from(base64Data, 'base64'));
+                    return {
+                        mimetype: item.mimetype,
+                        filename: item.filename || 'file',
+                        path: path.join('uploads', safeName)
+                    };
+                }
+                return {
+                    mimetype: item.mimetype,
+                    filename: item.filename || 'file',
+                    data: item.data,
+                    ...(item.buffer ? { buffer: item.buffer } : {})
+                };
+            });
         }
     }
 
-    return mediaArray.filter(item => item && item.mimetype && (item.buffer || item.data));
+    return mediaArray.filter(item => item && item.mimetype && (item.buffer || item.data || item.path));
 }
 
 function getCurrentKsaTimeParts() {
@@ -642,7 +676,9 @@ async function sendWhatsAppMessage(sock, jid, body, mediaArray, extraData = {}) 
             const m = mediaArray[i];
             let buffer;
             if (m.buffer) buffer = m.buffer;
-            else if (m.data) {
+            else if (m.path) {
+                buffer = fs.readFileSync(path.join(__dirname, m.path));
+            } else if (m.data) {
                 const base64Data = m.data.includes(',') ? m.data.split(',')[1] : m.data;
                 buffer = Buffer.from(base64Data, 'base64');
             }
@@ -686,7 +722,7 @@ async function getOwnedCampaign(userId, campaignId) {
 
 const MONGO_URI = (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('127.0.0.1') && !process.env.MONGODB_URI.includes('localhost'))
     ? process.env.MONGODB_URI
-    : 'mongodb+srv://tur100:Sa123456@cluster0.asfixge.mongodb.net/test?appName=Cluster0';
+    : 'mongodb://127.0.0.1:27017/wats';
 mongoose.connect(MONGO_URI)
     .then(async () => {
         console.log('✅ متصل بقاعدة بيانات MongoDB');
@@ -713,6 +749,7 @@ mongoose.connect(MONGO_URI)
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({

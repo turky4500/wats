@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const campaignMediaSchema = new mongoose.Schema({
     mimetype: { type: String, required: true },
     filename: { type: String, default: 'file' },
-    data: { type: String, required: true }
+    data: { type: String, default: null },
+    path: { type: String, default: null }
 }, { _id: false });
 
 const campaignSchema = new mongoose.Schema({
