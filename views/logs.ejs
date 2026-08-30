@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أرشيف الرسائل | واتساب تكوين</title>
+    <title>سجل الرسائل | واتساب تكوين</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/theme.css">
@@ -22,7 +22,7 @@
         }
         body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
 
-        /* Top Bar */
+        /* Top Bar (نفس الشكل الحالي) */
         .topbar { background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%); color: white; padding: 0 40px; display: flex; justify-content: space-between; align-items: center; height: 65px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .topbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 18px; }
         .topbar-actions { display: flex; gap: 10px; }
@@ -37,16 +37,16 @@
         .page-header h1 { font-size: 26px; font-weight: 900; color: var(--dark); display: flex; align-items: center; gap: 10px; }
         .page-header .subtitle { color: var(--gray); font-size: 14px; margin-top: 4px; }
 
-        /* Filter Card */
-        .filter-card { background: linear-gradient(135deg, var(--blue-light) 0%, #f0f7ff 100%); border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 22px 28px; margin-bottom: 25px; }
+        /* Filter Card (نفس الشكل) */
+        .filter-card { background: linear-gradient(135deg, var(--primary-light) 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; border-radius: var(--radius); padding: 22px 28px; margin-bottom: 25px; }
         .filter-form { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
         .filter-group { flex: 1; min-width: 180px; }
-        .filter-group label { display: block; font-weight: 700; font-size: 13px; color: #1e40af; margin-bottom: 6px; }
-        .filter-group input { width: 100%; padding: 11px 14px; border: 2px solid #93c5fd; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
-        .filter-group input:focus { border-color: var(--blue); }
+        .filter-group label { display: block; font-weight: 700; font-size: 13px; color: #166534; margin-bottom: 6px; }
+        .filter-group input { width: 100%; padding: 11px 14px; border: 2px solid #86efac; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; background: white; transition: border 0.2s; }
+        .filter-group input:focus { border-color: var(--primary); }
         .filter-actions { display: flex; gap: 8px; }
 
-        /* Stats Row */
+        /* Stats Row (نفس الشكل) */
         .log-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .log-stat { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; }
         .log-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
@@ -60,12 +60,37 @@
 
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         thead th { background: #f8fafc; color: var(--gray); font-weight: 700; padding: 14px 20px; text-align: right; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
-        tbody td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; }
+        tbody td { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         tbody tr { transition: background 0.15s; }
         tbody tr:hover { background: #fafbff; }
 
-        .msg-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dark2); }
-        .phone-cell { font-weight: 800; color: var(--dark); direction: ltr; font-family: 'Courier New', monospace; font-size: 13px; }
+        /* ===== التصميم الاحترافي الجديد للأعمدة ===== */
+        .msg-cell { max-width: 340px; }
+        .msg-preview { display: flex; align-items: center; gap: 10px; }
+        .msg-bubble-mini {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
+            padding: 8px 14px; font-size: 13px; color: var(--dark2);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;
+            position: relative;
+        }
+        .msg-bubble-mini::after { content: '💬'; position: absolute; top: 50%; transform: translateY(-50%); left: -8px; opacity: 0; }
+        .view-btn {
+            background: #f8fafc; border: 1.5px solid #e2e8f0; color: #166534;
+            border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 800;
+            cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .view-btn:hover { background: var(--primary-light); border-color: var(--primary); transform: translateY(-1px); }
+
+        .phone-cell { font-weight: 800; color: var(--dark); direction: ltr; font-family: 'Courier New', monospace; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .copy-mini-btn {
+            background: none; border: 1px solid #e2e8f0; color: var(--gray);
+            width: 26px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 12px;
+            display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .copy-mini-btn:hover { background: var(--primary-light); border-color: var(--primary); color: #166534; }
+        .copy-mini-btn.copied { background: var(--primary); color: #fff; border-color: var(--primary); }
+
         .time-cell { color: var(--gray); font-size: 13px; direction: ltr; white-space: nowrap; }
 
         .badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; }
@@ -85,9 +110,8 @@
         .btn-red { background: var(--danger); }
         .btn-dark { background: var(--dark2); }
         .btn-outline { background: white; color: var(--dark2); border: 2px solid #e2e8f0; }
-        .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+        .btn-outline:hover { border-color: var(--primary); color: #166534; }
 
-        /* Resend feature */
         .btn-green { background: var(--primary); }
         .btn-green:disabled { background: #94a3b8; cursor: not-allowed; opacity: 0.6; transform: none !important; }
         .row-checkbox, .check-all { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
@@ -95,7 +119,17 @@
         .selection-info.active { display: inline-flex; }
         .header-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        /* Modal */
+        /* Search box (جديد) */
+        .search-box { position: relative; }
+        .search-box input {
+            padding: 10px 16px 10px 38px; border: 2px solid #e2e8f0; border-radius: 10px;
+            font-family: inherit; font-size: 13px; width: 240px; outline: none; transition: all 0.2s; background: white;
+        }
+        .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,211,102,0.12); }
+        .search-box .s-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-light); font-size: 14px; pointer-events: none; }
+        .search-box .s-clear { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--gray-light); cursor: pointer; font-size: 14px; display: none; }
+
+        /* Modal عام */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal-overlay.active { display: flex; }
         .modal { background: var(--card); border-radius: var(--radius); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); width: 100%; max-width: 720px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; animation: modalIn 0.2s ease-out; }
@@ -109,22 +143,18 @@
 
         .resend-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; position: relative; }
         .resend-item.removed { opacity: 0.4; }
+        .resend-item.invalid { border-color: var(--danger); background: var(--danger-light); }
         .resend-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .resend-item-head strong { font-size: 12px; color: var(--gray); font-weight: 700; }
         .resend-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; }
         .resend-remove:hover { background: var(--danger-light); }
         .resend-field { margin-bottom: 8px; }
         .resend-field label { display: block; font-size: 11px; font-weight: 700; color: var(--gray); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
-        .resend-field input, .resend-field textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 13px; outline: none; background: white; transition: border 0.15s; resize: vertical; }
-        .resend-field input { direction: ltr; font-family: 'Courier New', monospace; font-weight: 700; }
-        .resend-field textarea { min-height: 60px; line-height: 1.6; }
+        .resend-field input, .resend-field textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; }
         .resend-field input:focus, .resend-field textarea:focus { border-color: var(--primary); }
-        .resend-item.invalid { border-color: var(--danger); background: var(--danger-light); }
-
         .progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 15px 0; display: none; }
         .progress-bar.active { display: block; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); width: 0; transition: width 0.4s ease; }
-
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), #128C7E); border-radius: 4px; transition: width 0.4s; }
         .result-box { padding: 14px 18px; border-radius: 10px; margin-top: 12px; display: none; font-size: 14px; }
         .result-box.active { display: block; }
         .result-box.success { background: var(--primary-light); color: #065f46; border: 1px solid var(--primary); }
@@ -135,14 +165,52 @@
         .result-box li { padding: 4px 0; font-size: 12px; direction: ltr; text-align: right; border-bottom: 1px dashed rgba(0,0,0,0.08); }
         .result-box li:last-child { border-bottom: none; }
 
-        /* Responsive */
+        /* ===== نافذة عرض الرسالة (أسلوب واتساب) ===== */
+        .detail-wa-wrap { background: #e5ddd5; border-radius: 14px; padding: 18px; position: relative; min-height: 120px; }
+        .detail-bubble {
+            background: #fff; border-radius: 12px; border-top-right-radius: 4px;
+            padding: 12px 16px; font-size: 14.5px; line-height: 1.9; color: var(--dark2);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); max-width: 88%; word-break: break-word; white-space: pre-wrap;
+        }
+        .detail-bubble .dtime { display: block; font-size: 10.5px; color: var(--gray-light); text-align: left; margin-top: 8px; direction: ltr; }
+        .detail-bubble .double-check { color: #53bdeb; font-size: 12px; margin-left: 3px; }
+        .detail-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 18px 0; }
+        .meta-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; }
+        .meta-item label { display: block; font-size: 11px; font-weight: 800; color: var(--gray); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .meta-item .val { font-size: 14px; font-weight: 800; color: var(--dark); direction: ltr; text-align: right; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .meta-item .val.normal { direction: rtl; font-weight: 700; }
+        .meta-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .err-box { background: var(--danger-light); border: 1px solid #fecaca; border-radius: 12px; padding: 12px 16px; color: #991b1b; font-size: 13px; margin-top: 14px; }
+        .err-box label { font-weight: 800; display: block; margin-bottom: 4px; }
+
+        /* ===== نافذة عرض الأرقام ===== */
+        .nums-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+        .nums-toolbar .count-badge { background: var(--primary-light); color: #065f46; font-weight: 800; font-size: 13px; padding: 7px 16px; border-radius: 20px; }
+        .nums-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 46vh; overflow-y: auto; padding-left: 4px; }
+        .num-chip {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+            padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            direction: ltr; font-family: 'Courier New', monospace; font-size: 13px; font-weight: 800; color: var(--dark);
+            transition: all 0.15s; cursor: pointer;
+        }
+        .num-chip:hover { border-color: var(--primary); background: var(--primary-light); }
+        .num-chip .num-copy { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--gray); padding: 2px 6px; border-radius: 6px; }
+        .num-chip .num-copy:hover { color: #166534; }
+        .nums-empty { text-align: center; color: var(--gray-light); padding: 30px; font-size: 14px; }
+
+        /* Toast صغير */
+        .mini-toast { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--dark); color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 13px; font-weight: 700; z-index: 2000; transition: transform 0.3s; opacity: 0; pointer-events: none; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .mini-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .mini-toast.green { background: #059669; }
+
         @media (max-width: 768px) {
-            .topbar { padding: 0 20px; }
-            .container { padding: 20px; }
-            .filter-form { flex-direction: column; }
-            .filter-group { min-width: 100%; }
-            .page-header { flex-direction: column; align-items: flex-start; }
-            .table-header { flex-direction: column; align-items: flex-start; }
+            .container { padding: 20px 16px; }
+            .topbar { padding: 0 16px; }
+            .msg-bubble-mini { max-width: 140px; }
+            .search-box input { width: 100%; }
+            .search-box { width: 100%; }
+            .table-header { padding: 16px; }
+            thead th, tbody td { padding: 12px 12px; }
         }
     </style>
 </head>
@@ -151,7 +219,7 @@
     <div class="topbar">
         <div class="topbar-brand">
             <span>📜</span>
-            <span>أرشيف الرسائل</span>
+            <span>سجل الرسائل</span>
             <% if(isAdminView) { %><span style="opacity:0.5; font-size:13px;">— <%= user.username %></span><% } %>
         </div>
         <div class="topbar-actions">
@@ -175,6 +243,8 @@
         <%
             let sCount = 0, fCount = 0;
             logs.forEach(l => { if(l.status === 'success') sCount++; else fCount++; });
+            let uniqueNumbers = [];
+            logs.forEach(l => { if(!uniqueNumbers.includes(l.to)) uniqueNumbers.push(l.to); });
         %>
         <div class="log-stats">
             <div class="log-stat">
@@ -198,6 +268,13 @@
                     <div class="label">فاشلة</div>
                 </div>
             </div>
+            <div class="log-stat" style="cursor:pointer;" onclick="openNumbersModal()" title="عرض جميع الأرقام">
+                <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📱</div>
+                <div class="log-stat-info">
+                    <div class="value"><%= uniqueNumbers.length %></div>
+                    <div class="label">أرقام فريدة — عرض ←</div>
+                </div>
+            </div>
             <div class="log-stat">
                 <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
                 <div class="log-stat-info">
@@ -212,11 +289,11 @@
             <form method="GET" action="" class="filter-form">
                 <div class="filter-group">
                     <label>📅 من تاريخ</label>
-                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>" required>
+                    <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>">
                 </div>
                 <div class="filter-group">
                     <label>📅 إلى تاريخ</label>
-                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>" required>
+                    <input type="date" name="dateTo" value="<%= query.dateTo || '' %>">
                 </div>
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-blue">🔍 بحث</button>
@@ -232,11 +309,17 @@
             <div class="table-header">
                 <h3>📄 قائمة الرسائل</h3>
                 <div class="header-tools">
+                    <div class="search-box">
+                        <span class="s-icon">🔎</span>
+                        <input type="text" id="searchInput" placeholder="ابحث برقم أو نص الرسالة..." oninput="applySearch()">
+                        <button class="s-clear" id="searchClear" onclick="clearSearch()">✕</button>
+                    </div>
                     <span class="selection-info" id="selectionInfo">✓ <span id="selectionCount">0</span> محددة</span>
                     <% if(!isAdminView) { %>
                         <button type="button" class="btn btn-green" id="btnResendSelected" disabled>🔄 إعادة إرسال المحدد</button>
                         <button type="button" class="btn btn-outline" id="btnSelectFailed">❌ تحديد الفاشلة فقط</button>
                     <% } %>
+                    <button type="button" class="btn btn-dark" onclick="openNumbersModal()">📱 عرض الأرقام (<%= uniqueNumbers.length %>)</button>
                     <form action="/logs/delete" method="POST" onsubmit="return confirm('⚠️ هل أنت متأكد من حذف جميع السجلات؟ لا يمكن التراجع!');" style="margin:0;">
                         <% if(isAdminView) { %>
                             <input type="hidden" name="targetUserId" value="<%= user._id %>">
@@ -254,25 +337,35 @@
                 </div>
             <% } else { %>
                 <div style="overflow-x: auto;">
-                    <table>
+                    <table id="logsTable">
                         <thead>
                             <tr>
                                 <th style="width:40px;"><input type="checkbox" class="check-all" id="checkAll" title="تحديد الكل"></th>
-                                <th>#</th>
+                                <th style="width:44px;">#</th>
                                 <th>التاريخ والوقت</th>
                                 <th>المستلم</th>
                                 <th>محتوى الرسالة</th>
                                 <th>الحالة</th>
+                                <th style="width:70px;">عرض</th>
                             </tr>
                         </thead>
                         <tbody>
                             <% logs.forEach((log, idx) => { %>
-                            <tr data-log-id="<%= log._id %>" data-to="<%= log.to %>" data-body="<%= log.body.replace(/"/g, '&quot;') %>" data-status="<%= log.status %>">
+                            <tr data-log-id="<%= log._id %>" data-to="<%= log.to %>" data-body="<%= log.body.replace(/\"/g, '&quot;') %>" data-status="<%= log.status %>" data-err="<%= (log.errorDetails || '').replace(/\"/g, '&quot;') %>" data-time="<%= log.createdAt.toISOString() %>">
                                 <td><input type="checkbox" class="row-checkbox" value="<%= log._id %>"></td>
                                 <td style="color: var(--gray-light); font-weight: 700;"><%= idx + 1 %></td>
                                 <td class="time-cell"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
-                                <td class="phone-cell"><%= log.to %></td>
-                                <td class="msg-cell" title="<%= log.body %>"><%= log.body %></td>
+                                <td>
+                                    <span class="phone-cell">
+                                        <span class="phone-num"><%= log.to %></span>
+                                        <button class="copy-mini-btn" onclick="copyText('<%= log.to %>', this)" title="نسخ الرقم">📋</button>
+                                    </span>
+                                </td>
+                                <td class="msg-cell">
+                                    <div class="msg-preview">
+                                        <span class="msg-bubble-mini"><%= log.body %></span>
+                                    </div>
+                                </td>
                                 <td>
                                     <% if (log.status === 'success') { %>
                                         <span class="badge badge-success">✅ ناجح</span>
@@ -283,12 +376,80 @@
                                         <% } %>
                                     <% } %>
                                 </td>
+                                <td>
+                                    <button class="view-btn" onclick="openMessageModal(this)" title="عرض الرسالة كاملة">👁️ عرض</button>
+                                </td>
                             </tr>
                             <% }) %>
                         </tbody>
                     </table>
                 </div>
             <% } %>
+        </div>
+    </div>
+
+    <!-- ===== نافذة عرض الرسالة (أسلوب واتساب) ===== -->
+    <div class="modal-overlay" id="messageModal">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-head">
+                <h3>💬 محتوى الرسالة</h3>
+                <button type="button" class="modal-close" onclick="closeMessageModal()" title="إغلاق">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-wa-wrap">
+                    <div class="detail-bubble" id="detailBubble">
+                        <span id="detailText"></span>
+                        <span class="dtime"><span class="double-check">✓✓</span> <span id="detailTime"></span></span>
+                    </div>
+                </div>
+                <div class="detail-meta">
+                    <div class="meta-item">
+                        <label>📱 رقم المستلم</label>
+                        <div class="val" id="detailPhone"></div>
+                    </div>
+                    <div class="meta-item">
+                        <label>📌 الحالة</label>
+                        <div class="val normal" id="detailStatus"></div>
+                    </div>
+                </div>
+                <div class="err-box" id="detailError" style="display:none;">
+                    <label>⚠️ سبب الفشل</label>
+                    <span id="detailErrorText"></span>
+                </div>
+                <div class="meta-actions">
+                    <button class="btn btn-green" onclick="copyDetailMessage()">📋 نسخ نص الرسالة</button>
+                    <button class="btn btn-outline" onclick="copyDetailPhone()">📱 نسخ الرقم</button>
+                    <a class="btn btn-blue" id="detailWaLink" target="_blank" rel="noopener" href="#">💬 فتح محادثة واتساب</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== نافذة عرض الأرقام ===== -->
+    <div class="modal-overlay" id="numbersModal">
+        <div class="modal" style="max-width: 720px;">
+            <div class="modal-head">
+                <h3>📱 أرقام المستلمين (<%= uniqueNumbers.length %>)</h3>
+                <button type="button" class="modal-close" onclick="closeNumbersModal()" title="إغلاق">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="nums-toolbar">
+                    <span class="count-badge">عدد الأرقام الفريدة: <%= uniqueNumbers.length %></span>
+                    <button class="btn btn-green" onclick="copyAllNumbers()">📋 نسخ جميع الأرقام</button>
+                </div>
+                <% if(uniqueNumbers.length === 0) { %>
+                    <div class="nums-empty">لا توجد أرقام لعرضها</div>
+                <% } else { %>
+                    <div class="nums-grid">
+                        <% uniqueNumbers.forEach(num => { %>
+                            <div class="num-chip" onclick="copyText('<%= num %>', this.querySelector('.num-copy'))" title="اضغط للنسخ">
+                                <span>📱 <%= num %></span>
+                                <button class="num-copy" onclick="event.stopPropagation(); copyText('<%= num %>', this)">📋</button>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </div>
         </div>
     </div>
 
@@ -316,6 +477,8 @@
             </div>
         </div>
     </div>
+
+    <div class="mini-toast" id="miniToast"></div>
 
     <script>
     (function() {
@@ -357,7 +520,111 @@
             });
         }
 
-        // Modal
+        // ===== البحث الفوري =====
+        window.applySearch = function() {
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            document.getElementById('searchClear').style.display = q ? 'block' : 'none';
+            const rows = document.querySelectorAll('#logsTable tbody tr');
+            let visible = 0;
+            rows.forEach(tr => {
+                const to = (tr.dataset.to || '').toLowerCase();
+                const body = (tr.dataset.body || '').toLowerCase();
+                const match = !q || to.includes(q) || body.includes(q);
+                tr.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+        };
+        window.clearSearch = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchClear').style.display = 'none';
+            applySearch();
+        };
+
+        // ===== Toast =====
+        let toastTimer = null;
+        function showToast(msg, green) {
+            const t = document.getElementById('miniToast');
+            t.textContent = msg;
+            t.className = 'mini-toast show' + (green ? ' green' : '');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+        }
+
+        // ===== نسخ نص =====
+        window.copyText = async function(text, btn) {
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (e) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            if (btn) {
+                const old = btn.innerHTML;
+                btn.innerHTML = '✅';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.innerHTML = old; btn.classList.remove('copied'); }, 1200);
+            }
+            showToast('✅ تم نسخ: ' + text, true);
+        };
+
+        // ===== نافذة عرض الرسالة =====
+        window.openMessageModal = function(btn) {
+            const tr = btn.closest('tr');
+            const body = tr.dataset.body || '';
+            const to = tr.dataset.to || '';
+            const status = tr.dataset.status || 'success';
+            const err = tr.dataset.err || '';
+            const time = tr.dataset.time ? new Date(tr.dataset.time) : null;
+
+            document.getElementById('detailText').textContent = body;
+            document.getElementById('detailTime').textContent = time ? time.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+            document.getElementById('detailPhone').innerHTML = '<span>' + to + '</span> <button class="copy-mini-btn" onclick="copyText(\'' + to + '\', this)">📋</button>';
+            document.getElementById('detailStatus').innerHTML = status === 'success'
+                ? '<span class="badge badge-success">✅ ناجح</span>'
+                : '<span class="badge badge-failed">❌ فاشل</span>';
+            const errBox = document.getElementById('detailError');
+            if (status === 'failed' && err) {
+                errBox.style.display = 'block';
+                document.getElementById('detailErrorText').textContent = err;
+            } else {
+                errBox.style.display = 'none';
+            }
+            document.getElementById('detailWaLink').href = 'https://wa.me/' + to.replace(/^0+/, '');
+            document.getElementById('messageModal').classList.add('active');
+        };
+        window.closeMessageModal = function() { document.getElementById('messageModal').classList.remove('active'); };
+        window.copyDetailMessage = function() { copyText(document.getElementById('detailText').textContent); };
+        window.copyDetailPhone = function() {
+            const t = document.getElementById('detailPhone').textContent.replace('📋','').trim();
+            copyText(t);
+        };
+
+        // ===== نافذة عرض الأرقام =====
+        window.openNumbersModal = function() { document.getElementById('numbersModal').classList.add('active'); };
+        window.closeNumbersModal = function() { document.getElementById('numbersModal').classList.remove('active'); };
+        window.copyAllNumbers = function() {
+            const nums = Array.from(document.querySelectorAll('.num-chip')).map(c => c.querySelector('span').textContent.replace('📱','').trim());
+            if (nums.length === 0) return;
+            copyText(nums.join('\n'));
+        };
+
+        // إغلاق النوافذ بالنقر خارجها
+        ['messageModal', 'numbersModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target === document.getElementById(id)) document.getElementById(id).classList.remove('active');
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['messageModal', 'numbersModal'].forEach(id => document.getElementById(id).classList.remove('active'));
+            }
+        });
+
+        // Modal إعادة إرسال (نفس الوظيفة السابقة)
         const modal = document.getElementById('resendModal');
         const modalClose = document.getElementById('modalClose');
         const btnCancel = document.getElementById('btnCancelResend');
@@ -434,7 +701,6 @@
                 body: el.querySelector('.resend-body').value
             }));
 
-            // التحقق
             let hasInvalid = false;
             items.forEach((it, i) => {
                 const el = itemsContainer.children[i];
