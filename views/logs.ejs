@@ -218,9 +218,9 @@
     <!-- Top Bar -->
     <div class="topbar">
         <div class="topbar-brand">
-            <span>📜</span>
+            <span><% if(isAdminView) { %>👑<% } else { %>📜<% } %></span>
             <span>سجل الرسائل</span>
-            <% if(isAdminView) { %><span style="opacity:0.5; font-size:13px;">— <%= user.username %></span><% } %>
+            <% if(isAdminView) { %><span style="background:rgba(245,158,11,0.2); color:#fcd34d; padding:3px 12px; border-radius:20px; font-size:11px;">عرض الإدارة — <%= user.username %></span><% } %>
         </div>
         <div class="topbar-actions">
             <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn-back">← العودة للوحة</a>

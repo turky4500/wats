@@ -1272,11 +1272,33 @@ app.put('/api/groups/:groupId/contacts/:contactId', requireAuth, async (req, res
     }
 });
 
+// 📄 قراءة أوراق عمل ملف Excel وعرضها (لاختيار الورقة قبل الاستيراد)
+app.post('/api/groups/import-excel/sheets', requireAuth, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            return res.status(400).json({ success: false, error: 'الملف لا يحتوي على أوراق عمل' });
+        }
+        const sheets = workbook.SheetNames.map(name => ({
+            name,
+            rows: XLSX.utils.sheet_to_json(workbook.Sheets[name]).length
+        }));
+        res.json({ success: true, sheets, defaultSheet: sheets[0].name });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'خطأ في قراءة الملف: ' + e.message });
+    }
+});
+
 app.post('/api/groups/import-excel', requireAuth, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, error: 'لم يتم رفع ملف' });
         const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
+        // اختيار الورقة: إن حدد المستخدم ورقة موجودة نستخدمها، وإلا الورقة الأولى افتراضياً
+        const requestedSheet = req.body.sheetName;
+        const sheetName = requestedSheet && workbook.SheetNames.includes(requestedSheet)
+            ? requestedSheet
+            : workbook.SheetNames[0];
         const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
         if (rows.length === 0) return res.status(400).json({ success: false, error: 'الملف فارغ' });
 

@@ -273,6 +273,7 @@
     <script>
         let currentGroupId = null;
         let importedContacts = [];
+        let currentExcelFile = null;
 
         function showToast(message, type) {
             const c = document.getElementById('toast-container');
@@ -409,16 +410,54 @@
         async function handleExcelImport(event) {
             const file = event.target.files[0];
             if (!file) return;
+            importedContacts = [];
+            showMsg('importMsg', 'جاري قراءة أوراق العمل...', 'success');
+            try {
+                // الخطوة 1: قراءة أسماء أوراق العمل في الملف
+                const formData = new FormData();
+                formData.append('file', file);
+                const sheetsRes = await fetch('/api/groups/import-excel/sheets', { method: 'POST', body: formData });
+                const sheetsData = await sheetsRes.json();
+                if (!sheetsData.success) {
+                    showMsg('importMsg', sheetsData.error || 'خطأ في قراءة الملف', 'error');
+                    return;
+                }
+                currentExcelFile = file;
+
+                // الخطوة 2: عرض قائمة الأوراق لاختيار الورقة المطلوبة (الافتراضي: الأولى)
+                let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
+                html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:6px;">📄 تم العثور على ' + sheetsData.sheets.length + ' ورقة عمل</div>';
+                html += '<div style="font-size:12px;color:var(--ink-400);margin-bottom:10px;">اختر الورقة التي تحتوي على الأرقام (الافتراضي: الورقة الأولى)</div>';
+                html += '<select id="sheetSelect" style="width:100%;padding:10px 12px;border:2px solid #bbf7d0;border-radius:10px;font-family:inherit;font-size:14px;background:white;color:var(--ink-800);outline:none;">';
+                sheetsData.sheets.forEach((s, i) => {
+                    html += '<option value="' + escapeHtml(s.name) + '"' + (i === 0 ? ' selected' : '') + '>' + escapeHtml(s.name) + ' (' + s.rows + ' صف)</option>';
+                });
+                html += '</select>';
+                html += '<button class="btn btn-green btn-full" style="margin-top:10px;" onclick="readExcelSheet()"><i class="fas fa-file-excel"></i> قراءة الأرقام من هذه الورقة</button>';
+                html += '</div>';
+                document.getElementById('importPreview').innerHTML = html;
+                document.getElementById('importPreview').style.display = 'block';
+                hideMsg('importMsg');
+            } catch (e) { showMsg('importMsg', 'خطأ في رفع الملف', 'error'); }
+            event.target.value = '';
+        }
+
+        // قراءة الأرقام من الورقة المختارة
+        async function readExcelSheet() {
+            const select = document.getElementById('sheetSelect');
+            const sheetName = select ? select.value : '';
+            if (!currentExcelFile) { showMsg('importMsg', 'أعد اختيار الملف أولاً', 'error'); return; }
+            showMsg('importMsg', 'جاري استخراج الأرقام من ورقة "' + sheetName + '"...', 'success');
             const formData = new FormData();
-            formData.append('file', file);
-            showMsg('importMsg', 'جاري قراءة الملف...', 'success');
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', sheetName);
             try {
                 const res = await fetch('/api/groups/import-excel', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (data.success) {
                     importedContacts = data.contacts;
                     let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
-                    html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الملف</div>';
+                    html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الورقة: ' + escapeHtml(sheetName) + '</div>';
                     html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
                     data.contacts.slice(0, 20).forEach((c, i) => {
                         html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
@@ -433,8 +472,7 @@
                 } else {
                     showMsg('importMsg', data.error || 'خطأ', 'error');
                 }
-            } catch (e) { showMsg('importMsg', 'خطأ في رفع الملف', 'error'); }
-            event.target.value = '';
+            } catch (e) { showMsg('importMsg', 'خطأ في قراءة الملف', 'error'); }
         }
 
         async function saveImportedContacts() {
