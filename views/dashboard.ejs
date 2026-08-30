@@ -43,6 +43,7 @@
         if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
 
         const campaignLabels = {
+            scheduled: 'مجدولة ⏰',
             pending: 'بانتظار البدء',
             processing: 'قيد التنفيذ',
             paused: 'متوقفة مؤقتاً',
@@ -83,9 +84,10 @@
 
             <div class="sidebar-nav">
                 <a href="/dashboard" class="active"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/dashboard#campaigns"><span class="ic"><i class="fas fa-bullhorn"></i></span> الحملات والإرسال</a>
                 <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
                 <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
-                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
+                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> الملف الشخصي</a>
                 <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
                 <% if (isImpersonating) { %>
                     <a href="/return-to-admin" style="color: #f59e0b;"><span class="ic"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
@@ -184,7 +186,7 @@
             <!-- ===== Master Main Builder Grid ===== -->
             <div class="master-grid">
                 <!-- Left Column: Step Builder -->
-                <div class="campaign-card">
+                <div class="campaign-card" id="campaigns">
                     <div class="campaign-header">
                         <div>
                             <h3><i class="fas fa-magic"></i> مُنشئ الحملات والرسائل الذكي</h3>
@@ -298,6 +300,18 @@
                             </div>
                             <input type="file" id="mediaFiles" multiple class="d-none" style="display:none;" onchange="handleMediaSelect()">
                             <div id="mediaNames" class="mt-2 text-muted fw-bold small"></div>
+
+                            <!-- ⏰ جدولة الإرسال (ميزة جديدة) -->
+                            <div style="margin-top:18px; background:#f8fafc; border:1px dashed #25D366; border-radius:14px; padding:16px 18px;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:800; color:#0f172a; font-size:15px;">
+                                    <input type="checkbox" id="scheduleEnable" onchange="toggleSchedule()" style="width:18px;height:18px;accent-color:#25D366;">
+                                    <i class="fas fa-clock text-primary"></i> جدولة الإرسال لوقت لاحق
+                                </label>
+                                <div id="scheduleFields" style="display:none; margin-top:12px;">
+                                    <input type="datetime-local" id="scheduleAt" style="width:100%; padding:11px 14px; border:2px solid #e2e8f0; border-radius:10px; font-family:inherit; font-size:15px; outline:none;">
+                                    <p style="font-size:12.5px; color:#64748b; margin-top:8px;">⏰ سيتم إطلاق الحملة تلقائياً في الوقت المحدد — دون الحاجة لإبقاء جهازك مفتوحاً.</p>
+                                </div>
+                            </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-4">
                                 <button class="btn btn-outline" onclick="goToStep(1)">→ السابق</button>
@@ -630,6 +644,21 @@
             reader.readAsText(file);
         }
 
+        // ⏰ إظهار/إخفاء حقول الجدولة
+        function toggleSchedule() {
+            const enabled = document.getElementById('scheduleEnable').checked;
+            document.getElementById('scheduleFields').style.display = enabled ? 'block' : 'none';
+            const btn = document.getElementById('send-btn');
+            if (btn) btn.innerHTML = enabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
+            if (enabled) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() + 5);
+                now.setSeconds(0, 0);
+                const pad = n => String(n).padStart(2, '0');
+                document.getElementById('scheduleAt').min = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            }
+        }
+
         async function sendCampaign() {
             if (recipientsList.length === 0) {
                 showToast('يرجى إضافة رقم واحد على الأقل للمستلمين', 'error');
@@ -645,25 +674,47 @@
 
             const msgPreview = msg.length > 100 ? msg.substring(0, 100) + '...' : msg;
             const mediaCount = mediaFiles.length;
+
+            // ⏰ قراءة إعدادات الجدولة
+            const scheduleEnabled = document.getElementById('scheduleEnable').checked;
+            let scheduledAt = null;
+            if (scheduleEnabled) {
+                const raw = document.getElementById('scheduleAt').value;
+                if (!raw) {
+                    showToast('يرجى اختيار تاريخ ووقت الجدولة أولاً', 'error');
+                    return;
+                }
+                scheduledAt = new Date(raw);
+                if (isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now()) {
+                    showToast('يرجى اختيار وقت مستقبلي للجدولة', 'error');
+                    return;
+                }
+            }
+
             let detailText = '📋 *ملخص الحملة:*\n\n';
             detailText += '👥 عدد الأرقام: ' + recipientsList.length + ' رقم\n';
             if (mediaCount > 0) detailText += '📎 المرفقات: ' + mediaCount + ' ملف(ات)\n';
+            if (scheduledAt) {
+                const opt = { dateStyle: 'medium', timeStyle: 'short' };
+                detailText += '⏰ موعد الإرسال المجدول: ' + scheduledAt.toLocaleString('ar-SA', opt) + '\n';
+            }
             detailText += '\n📝 *معاينة الرسالة:*\n' + (msgPreview || '(بدون نص - مرفق فقط)') + '\n\n';
-            detailText += '⚠️ هل أنت متأكد من إرسال هذه الحملة لـ ' + recipientsList.length + ' رقم؟';
+            detailText += scheduledAt ? '⚠️ هل أنت متأكد من جدولة هذه الحملة لـ ' + recipientsList.length + ' رقم؟' : '⚠️ هل أنت متأكد من إرسال هذه الحملة لـ ' + recipientsList.length + ' رقم؟';
 
             const firstConfirm = confirm(detailText);
             if (!firstConfirm) return;
 
-            const secondConfirm = confirm('🔒 تأكيد نهائي:\n\nسيتم إرسال رسالتك فوراً إلى ' + recipientsList.length + ' رقم.\nهل تريد المتابعة؟');
+            const secondConfirm = confirm(scheduledAt ? '🔒 تأكيد نهائي:\n\nسيتم جدولة رسالتك وإرسالها تلقائياً إلى ' + recipientsList.length + ' رقم في الوقت المحدد.\nهل تريد المتابعة؟' : '🔒 تأكيد نهائي:\n\nسيتم إرسال رسالتك فوراً إلى ' + recipientsList.length + ' رقم.\nهل تريد المتابعة؟');
             if (!secondConfirm) return;
 
             const btn = document.getElementById('send-btn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
+            btn.innerHTML = scheduledAt ? '<i class="fas fa-spinner fa-spin ms-2"></i> جاري جدولة الحملة...' : '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
 
             const formData = new FormData();
             formData.append('numbers', JSON.stringify(recipientsList));
             formData.append('message', msg);
+            if (scheduledAt) formData.append('scheduledAt', scheduledAt.toISOString());
             
             for (let i = 0; i < mediaFiles.length; i++) {
                 formData.append('media', mediaFiles[i]);
@@ -683,19 +734,19 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    showToast('تم إطلاق الحملة بنجاح! 🚀');
+                    showToast(scheduledAt ? 'تمت جدولة الحملة بنجاح! ⏰' : 'تم إطلاق الحملة بنجاح! 🚀');
                     setTimeout(() => {
                         window.location.href = data.campaignId ? `/campaigns/${data.campaignId}` : '/dashboard';
                     }, 1500);
                 } else {
                     showToast(data.error || 'حدث خطأ أثناء إرسال الحملة', 'error');
                     btn.disabled = false;
-                    btn.innerHTML = '🚀 إطلاق الحملة الآن';
+                    btn.innerHTML = scheduleEnabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
                 }
             } catch (err) {
                 showToast('تعذر الإرسال: ' + err.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '🚀 إطلاق الحملة الآن';
+                btn.innerHTML = scheduleEnabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
             }
         }
 

@@ -17,10 +17,11 @@ const campaignSchema = new mongoose.Schema({
     currentPhone: { type: String, default: null },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'paused', 'waiting_window', 'completed', 'failed', 'cancelled'],
+        enum: ['scheduled', 'pending', 'processing', 'paused', 'waiting_window', 'completed', 'failed', 'cancelled'],
         default: 'pending',
         index: true
     },
+    scheduledAt: { type: Date, default: null, index: true },
     controlStatus: {
         type: String,
         enum: ['active', 'paused', 'cancelled'],

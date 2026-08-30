@@ -546,6 +546,24 @@ async function resumeActiveCampaigns() {
     }
 }
 
+// ⏰ مشغّل الحملات المجدولة — يفحص كل 30 ثانية ويطلق الحملات عند حلول موعدها
+const SCHEDULED_CAMPAIGN_CHECK_MS = 30 * 1000;
+
+async function processScheduledCampaigns() {
+    const now = new Date();
+    const campaigns = await Campaign.find({ status: 'scheduled', scheduledAt: { $lte: now } }).select('_id');
+    for (const campaign of campaigns) {
+        const res = await Campaign.updateOne(
+            { _id: campaign._id, status: 'scheduled' },
+            { $set: { status: 'pending', updatedAt: new Date() } }
+        );
+        if (res.modifiedCount > 0) {
+            console.log('⏰ إطلاق حملة مجدولة:', campaign._id.toString());
+            startCampaignWorker(campaign._id).catch(err => console.error('خطأ تشغيل حملة مجدولة:', err));
+        }
+    }
+}
+
 async function sendSystemOTP(phone, message) {
     console.log('📤 محاولة إرسال OTP إلى:', phone);
     let sock = getSession(SYSTEM_ID);
@@ -686,6 +704,7 @@ mongoose.connect(MONGO_URI)
 
             setTimeout(() => {
                 resumeActiveCampaigns().catch(err => console.error('خطأ في استئناف الحملات:', err));
+                processScheduledCampaigns().catch(err => console.error('خطأ في تشغيل الحملات المجدولة:', err));
             }, 12000);
         } catch (e) {
             console.error('خطأ:', e);
@@ -955,7 +974,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     const recentCampaigns = await Campaign.find({ userId: user._id }).sort({ createdAt: -1 }).limit(8).lean();
     const activeCampaign = await Campaign.findOne({
         userId: user._id,
-        status: { $in: ['pending', 'processing', 'paused', 'waiting_window'] }
+        status: { $in: ['pending', 'processing', 'paused', 'waiting_window', 'scheduled'] }
     }).sort({ createdAt: -1 }).lean();
 
     res.render('dashboard', {
@@ -1541,9 +1560,21 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             return res.status(400).json({ success: false, error: 'النافذة الزمنية غير صحيحة' });
         }
 
+        // ⏰ الإرسال المجدول: قبول تاريخ/وقت مستقبلي لجدولة الحملة
+        let scheduledAt = null;
+        if (req.body.scheduledAt) {
+            scheduledAt = new Date(req.body.scheduledAt);
+            if (isNaN(scheduledAt.getTime())) {
+                return res.status(400).json({ success: false, error: 'تاريخ الجدولة غير صالح' });
+            }
+            if (scheduledAt.getTime() <= Date.now()) {
+                return res.status(400).json({ success: false, error: 'يرجى اختيار وقت مستقبلي للجدولة' });
+            }
+        }
+
         const existingCampaign = await Campaign.findOne({
             userId: user._id,
-            status: { $in: ['pending', 'processing', 'paused', 'waiting_window'] }
+            status: { $in: ['pending', 'processing', 'paused', 'waiting_window', 'scheduled'] }
         }).sort({ createdAt: -1 });
         if (existingCampaign) {
             return res.status(409).json({
@@ -1554,7 +1585,7 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
         }
 
         const sock = getSession(user._id.toString());
-        if (!sock || !sock.user) {
+        if (!scheduledAt && (!sock || !sock.user)) {
             return res.status(503).json({ success: false, error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم أولاً.' });
         }
 
@@ -1566,7 +1597,8 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             useTimeWindow,
             windowStart: useTimeWindow ? windowStart : null,
             windowEnd: useTimeWindow ? windowEnd : null,
-            status: 'pending',
+            scheduledAt,
+            status: scheduledAt ? 'scheduled' : 'pending',
             controlStatus: 'active'
         });
 
@@ -1577,6 +1609,11 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             status: 'pending',
             retryCount: 0
         })));
+
+        if (scheduledAt) {
+            res.status(201).json({ success: true, campaignId: campaign._id, scheduledAt: scheduledAt.toISOString(), message: 'تمت جدولة الحملة بنجاح ⏰ وسيتم الإرسال تلقائياً في الوقت المحدد' });
+            return;
+        }
 
         startCampaignWorker(campaign._id).catch(err => console.error('خطأ تشغيل الحملة:', err));
 
@@ -1773,3 +1810,8 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
+// ⏰ حلقة فحص الحملات المجدولة (كل 30 ثانية)
+setInterval(() => {
+    processScheduledCampaigns().catch(err => console.error('خطأ في حلقة الحملات المجدولة:', err));
+}, SCHEDULED_CAMPAIGN_CHECK_MS);
