@@ -2254,40 +2254,111 @@ async function createMyFatoorahInvoice(user, settings, payment, hostBase) {
 
     payment.myfatoorahPaymentId = data.Data.PaymentId || null;
     payment.myfatoorahInvoiceId = data.Data.InvoiceId || null;
+    // تشخيص: أي مسار استخدم في الإنشاء + الاستجابة الخام
+    payment.errorMessage = null;
     await payment.save();
 
     return data.Data.PaymentURL;
 }
 
+// ✅ اختبار فوري من لوحة الإدارة: ينشئ فاتورة حقيقية لدى البوابة بالوضع الحالي
+// ويعرض الرابط أو الخطأ الفعلي — أسرع طريقة لاكتشاف مشاكل الحساب/التوكن
+app.post('/admin/payments/test-invoice', requireAdmin, async (req, res) => {
+    try {
+        const settings = await getSettings();
+        if (!settings.paymentsEnabled) return res.json({ success: false, message: 'فعّل الدفع الإلكتروني أولاً في الإعدادات' });
+
+        const config = getMyFatoorahConfig(settings);
+        if (!config.token) return res.json({ success: false, message: 'لا يوجد توكن — في الوضع الحقيقي أدخل توكنك، أو بدّل للوضع التجريبي' });
+
+        const host = getPublicBaseUrl(req);
+        const payload = {
+            CustomerName: 'اختبار البوابة (من لوحة الإدارة)',
+            InvoiceValue: 1,
+            DisplayCurrencyIso: 'SAR',
+            CallbackUrl: host + '/api/payments/callback?userId=test&ref=test',
+            ErrorUrl: host + '/api/payments/callback?userId=test&ref=test&error=1',
+            WebhookUrl: host + '/api/payments/webhook',
+            CustomerEmail: 'test@example.com',
+            CustomerMobile: '50000000',
+            MobileCountryCode: '+966',
+            Language: 'ar'
+        };
+
+        let result = { mode: config.mode, baseUrl: config.baseUrl, attempts: [] };
+
+        // نفس منطق الإنشاء الحقيقي تماماً
+        if (config.mode === 'live') {
+            try {
+                const r = await myfatoorahRequest('/v2/ExecutePayment', { ...payload, PaymentMethodId: 0 }, config.token);
+                result.attempts.push({ method: 'PM=0 (كل الوسائل)', success: true, url: r.Data.PaymentURL });
+                return res.json({ success: true, ...result });
+            } catch (e) {
+                result.attempts.push({ method: 'PM=0', success: false, error: e.message });
+            }
+            const methodsId = await getMyFatoorahPaymentMethods(config.token, config.baseUrl);
+            if (methodsId !== null) {
+                try {
+                    const r = await myfatoorahRequest('/v2/ExecutePayment', { ...payload, PaymentMethodId: methodsId }, config.token);
+                    result.attempts.push({ method: 'الوسيلة المفضلة (' + methodsId + ')', success: true, url: r.Data.PaymentURL });
+                    return res.json({ success: true, ...result });
+                } catch (e) {
+                    result.attempts.push({ method: 'الوسيلة المفضلة (' + methodsId + ')', success: false, error: e.message });
+                }
+            }
+            try {
+                const r = await myfatoorahRequest('/v2/ExecutePayment', { ...payload, PaymentMethodId: 2 }, config.token);
+                result.attempts.push({ method: 'فيزا/ماستر (2)', success: true, url: r.Data.PaymentURL });
+                return res.json({ success: true, ...result });
+            } catch (e) {
+                result.attempts.push({ method: 'فيزا/ماستر (2)', success: false, error: e.message });
+            }
+        } else {
+            try {
+                const r = await myfatoorahRequest('/v2/ExecutePayment', { ...payload, PaymentMethodId: 2 }, config.token);
+                result.attempts.push({ method: 'فيزا/ماستر (2)', success: true, url: r.Data.PaymentURL });
+                return res.json({ success: true, ...result });
+            } catch (e) {
+                result.attempts.push({ method: 'فيزا/ماستر (2)', success: false, error: e.message });
+            }
+        }
+
+        res.json({ success: false, ...result });
+    } catch (e) {
+        console.error('❌ خطأ اختبار فاتورة:', e.message);
+        res.status(500).json({ success: false, message: 'خطأ: ' + e.message });
+    }
+});
+
 // تنفيذ الدفع في الوضع الحقيقي — يضمن ظهور كل وسائل الدفع للعميل
 // (مهم جداً في السعودية: بطاقات مدى المحلية لا تعمل عبر فيزا — خطأ MADA_VISA)
+// ملاحظة: لا نستخدم InitiateSession لأنها تعطي صفحة دفع مضمّنة (Embedded)
+// تتطلب مكتبة JS داخل الموقع، وعند فتحها مباشرة تفشل — نستخدم PaymentMethodId=0
+// الذي يعرض كل الوسائل في صفحة دفع عادية كاملة.
 async function executeLivePayment(config, commonPayload) {
-    // المحاولة 1: جلسة دفع (InitiateSession) تعرض كل الوسائل في صفحة الدفع
+    // المحاولة 1: PaymentMethodId=0 — صفحة دفع كاملة بكل الوسائل (مدى/فيزا/أبل باي)
     try {
-        const init = await myfatoorahRequest('/v2/InitiateSession', { SaveToken: false, IsRecurring: false }, config.token);
-        const sessionId = init.Data && init.Data.SessionId;
-        if (sessionId) {
-            const r = await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, SessionId: sessionId }, config.token);
-            console.log('✅ [دفع] أنشئت فاتورة بجلسة كل الوسائل (مدى/فيزا/أبل باي)');
-            return r;
-        }
-    } catch (e) { console.log('⚠️ [دفع] مسار الجلسة فشل — نجرب وسائل أخرى:', e.message); }
+        const r = await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 0 }, config.token);
+        console.log('✅ [دفع] أنشئت فاتورة بكل الوسائل (PaymentMethodId=0)');
+        return r;
+    } catch (e) { console.log('⚠️ [دفع] PM=0 فشل (' + e.message + ') — نجرب الوسائل من قائمة الحساب'); }
 
-    // المحاولة 2: PaymentMethodId=0 (كل الوسائل) بدون جلسة
-    try {
-        return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 0 }, config.token);
-    } catch (e) { console.log('⚠️ [دفع] PaymentMethodId=0 فشل — نجرب وسيلة من قائمة الحساب:', e.message); }
-
-    // المحاولة 3: وسيلة بطاقة من قائمة الحساب الفعلية (يفضّل مدى في السعودية)
+    // المحاولة 2: وسيلة بطاقة من قائمة الحساب الفعلية (يفضّل مدى في السعودية)
     const methodsId = await getMyFatoorahPaymentMethods(config.token, config.baseUrl);
     if (methodsId !== null) {
         try {
-            return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: methodsId }, config.token);
-        } catch (e) { console.log('⚠️ [دفع] الوسيلة المفضلة فشلت — ننتقل لفيزا/ماستر:', e.message); }
+            const r = await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: methodsId }, config.token);
+            console.log('✅ [دفع] أنشئت فاتورة بالوسيلة المفضلة (PaymentMethodId=' + methodsId + ')');
+            return r;
+        } catch (e) { console.log('⚠️ [دفع] الوسيلة المفضلة فشلت (' + e.message + ') — ننتقل لفيزا/ماستر'); }
+    } else {
+        console.log('⚠️ [دفع] لم نستطع جلب الوسائل من الحساب');
     }
 
     // المحاولة الأخيرة: فيزا/ماستر (2)
-    return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 2 }, config.token);
+    const r = await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 2 }, config.token);
+    console.log('✅ [دفع] أنشئت فاتورة بفيزا/ماستر (PaymentMethodId=2)');
+    return r;
 }
 
 // الاستعلام عن حالة دفع لدى ماي فاتورة
