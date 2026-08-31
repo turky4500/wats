@@ -2101,7 +2101,7 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
 function getMyFatoorahConfig(settings) {
     const token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
     const mode = settings.myfatoorahMode === 'live' ? 'live' : 'test';
-    const baseUrl = mode === 'live' ? 'https://api.myfatoorah.com' : 'https://apitest.myfatoorah.com';
+    const baseUrl = mode === 'live' ? 'https://api-sa.myfatoorah.com' : 'https://apitest.myfatoorah.com';
     return { token, mode, baseUrl };
 }
 
