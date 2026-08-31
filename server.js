@@ -884,6 +884,8 @@ initDatabase()
     }).catch(err => console.error('❌ خطأ في الاتصال بقاعدة البيانات:', err));
 
 app.set('view engine', 'ejs');
+// تمكين التعرف على البروتوكول الأصلي خلف nginx (HTTPS) — ضروري لروابط العودة من بوابة الدفع
+app.set('trust proxy', true);
 app.use(express.static('public'));
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json({ limit: '50mb' }));
@@ -2186,12 +2188,23 @@ function reqBaseHost() {
     return 'http://127.0.0.1:' + (process.env.PORT || 3000);
 }
 
+// الرابط العام للموقع (يُستخدم في روابط العودة من بوابة الدفع)
+// الأفضلية: 1) PUBLIC_BASE_URL من بيئة الخادم 2) مستنتج من طلب المستخدم (يعمل تلقائياً خلف nginx)
+function getPublicBaseUrl(req) {
+    if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+    if (req && req.headers && req.headers.host) {
+        const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        return proto + '://' + req.headers.host;
+    }
+    return reqBaseHost();
+}
+
 // إنشاء فاتورة دفع لدى ماي فاتورة وإرجاع رابط الدفع
-async function createMyFatoorahInvoice(user, settings, payment) {
+async function createMyFatoorahInvoice(user, settings, payment, hostBase) {
     const config = getMyFatoorahConfig(settings);
     if (!config.token) throw new Error('لم تُدخل التوكن الحقيقي بعد — افتح إعدادات الدفع في لوحة الإدارة وأدخل التوكن وبدّل الوضع إلى حقيقي');
 
-    const host = (process.env.PUBLIC_BASE_URL || reqBaseHost()).replace(/\/$/, '');
+    const host = hostBase || reqBaseHost();
     const callbackUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id;
     const errorUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id + '&error=1';
 
@@ -2205,6 +2218,8 @@ async function createMyFatoorahInvoice(user, settings, payment) {
         DisplayCurrencyIso: 'SAR',
         CallbackUrl: callbackUrl,
         ErrorUrl: errorUrl,
+        // إشعار آلي من البوابة عند نجاح الدفع (يعمل حتى لو أغلق العميل المتصفح قبل العودة)
+        WebhookUrl: host + '/api/payments/webhook',
         CustomerEmail: user.email || 'noreply@example.com',
         CustomerMobile: normalizeMobileForMyFatoorah(user.phoneNumber),
         MobileCountryCode: '+966',
@@ -2315,7 +2330,7 @@ app.post('/api/payments/create', requireAuth, async (req, res) => {
             status: 'pending'
         });
 
-        const paymentUrl = await createMyFatoorahInvoice(user, settings, payment);
+        const paymentUrl = await createMyFatoorahInvoice(user, settings, payment, getPublicBaseUrl(req));
         res.json({ success: true, paymentUrl });
     } catch (e) {
         console.error('❌ خطأ إنشاء دفع:', e.message);
@@ -2326,6 +2341,46 @@ app.post('/api/payments/create', requireAuth, async (req, res) => {
             err += ' [الوضع: ' + (cfg.mode === 'live' ? 'حقيقي' : 'تجريبي') + ' | التوكن المستخدم: ' + (cfg.token ? cfg.token.slice(0, 8) + '...' : 'بدون') + ']';
         } catch (e2) {}
         res.status(500).json({ success: false, error: err });
+    }
+});
+
+// ✅ تحقق يدوي: المستخدم دفع لكن الاشتراك لم يُجدد (مثلاً فشل العودة) — يسترجع الحالة من البوابة
+app.post('/api/payments/verify', requireAuth, async (req, res) => {
+    try {
+        const settings = await getSettings();
+        if (!settings.paymentsEnabled) return res.json({ success: false, message: 'الدفع الإلكتروني غير مفعل' });
+
+        // أحدث عملية معلقة للمستخدم (تُلغى العمليات المعلقة السابقة عند كل إنشاء جديد)
+        const payment = await Payment.findOne({ userId: req.session.userId, status: 'pending' }).sort({ createdAt: -1 });
+        if (!payment) return res.json({ success: false, message: 'لا توجد عملية دفع معلقة تخصك' });
+        if (!payment.myfatoorahPaymentId && !payment.myfatoorahInvoiceId) {
+            return res.json({ success: false, message: 'هذه العملية لم تصل لبوابة الدفع بعد — أعد المحاولة من زر الدفع' });
+        }
+
+        const config = getMyFatoorahConfig(settings);
+        const status = await getMyFatoorahPaymentStatus(payment, config.token);
+
+        if (isMyFatoorahSuccess(status)) {
+            const user = await User.findById(payment.userId);
+            if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+            if (!payment.myfatoorahPaymentId && status.PaymentId) payment.myfatoorahPaymentId = status.PaymentId;
+            payment.paymentMethod = status.PaymentMethod || payment.paymentMethod;
+            payment.transactionId = status.TransactionId || payment.transactionId;
+            await extendSubscriptionAfterPayment(user, payment);
+            if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+            return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراكك بنجاح!' });
+        }
+
+        if (status.InvoiceStatus && status.InvoiceStatus !== 'Pending') {
+            payment.status = 'failed';
+            payment.errorMessage = status.InvoiceStatus || 'لم ينجح الدفع';
+            await payment.save();
+            return res.json({ success: false, message: 'لم يتم تأكيد الدفع من البوابة بعد' });
+        }
+        res.json({ success: false, message: 'العملية ما تزال قيد التنفيذ عند البوابة — حاول مرة أخرى بعد دقائق' });
+    } catch (e) {
+        console.error('❌ خطأ تحقق يدوي:', e.message);
+        res.status(500).json({ success: false, message: 'تعذر التحقق: ' + e.message });
     }
 });
 
@@ -2345,7 +2400,8 @@ app.get('/api/payments/debug', requireAdmin, async (req, res) => {
             planName: settings.planName,
             nodeVersion: process.version,
             fetchAvailable: typeof fetch !== 'undefined',
-            publicBaseUrl: process.env.PUBLIC_BASE_URL || '(غير مضبوط — سيُستخدم http://127.0.0.1:' + (process.env.PORT || 3000) + ')'
+            publicBaseUrl: getPublicBaseUrl(req),
+            envPublicBaseUrl: process.env.PUBLIC_BASE_URL || '(غير مضبوط)'
         });
     } catch (e) {
         res.status(500).json({ error: e.message });

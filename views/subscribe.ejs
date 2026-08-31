@@ -37,6 +37,9 @@
         .pay-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -8px rgba(13,160,106,0.45); }
         .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .pay-note { font-size: 12px; color: var(--ink-300); margin-top: 12px; }
+        .verify-btn { margin-top: 10px; background: none; border: 2px dashed #f59e0b; color: #b45309; border-radius: var(--r-md); padding: 10px 18px; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.25s; display: inline-flex; align-items: center; gap: 8px; }
+        .verify-btn:hover { background: #fff7e6; transform: translateY(-1px); }
+        .verify-btn:disabled { opacity: 0.6; cursor: wait; }
         .pay-methods { display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
         .pay-method { background: white; border: 1px solid var(--ink-100); border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 800; color: var(--ink-500); display: inline-flex; align-items: center; gap: 6px; }
 
@@ -106,6 +109,9 @@
                 <div class="msg-box error show">الدفع الإلكتروني غير مفعل حالياً — تواصل مع الإدارة: <%= settings.supportPhone %></div>
             <% } %>
             <div class="pay-note">✅ دفع آمن ومشفر عبر ماي فاتورة — مدى، فيزا، ماستركارد، أبل باي</div>
+            <button class="verify-btn" id="verifyBtn" onclick="verifyPayment()" style="display:none;">
+                <i class="fas fa-search"></i> لقد دفعت ولم يُجدَّد؟ تحقق الآن
+            </button>
             <div class="pay-methods">
                 <span class="pay-method"><i class="fab fa-cc-visa"></i> فيزا</span>
                 <span class="pay-method"><i class="fab fa-cc-mastercard"></i> ماستركارد</span>
@@ -159,6 +165,28 @@
     </div>
 
     <script>
+        // إظهار زر التحقق إذا كانت هناك عملية معلقة
+        <% if (payments.some(p => p.status === 'pending')) { %>
+            document.getElementById('verifyBtn').style.display = 'block';
+        <% } %>
+
+        async function verifyPayment() {
+            const btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق من الدفع...';
+            try {
+                const res = await fetch('/api/payments/verify', { method: 'POST' });
+                const data = await res.json();
+                showMsg(data.success ? 'success' : 'error', data.message || 'تعذر التحقق');
+                if (data.success) setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+                showMsg('error', 'حدث خطأ: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> لقد دفعت ولم يُجدَّد؟ تحقق الآن';
+            }
+        }
+
         async function startPayment() {
             const btn = document.getElementById('payBtn');
             btn.disabled = true;
