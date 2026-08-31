@@ -88,6 +88,7 @@
                 <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
                 <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
                 <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> الملف الشخصي</a>
+                <a href="/subscribe"><span class="ic"><i class="fas fa-credit-card"></i></span> الاشتراك والدفع <% if (isExpired) { %><span style="background:#ef4444;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:auto;">منتهي</span><% } %></a>
                 <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
                 <% if (isImpersonating) { %>
                     <a href="/return-to-admin" style="color: #f59e0b;"><span class="ic"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
@@ -113,12 +114,15 @@
 
             <% if (isExpired) { %>
                 <div class="alert-expired">
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3" style="flex-wrap:wrap;">
                         <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
-                        <div>
+                        <div style="flex:1; min-width:220px;">
                             <div class="fw-bold fs-6">تنويه: اشتراكك منتهي الصلاحية</div>
-                            <div class="small opacity-75">يرجى التواصل مع الدعم للتجديد وإعادة تفعيل الإرسال الحمالات: <%= settings ? settings.supportPhone : '' %></div>
+                            <div class="small opacity-75">جدد اشتراكك الآن لاستعادة الإرسال فوراً — أو تواصل مع الدعم: <%= settings ? settings.supportPhone : '' %></div>
                         </div>
+                        <a href="/subscribe" class="btn btn-success" style="white-space:nowrap; box-shadow:0 6px 14px -4px rgba(37,211,102,.5);">
+                            <i class="fas fa-credit-card"></i> ادفع وجدد الآن
+                        </a>
                     </div>
                 </div>
             <% } %>

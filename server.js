@@ -22,6 +22,7 @@ const Settings = require('./models/Settings');
 const Campaign = require('./models/Campaign');
 const CampaignRecipient = require('./models/CampaignRecipient');
 const Group = require('./models/Group');
+const Payment = require('./models/Payment');
 const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode, waitForReadySession, isSessionReady } = require('./whatsappManager');
 
 const app = express();
@@ -64,6 +65,31 @@ async function getSettings() {
     }
     if (settings.campaignDelayMaxMinutes === undefined || settings.campaignDelayMaxMinutes === null) {
         settings.campaignDelayMaxMinutes = 13;
+        shouldSave = true;
+    }
+    // 💳 حقول الدفع الإلكتروني
+    if (settings.paymentsEnabled === undefined || settings.paymentsEnabled === null) {
+        settings.paymentsEnabled = false;
+        shouldSave = true;
+    }
+    if (settings.myfatoorahMode === undefined || settings.myfatoorahMode === null) {
+        settings.myfatoorahMode = 'test';
+        shouldSave = true;
+    }
+    if (settings.myfatoorahToken === undefined || settings.myfatoorahToken === null) {
+        settings.myfatoorahToken = '';
+        shouldSave = true;
+    }
+    if (settings.planPrice === undefined || settings.planPrice === null) {
+        settings.planPrice = 100;
+        shouldSave = true;
+    }
+    if (settings.planDays === undefined || settings.planDays === null) {
+        settings.planDays = 30;
+        shouldSave = true;
+    }
+    if (settings.planName === undefined || settings.planName === null) {
+        settings.planName = 'الباقة الشهرية';
         shouldSave = true;
     }
     if (shouldSave) await settings.save();
@@ -2066,6 +2092,244 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
             await sleep(bodyMedia.length > 0 ? 4000 : 2000);
         }
     })();
+});
+
+// =====================================================================
+// 💳 الدفع الإلكتروني — ماي فاتورة (MyFatoorah) + تجديد الاشتراك التلقائي
+// =====================================================================
+
+function getMyFatoorahConfig(settings) {
+    const token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
+    const mode = settings.myfatoorahMode === 'live' ? 'live' : 'test';
+    const baseUrl = mode === 'live' ? 'https://api.myfatoorah.com' : 'https://apitest.myfatoorah.com';
+    return { token, mode, baseUrl };
+}
+
+async function myfatoorahRequest(path, body, token) {
+    const config = getMyFatoorahConfig(await getSettings());
+    if (!token) token = config.token;
+    const res = await fetch(config.baseUrl + path, {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error((data && data.Message) || ('خطأ في بوابة الدفع (HTTP ' + res.status + ')'));
+    }
+    return data;
+}
+
+function reqBaseHost() {
+    return 'http://127.0.0.1:' + (process.env.PORT || 3000);
+}
+
+// إنشاء فاتورة دفع لدى ماي فاتورة وإرجاع رابط الدفع
+async function createMyFatoorahInvoice(user, settings, payment) {
+    const config = getMyFatoorahConfig(settings);
+    if (!config.token) throw new Error('الدفع الإلكتروني غير مفعّل بعد — تواصل مع الإدارة');
+
+    const host = (process.env.PUBLIC_BASE_URL || reqBaseHost()).replace(/\/$/, '');
+    const callbackUrl = host + '/api/payments/callback?userId=' + user._id;
+    const errorUrl = host + '/api/payments/callback?userId=' + user._id + '&error=1';
+
+    const data = await myfatoorahRequest('/v2/ExecutePayment', {
+        CustomerName: user.username || 'عميل',
+        InvoiceValue: settings.planPrice,
+        DisplayCurrencyIso: 'SAR',
+        CallbackUrl: callbackUrl,
+        ErrorUrl: errorUrl,
+        CustomerEmail: user.email || '',
+        CustomerMobile: user.phoneNumber || '966500000000',
+        MobileCountryCode: '+966',
+        Language: 'ar',
+        PaymentMethodId: 0,
+        SessionId: payment._id.toString()
+    }, config.token);
+
+    if (!data.Data || !data.Data.PaymentURL) throw new Error('لم يتم استلام رابط الدفع من البوابة');
+
+    payment.myfatoorahPaymentId = data.Data.PaymentId || null;
+    payment.myfatoorahInvoiceId = data.Data.InvoiceId || null;
+    await payment.save();
+
+    return data.Data.PaymentURL;
+}
+
+// الاستعلام عن حالة دفع لدى ماي فاتورة
+async function getMyFatoorahPaymentStatus(paymentId, token) {
+    const data = await myfatoorahRequest('/v2/GetPaymentStatus', {
+        KeyType: 'PaymentId',
+        Key: paymentId
+    }, token);
+    return data.Data || {};
+}
+
+// تمديد اشتراك المستخدم بعد الدفع الناجح
+async function extendSubscriptionAfterPayment(user, payment) {
+    const settings = await getSettings();
+    const now = new Date();
+    let base = user.subscriptionEndsAt && new Date(user.subscriptionEndsAt) > now
+        ? new Date(user.subscriptionEndsAt)
+        : now;
+    base.setDate(base.getDate() + (payment.planDays || settings.planDays || 30));
+    user.subscriptionEndsAt = base;
+    user.isActive = true;
+    await user.save();
+    payment.status = 'paid';
+    await payment.save();
+    return base;
+}
+
+// ✅ صفحة الاشتراك والدفع
+app.get('/subscribe', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        if (user.role === 'admin') return res.redirect('/admin');
+        const settings = await getSettings();
+        const payments = await Payment.find({ userId: user._id }).sort({ createdAt: -1 }).limit(10).lean();
+
+        let daysRemaining = 0, isExpired = true, expDateFormatted = 'غير محدد';
+        if (user.subscriptionEndsAt) {
+            const d = new Date(user.subscriptionEndsAt);
+            expDateFormatted = d.toISOString().split('T')[0];
+            daysRemaining = Math.ceil((d - new Date()) / 86400000);
+            if (daysRemaining > 0) isExpired = false; else daysRemaining = 0;
+        }
+
+        res.render('subscribe', {
+            user, settings, payments,
+            daysRemaining, isExpired, expDateFormatted,
+            result: req.query.result || null,
+            msg: req.query.msg || ''
+        });
+    } catch (e) {
+        res.status(500).render('error', { code: 500, title: 'خطأ', message: e.message });
+    }
+});
+
+// ✅ إنشاء عملية دفع جديدة
+app.post('/api/payments/create', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        if (user.role === 'admin') return res.status(403).json({ success: false, error: 'غير مسموح' });
+        const settings = await getSettings();
+        if (!settings.paymentsEnabled) {
+            return res.status(403).json({ success: false, error: 'الدفع الإلكتروني غير مفعل بعد' });
+        }
+
+        // إلغاء أي عمليات معلقة سابقة للمستخدم
+        await Payment.updateMany(
+            { userId: user._id, status: 'pending' },
+            { $set: { status: 'cancelled' } }
+        );
+
+        const payment = await Payment.create({
+            userId: user._id,
+            amount: settings.planPrice,
+            currency: 'SAR',
+            planDays: settings.planDays,
+            status: 'pending'
+        });
+
+        const paymentUrl = await createMyFatoorahInvoice(user, settings, payment);
+        res.json({ success: true, paymentUrl });
+    } catch (e) {
+        console.error('❌ خطأ إنشاء دفع:', e.message);
+        res.status(500).json({ success: false, error: e.message || 'فشل إنشاء الدفع' });
+    }
+});
+
+// ✅ إشعار البوابة (Webhook) — يجدد الاشتراك تلقائياً
+app.post('/api/payments/webhook', async (req, res) => {
+    try {
+        const body = req.body || {};
+        const paymentId = body.PaymentId || (body.Data && body.Data.PaymentId) || null;
+        if (!paymentId) return res.status(400).json({ success: false, error: 'missing paymentId' });
+
+        const settings = await getSettings();
+        const config = getMyFatoorahConfig(settings);
+        if (!config.token) return res.status(400).json({ success: false, error: 'payment not configured' });
+
+        // تأكيد الحالة من البوابة مباشرة (أمان)
+        const status = await getMyFatoorahPaymentStatus(paymentId, config.token);
+
+        const payment = await Payment.findOne({ myfatoorahPaymentId: paymentId });
+        if (!payment) return res.status(404).json({ success: false, error: 'payment not found' });
+        if (payment.status === 'paid') return res.json({ success: true, alreadyProcessed: true });
+
+        if (status.TransactionStatus === 'Success') {
+            const user = await User.findById(payment.userId);
+            if (user) {
+                payment.paymentMethod = status.PaymentMethod || null;
+                payment.transactionId = status.TransactionId || null;
+                await extendSubscriptionAfterPayment(user, payment);
+                console.log('✅ [دفع] تم تجديد اشتراك ' + user.username + ' (' + payment.amount + ' ر.س)');
+                if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+            }
+        } else {
+            payment.status = 'failed';
+            payment.errorMessage = status.TransactionStatus || 'لم ينجح الدفع';
+            await payment.save();
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('❌ خطأ Webhook دفع:', e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// ✅ عودة المستخدم من صفحة الدفع
+app.get('/api/payments/callback', requireAuth, async (req, res) => {
+    try {
+        const paymentId = req.query.paymentId;
+        const settings = await getSettings();
+        let success = false, message = '';
+
+        if (paymentId) {
+            const config = getMyFatoorahConfig(settings);
+            try {
+                const status = await getMyFatoorahPaymentStatus(paymentId, config.token);
+                success = status.TransactionStatus === 'Success';
+                message = success ? 'تم الدفع بنجاح وتم تجديد اشتراكك 🎉' : 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم';
+                if (success) {
+                    const payment = await Payment.findOne({ myfatoorahPaymentId: paymentId });
+                    if (payment && payment.status !== 'paid') {
+                        const user = await User.findById(payment.userId);
+                        if (user) await extendSubscriptionAfterPayment(user, payment);
+                    }
+                }
+            } catch (e) {
+                message = 'تعذر التحقق من الدفع: ' + e.message;
+            }
+        } else {
+            message = req.query.error ? 'تم إلغاء الدفع أو فشل — يمكنك المحاولة مرة أخرى' : 'لم نستلم تأكيد الدفع';
+        }
+
+        res.redirect('/subscribe?result=' + (success ? 'success' : 'error') + '&msg=' + encodeURIComponent(message));
+    } catch (e) {
+        res.redirect('/subscribe');
+    }
+});
+
+// ✅ حفظ إعدادات الدفع من لوحة الإدارة
+app.post('/admin/payments-settings', requireAdmin, async (req, res) => {
+    try {
+        const settings = await getSettings();
+        settings.paymentsEnabled = req.body.paymentsEnabled === 'on' || req.body.paymentsEnabled === 'true';
+        settings.myfatoorahMode = req.body.myfatoorahMode === 'live' ? 'live' : 'test';
+        if (req.body.myfatoorahToken) settings.myfatoorahToken = req.body.myfatoorahToken.trim();
+        settings.planPrice = Math.max(1, Number(req.body.planPrice) || 100);
+        settings.planDays = Math.max(1, Number(req.body.planDays) || 30);
+        settings.planName = (req.body.planName || 'الباقة الشهرية').toString().slice(0, 50);
+        await settings.save();
+        res.redirect('/admin#settings');
+    } catch (e) {
+        res.status(500).send('خطأ في حفظ الإعدادات: ' + e.message);
+    }
 });
 
 app.get('/ping', (req, res) => res.send('pong'));

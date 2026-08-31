@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاشتراك والدفع | واتساب تكوين</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--bg); background-image: var(--bg-grad); color: var(--ink-800); line-height: 1.7; min-height: 100vh; }
+        .topbar { background: linear-gradient(135deg, #0b1220, #131c2e 70%, #0b6e52 140%); color: white; padding: 0 30px; display: flex; justify-content: space-between; align-items: center; height: 64px; box-shadow: 0 4px 20px rgba(0,0,0,0.18); position: sticky; top: 0; z-index: 100; }
+        .topbar-brand { display: flex; align-items: center; gap: 11px; font-weight: 900; font-size: 17px; }
+        .topbar-actions a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .topbar-actions a:hover { background: rgba(255,255,255,0.12); color: white; }
+        .container { max-width: 960px; margin: 0 auto; padding: 32px 20px 60px; }
+
+        .status-card { background: var(--card); border-radius: var(--r-lg); padding: 24px 28px; box-shadow: var(--shadow); border: 1px solid var(--ink-100); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+        .status-info { display: flex; align-items: center; gap: 14px; }
+        .status-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .status-title { font-weight: 900; font-size: 16px; }
+        .status-sub { font-size: 12.5px; color: var(--ink-400); }
+        .status-badge { padding: 8px 18px; border-radius: 24px; font-weight: 900; font-size: 14px; }
+        .status-badge.active { background: var(--primary-soft); color: var(--primary-dark); }
+        .status-badge.expired { background: var(--danger-soft); color: var(--danger); }
+
+        .plan-card { background: linear-gradient(150deg, #ffffff 0%, #f0fdf4 100%); border: 2px solid var(--primary); border-radius: var(--r-xl); padding: 34px 30px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; text-align: center; margin-bottom: 28px; }
+        .plan-card::before { content: ''; position: absolute; top: -60px; left: -60px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(37,211,102,0.15), transparent 70%); }
+        .plan-name { font-size: 15px; font-weight: 800; color: var(--ink-400); margin-bottom: 6px; }
+        .plan-price { font-size: 52px; font-weight: 900; color: var(--ink-900); line-height: 1.1; }
+        .plan-price small { font-size: 17px; color: var(--ink-400); font-weight: 700; }
+        .plan-desc { color: var(--ink-400); font-size: 13.5px; margin: 10px 0 4px; }
+        .plan-days { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary-dark); font-weight: 800; font-size: 13px; padding: 7px 18px; border-radius: 20px; margin: 8px 0 18px; }
+        .pay-btn { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; border: none; border-radius: var(--r-md); padding: 15px 48px; font-family: inherit; font-weight: 900; font-size: 17px; cursor: pointer; box-shadow: var(--shadow-glow); transition: all 0.25s; display: inline-flex; align-items: center; gap: 10px; }
+        .pay-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -8px rgba(13,160,106,0.45); }
+        .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .pay-note { font-size: 12px; color: var(--ink-300); margin-top: 12px; }
+        .pay-methods { display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .pay-method { background: white; border: 1px solid var(--ink-100); border-radius: 10px; padding: 6px 14px; font-size: 12px; font-weight: 800; color: var(--ink-500); display: inline-flex; align-items: center; gap: 6px; }
+
+        .msg-box { display: none; margin: 14px 0; padding: 13px 18px; border-radius: var(--r-sm); font-weight: 700; font-size: 14px; }
+        .msg-box.show { display: block; }
+        .msg-box.success { background: var(--primary-soft); color: var(--primary-dark); border: 1px solid #bbf7d0; }
+        .msg-box.error { background: var(--danger-soft); color: var(--danger); border: 1px solid #fecaca; }
+
+        .history-card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); border: 1px solid var(--ink-100); overflow: hidden; }
+        .history-header { padding: 18px 24px; border-bottom: 1px solid var(--ink-50); font-weight: 900; font-size: 16px; display: flex; align-items: center; gap: 9px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th { background: var(--ink-50); color: var(--ink-400); font-weight: 800; padding: 12px 16px; text-align: right; font-size: 12px; border-bottom: 2px solid var(--ink-100); }
+        tbody td { padding: 13px 16px; border-bottom: 1px solid var(--ink-50); }
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 800; }
+        .badge-paid { background: var(--primary-soft); color: var(--primary-dark); }
+        .badge-pending { background: #fff7e6; color: #b45309; }
+        .badge-failed { background: var(--danger-soft); color: var(--danger); }
+        .badge-cancelled { background: var(--ink-50); color: var(--ink-400); }
+        .empty { text-align: center; padding: 32px; color: var(--ink-300); font-size: 13.5px; }
+
+        @media (max-width: 640px) {
+            .plan-price { font-size: 42px; }
+            .pay-btn { width: 100%; justify-content: center; }
+            .status-card { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-brand"><i class="fas fa-credit-card" style="color:var(--whatsapp);"></i> الاشتراك والدفع</div>
+        <div class="topbar-actions"><a href="/dashboard"><i class="fas fa-arrow-right"></i> العودة للوحة</a></div>
+    </div>
+
+    <div class="container">
+        <!-- حالة الاشتراك -->
+        <div class="status-card">
+            <div class="status-info">
+                <div class="status-icon" style="background:<%= isExpired ? 'var(--danger-soft)' : 'var(--primary-soft)' %>; color:<%= isExpired ? 'var(--danger)' : 'var(--primary-dark)' %>;">
+                    <i class="fas <%= isExpired ? 'fa-exclamation-triangle' : 'fa-check-circle' %>"></i>
+                </div>
+                <div>
+                    <div class="status-title"><%= isExpired ? 'اشتراكك منتهي' : 'اشتراكك نشط' %></div>
+                    <div class="status-sub">تاريخ الانتهاء: <%= expDateFormatted %> — <%= isExpired ? 'جدد الآن لاستعادة الإرسال' : (daysRemaining + ' يوم متبقي') %></div>
+                </div>
+            </div>
+            <span class="status-badge <%= isExpired ? 'expired' : 'active' %>">
+                <%= isExpired ? '⛔ منتهي' : '✅ ' + daysRemaining + ' يوم' %>
+            </span>
+        </div>
+
+        <!-- رسالة النتيجة -->
+        <div class="msg-box <%= result === 'success' ? 'success show' : (result === 'error' ? 'error show' : '') %>" id="resultMsg">
+            <%= msg || '' %>
+        </div>
+
+        <!-- بطاقة الباقة -->
+        <div class="plan-card">
+            <div class="plan-name"><%= settings.planName %></div>
+            <div class="plan-price"><%= settings.planPrice %> <small>ر.س</small></div>
+            <div class="plan-desc">تجديد اشتراكك لمدة <%= settings.planDays %> يوم — يبدأ من تاريخ انتهاء اشتراكك الحالي إن كان نشطاً</div>
+            <div class="plan-days"><i class="fas fa-calendar-check"></i> <%= settings.planDays %> يوم اشتراك</div>
+            <% if (settings.paymentsEnabled) { %>
+                <button class="pay-btn" id="payBtn" onclick="startPayment()">
+                    <i class="fas fa-lock"></i> ادفع الآن وتجدد تلقائياً
+                </button>
+            <% } else { %>
+                <div class="msg-box error show">الدفع الإلكتروني غير مفعل حالياً — تواصل مع الإدارة: <%= settings.supportPhone %></div>
+            <% } %>
+            <div class="pay-note">✅ دفع آمن ومشفر عبر ماي فاتورة — مدى، فيزا، ماستركارد، أبل باي</div>
+            <div class="pay-methods">
+                <span class="pay-method"><i class="fab fa-cc-visa"></i> فيزا</span>
+                <span class="pay-method"><i class="fab fa-cc-mastercard"></i> ماستركارد</span>
+                <span class="pay-method"><i class="fas fa-money-bill-wave"></i> مدى</span>
+                <span class="pay-method"><i class="fab fa-apple"></i> أبل باي</span>
+            </div>
+        </div>
+
+        <!-- سجل المدفوعات -->
+        <div class="history-card">
+            <div class="history-header"><i class="fas fa-history" style="color:var(--primary);"></i> سجل عمليات الدفع</div>
+            <% if (payments.length === 0) { %>
+                <div class="empty">لا توجد عمليات دفع بعد</div>
+            <% } else { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>التاريخ</th>
+                            <th>المبلغ</th>
+                            <th>المدة</th>
+                            <th>الحالة</th>
+                            <th>وسيلة الدفع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% payments.forEach((p, i) => { %>
+                        <tr>
+                            <td style="color:var(--ink-300); font-weight:800;"><%= i + 1 %></td>
+                            <td style="color:var(--ink-500);"><%= p.createdAt.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) %></td>
+                            <td style="font-weight:900;"><%= p.amount %> ر.س</td>
+                            <td><%= p.planDays %> يوم</td>
+                            <td>
+                                <% if (p.status === 'paid') { %>
+                                    <span class="badge badge-paid">✅ مدفوع</span>
+                                <% } else if (p.status === 'pending') { %>
+                                    <span class="badge badge-pending">⏳ قيد التنفيذ</span>
+                                <% } else if (p.status === 'failed') { %>
+                                    <span class="badge badge-failed">❌ فشل</span>
+                                <% } else { %>
+                                    <span class="badge badge-cancelled">✕ ملغي</span>
+                                <% } %>
+                            </td>
+                            <td style="color:var(--ink-500);"><%= p.paymentMethod || '—' %></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } %>
+        </div>
+    </div>
+
+    <script>
+        async function startPayment() {
+            const btn = document.getElementById('payBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تجهيز صفحة الدفع...';
+            try {
+                const res = await fetch('/api/payments/create', { method: 'POST' });
+                const data = await res.json();
+                if (data.success && data.paymentUrl) {
+                    window.location.href = data.paymentUrl;
+                } else {
+                    showMsg('error', data.error || 'تعذر إنشاء عملية الدفع');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-lock"></i> ادفع الآن وتجدد تلقائياً';
+                }
+            } catch (e) {
+                showMsg('error', 'حدث خطأ: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock"></i> ادفع الآن وتجدد تلقائياً';
+            }
+        }
+
+        function showMsg(type, text) {
+            const box = document.getElementById('resultMsg');
+            box.className = 'msg-box ' + type + ' show';
+            box.textContent = text;
+            setTimeout(() => box.classList.remove('show'), 8000);
+        }
+    </script>
+</body>
+</html>
