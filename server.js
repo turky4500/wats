@@ -2129,6 +2129,38 @@ async function myfatoorahRequest(path, body, token) {
     return data;
 }
 
+// تطبيع رقم الجوال لتنسيق ماي فاتورة: بدون رمز الدولة، بحد أقصى 11 خانة
+// (مثال: 966500000000 أو 0500000000 ← 500000000)
+function normalizeMobileForMyFatoorah(mobile) {
+    let m = String(mobile || '').replace(/[^\d]/g, '');
+    if (m.startsWith('966')) m = m.slice(3);
+    if (m.startsWith('0')) m = m.slice(1);
+    m = m.slice(0, 11);
+    return m || '50000000';
+}
+
+// جلب وسائل الدفع الفعلية من البوابة (v3) — التوكن العام للتجربة لا يملك صلاحيتها،
+// فعند فشل الجلب نستخدم فيزا/ماستر (2) كخيار افتراضي يعمل مع التوكن التجريبي.
+async function getMyFatoorahPaymentMethods(token, baseUrl) {
+    try {
+        const res = await fetch(baseUrl + '/v3/payment-methods', {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+        const list = data.data || data.Data || data.result || data.Result;
+        if (Array.isArray(list) && list.length) {
+            const name = m => String(m.paymentMethodEn || m.PaymentMethodEn || m.paymentMethodAr || m.PaymentMethodAr || '').toLowerCase();
+            // نفضّل وسيلة بطاقة (فيزا/ماستر/مدى/أبل باي/إس تي سي) وإلا أول وسيلة متاحة
+            const preferred = list.find(m => /visa|master|mada|apple|stc|card/i.test(name(m))) || list[0];
+            const id = preferred.paymentMethodId ?? preferred.PaymentMethodId;
+            if (id !== undefined && id !== null) return Number(id);
+        }
+    } catch (e) { /* تجاهل — سنستخدم الخيار الافتراضي */ }
+    return null;
+}
+
+
 function reqBaseHost() {
     return 'http://127.0.0.1:' + (process.env.PORT || 3000);
 }
@@ -2139,8 +2171,12 @@ async function createMyFatoorahInvoice(user, settings, payment) {
     if (!config.token) throw new Error('الدفع الإلكتروني غير مفعّل بعد — تواصل مع الإدارة');
 
     const host = (process.env.PUBLIC_BASE_URL || reqBaseHost()).replace(/\/$/, '');
-    const callbackUrl = host + '/api/payments/callback?userId=' + user._id;
-    const errorUrl = host + '/api/payments/callback?userId=' + user._id + '&error=1';
+    const callbackUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id;
+    const errorUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id + '&error=1';
+
+    // اختيار وسيلة الدفع: من قائمة البوابة الفعلية إن أمكن، وإلا فيزا/ماستر (2) — يعمل مع التوكن التجريبي
+    const methodsId = await getMyFatoorahPaymentMethods(config.token, config.baseUrl);
+    const paymentMethodId = methodsId !== null ? methodsId : 2;
 
     const data = await myfatoorahRequest('/v2/ExecutePayment', {
         CustomerName: user.username || 'عميل',
@@ -2148,12 +2184,11 @@ async function createMyFatoorahInvoice(user, settings, payment) {
         DisplayCurrencyIso: 'SAR',
         CallbackUrl: callbackUrl,
         ErrorUrl: errorUrl,
-        CustomerEmail: user.email || '',
-        CustomerMobile: user.phoneNumber || '966500000000',
+        CustomerEmail: user.email || 'noreply@example.com',
+        CustomerMobile: normalizeMobileForMyFatoorah(user.phoneNumber),
         MobileCountryCode: '+966',
         Language: 'ar',
-        PaymentMethodId: 0,
-        SessionId: payment._id.toString()
+        PaymentMethodId: paymentMethodId
     }, config.token);
 
     if (!data.Data || !data.Data.PaymentURL) throw new Error('لم يتم استلام رابط الدفع من البوابة');
@@ -2166,12 +2201,30 @@ async function createMyFatoorahInvoice(user, settings, payment) {
 }
 
 // الاستعلام عن حالة دفع لدى ماي فاتورة
-async function getMyFatoorahPaymentStatus(paymentId, token) {
+// يستخدم PaymentId إن وُجد، وإلا يتحول إلى InvoiceId (الموجود دائماً في الرد)
+// الحالة عند النجاح قد تأتي في TransactionStatus مباشرة أو داخل InvoiceTransactions[0]
+async function getMyFatoorahPaymentStatus(payment, token) {
+    const key = payment.myfatoorahPaymentId || payment.myfatoorahInvoiceId;
+    if (!key) throw new Error('لا يوجد معرّف دفع للاستعلام عنه');
     const data = await myfatoorahRequest('/v2/GetPaymentStatus', {
-        KeyType: 'PaymentId',
-        Key: paymentId
+        KeyType: payment.myfatoorahPaymentId ? 'PaymentId' : 'InvoiceId',
+        Key: key
     }, token);
-    return data.Data || {};
+    const d = data.Data || {};
+    const tx = (Array.isArray(d.InvoiceTransactions) && d.InvoiceTransactions.length) ? d.InvoiceTransactions[0] : {};
+    return {
+        InvoiceId: d.InvoiceId || null,
+        InvoiceStatus: d.InvoiceStatus || null,
+        TransactionStatus: d.TransactionStatus || tx.TransactionStatus || null,
+        PaymentId: d.PaymentId || tx.PaymentId || null,
+        TransactionId: d.TransactionId || tx.TransactionId || null,
+        PaymentMethod: d.PaymentMethod || tx.PaymentMethod || null
+    };
+}
+
+// هل عملية الدفع ناجحة؟ (بيئة الاختبار ترجع Succss بخطأ إملائي معروف في نظامهم)
+function isMyFatoorahSuccess(status) {
+    return status.TransactionStatus === 'Success' || status.TransactionStatus === 'Succss';
 }
 
 // تمديد اشتراك المستخدم بعد الدفع الناجح
@@ -2253,23 +2306,32 @@ app.post('/api/payments/create', requireAuth, async (req, res) => {
 app.post('/api/payments/webhook', async (req, res) => {
     try {
         const body = req.body || {};
-        const paymentId = body.PaymentId || (body.Data && body.Data.PaymentId) || null;
-        if (!paymentId) return res.status(400).json({ success: false, error: 'missing paymentId' });
+        const data = body.Data || {};
+        const paymentId = body.PaymentId || data.PaymentId || null;
+        const invoiceId = body.InvoiceId || data.InvoiceId || null;
+        if (!paymentId && !invoiceId) return res.status(400).json({ success: false, error: 'missing payment id' });
 
         const settings = await getSettings();
         const config = getMyFatoorahConfig(settings);
         if (!config.token) return res.status(400).json({ success: false, error: 'payment not configured' });
 
-        // تأكيد الحالة من البوابة مباشرة (أمان)
-        const status = await getMyFatoorahPaymentStatus(paymentId, config.token);
-
-        const payment = await Payment.findOne({ myfatoorahPaymentId: paymentId });
+        // البحث عن العملية بالـ PaymentId أو بالـ InvoiceId (أيهما ورد في الإشعار)
+        const payment = await Payment.findOne({
+            $or: [
+                ...(paymentId ? [{ myfatoorahPaymentId: paymentId }] : []),
+                ...(invoiceId ? [{ myfatoorahInvoiceId: invoiceId }] : [])
+            ]
+        });
         if (!payment) return res.status(404).json({ success: false, error: 'payment not found' });
         if (payment.status === 'paid') return res.json({ success: true, alreadyProcessed: true });
 
-        if (status.TransactionStatus === 'Success') {
+        // تأكيد الحالة من البوابة مباشرة (أمان — لا نثق بالإشعار وحده)
+        const status = await getMyFatoorahPaymentStatus(payment, config.token);
+
+        if (isMyFatoorahSuccess(status)) {
             const user = await User.findById(payment.userId);
             if (user) {
+                if (!payment.myfatoorahPaymentId && status.PaymentId) payment.myfatoorahPaymentId = status.PaymentId;
                 payment.paymentMethod = status.PaymentMethod || null;
                 payment.transactionId = status.TransactionId || null;
                 await extendSubscriptionAfterPayment(user, payment);
@@ -2291,22 +2353,35 @@ app.post('/api/payments/webhook', async (req, res) => {
 // ✅ عودة المستخدم من صفحة الدفع
 app.get('/api/payments/callback', requireAuth, async (req, res) => {
     try {
+        const refId = req.query.ref;
         const paymentId = req.query.paymentId;
         const settings = await getSettings();
         let success = false, message = '';
 
-        if (paymentId) {
+        // نجد العملية إما بمعرّفنا الداخلي (ref) أو بالمعرّف الذي ترجعه البوابة (paymentId)
+        let payment = null;
+        if (refId) payment = await Payment.findOne({ _id: refId, userId: req.user._id });
+        else if (paymentId) payment = await Payment.findOne({ myfatoorahPaymentId: paymentId, userId: req.user._id });
+
+        if (payment) {
             const config = getMyFatoorahConfig(settings);
             try {
-                const status = await getMyFatoorahPaymentStatus(paymentId, config.token);
-                success = status.TransactionStatus === 'Success';
-                message = success ? 'تم الدفع بنجاح وتم تجديد اشتراكك 🎉' : 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم';
+                const status = await getMyFatoorahPaymentStatus(payment, config.token);
+                success = isMyFatoorahSuccess(status);
                 if (success) {
-                    const payment = await Payment.findOne({ myfatoorahPaymentId: paymentId });
-                    if (payment && payment.status !== 'paid') {
+                    message = 'تم الدفع بنجاح وتم تجديد اشتراكك 🎉';
+                    if (payment.status !== 'paid') {
                         const user = await User.findById(payment.userId);
-                        if (user) await extendSubscriptionAfterPayment(user, payment);
+                        if (user) {
+                            if (!payment.myfatoorahPaymentId && status.PaymentId) payment.myfatoorahPaymentId = status.PaymentId;
+                            payment.paymentMethod = status.PaymentMethod || payment.paymentMethod;
+                            payment.transactionId = status.TransactionId || payment.transactionId;
+                            await extendSubscriptionAfterPayment(user, payment);
+                            if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+                        }
                     }
+                } else {
+                    message = 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم';
                 }
             } catch (e) {
                 message = 'تعذر التحقق من الدفع: ' + e.message;
