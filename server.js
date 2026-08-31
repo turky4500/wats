@@ -2098,9 +2098,15 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
 // 💳 الدفع الإلكتروني — ماي فاتورة (MyFatoorah) + تجديد الاشتراك التلقائي
 // =====================================================================
 
+// 🆓 توكن تجريبي عام توفره ماي فاتورة للجميع (يعمل في بيئة apitest فقط)
+// المرجع: docs.myfatoorah.com/docs/api-key — قسم Test (Demo) Token
+const MYFATOORAH_PUBLIC_TEST_TOKEN = 'SK_KWT_vVZlnnAqu8jRByOWaRPNId4ShzEDNt256dvnjebuyzo52dXjAfRx2ixW5umjWSUx';
+
 function getMyFatoorahConfig(settings) {
-    const token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
     const mode = settings.myfatoorahMode === 'live' ? 'live' : 'test';
+    let token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
+    // في الوضع التجريبي: إذا لم يُدخل المشرف توكنه، نستخدم التوكن العام للتجربة
+    if (!token && mode === 'test') token = MYFATOORAH_PUBLIC_TEST_TOKEN;
     const baseUrl = mode === 'live' ? 'https://api-sa.myfatoorah.com' : 'https://apitest.myfatoorah.com';
     return { token, mode, baseUrl };
 }
