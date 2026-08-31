@@ -2104,11 +2104,27 @@ const MYFATOORAH_PUBLIC_TEST_TOKEN = 'SK_KWT_vVZlnnAqu8jRByOWaRPNId4ShzEDNt256dv
 
 function getMyFatoorahConfig(settings) {
     const mode = settings.myfatoorahMode === 'live' ? 'live' : 'test';
-    let token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
-    // في الوضع التجريبي: إذا لم يُدخل المشرف توكنه، نستخدم التوكن العام للتجربة
-    if (!token && mode === 'test') token = MYFATOORAH_PUBLIC_TEST_TOKEN;
-    const baseUrl = mode === 'live' ? 'https://api-sa.myfatoorah.com' : 'https://apitest.myfatoorah.com';
-    return { token, mode, baseUrl };
+
+    // 🧪 الوضع التجريبي: يستخدم دائماً التوكن التجريبي العام.
+    // توكنات الإنتاج (الحقيقية) لا تعمل أبداً في بيئة الاختبار — لذلك نتجاهلها في هذا الوضع
+    // حتى لو خزنها المشرف في الإعدادات (سبب خطأ "An error has occurred.").
+    if (mode === 'test') {
+        return { token: MYFATOORAH_PUBLIC_TEST_TOKEN, mode, baseUrl: 'https://apitest.myfatoorah.com' };
+    }
+
+    // 🔴 الوضع الحقيقي: التوكن من متغير البيئة أو من إعدادات الإدارة
+    const token = (process.env.MYFATOORAH_TOKEN || settings.myfatoorahToken || '').trim();
+    return { token, mode, baseUrl: 'https://api-sa.myfatoorah.com' };
+}
+
+// ترجمة رسائل أخطاء ماي فاتورة الشائعة لرسائل واضحة بالعربية
+function translateMyFatoorahError(msg) {
+    if (!msg) return '';
+    const m = String(msg);
+    if (/invalid login token|unauthorized|authentication/i.test(m)) return 'رمز API غير صالح للبيئة المحددة — تأكد من استخدام التوكن الصحيح (تجريبي/حقيقي)';
+    if (/required permissions/i.test(m)) return 'التوكن لا يملك صلاحيات الدفع المطلوبة — فعّلها من لوحة ماي فاتورة ثم أعد المحاولة';
+    if (/error has occurred/i.test(m)) return 'خطأ من بوابة الدفع — يُستخدم توكن التجربة تلقائياً في الوضع التجريبي، وتوكنك الحقيقي يعمل فقط في الوضع الحقيقي';
+    return m;
 }
 
 async function myfatoorahRequest(path, body, token) {
@@ -2123,8 +2139,10 @@ async function myfatoorahRequest(path, body, token) {
         body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        throw new Error((data && data.Message) || ('خطأ في بوابة الدفع (HTTP ' + res.status + ')'));
+    // ماي فاتورة قد يرجع HTTP 200 مع IsSuccess=false — نعالج الحالتين
+    if (!res.ok || data.IsSuccess === false) {
+        const msg = translateMyFatoorahError(data && data.Message);
+        throw new Error(msg || ('خطأ في بوابة الدفع (HTTP ' + res.status + ')'));
     }
     return data;
 }
@@ -2168,7 +2186,7 @@ function reqBaseHost() {
 // إنشاء فاتورة دفع لدى ماي فاتورة وإرجاع رابط الدفع
 async function createMyFatoorahInvoice(user, settings, payment) {
     const config = getMyFatoorahConfig(settings);
-    if (!config.token) throw new Error('الدفع الإلكتروني غير مفعّل بعد — تواصل مع الإدارة');
+    if (!config.token) throw new Error('لم تُدخل التوكن الحقيقي بعد — افتح إعدادات الدفع في لوحة الإدارة وأدخل التوكن وبدّل الوضع إلى حقيقي');
 
     const host = (process.env.PUBLIC_BASE_URL || reqBaseHost()).replace(/\/$/, '');
     const callbackUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id;
