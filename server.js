@@ -2182,6 +2182,7 @@ function normalizeMobileForMyFatoorah(mobile) {
 
 // جلب وسائل الدفع الفعلية من البوابة (v3) — التوكن العام للتجربة لا يملك صلاحيتها،
 // فعند فشل الجلب نستخدم فيزا/ماستر (2) كخيار افتراضي يعمل مع التوكن التجريبي.
+// في السعودية نفضّل مدى (MADA) لأن أغلب البطاقات المحلية مدى ولا تعمل عبر فيزا.
 async function getMyFatoorahPaymentMethods(token, baseUrl) {
     try {
         const res = await fetch(baseUrl + '/v3/payment-methods', {
@@ -2192,8 +2193,11 @@ async function getMyFatoorahPaymentMethods(token, baseUrl) {
         const list = data.data || data.Data || data.result || data.Result;
         if (Array.isArray(list) && list.length) {
             const name = m => String(m.paymentMethodEn || m.PaymentMethodEn || m.paymentMethodAr || m.PaymentMethodAr || '').toLowerCase();
-            // نفضّل وسيلة بطاقة (فيزا/ماستر/مدى/أبل باي/إس تي سي) وإلا أول وسيلة متاحة
-            const preferred = list.find(m => /visa|master|mada|apple|stc|card/i.test(name(m))) || list[0];
+            // الترتيب المفضل: مدى ← فيزا/ماستر ← أبل باي ← أول وسيلة
+            const preferred = list.find(m => /mada|مدى/i.test(name(m)))
+                || list.find(m => /visa|master|card/i.test(name(m)))
+                || list.find(m => /apple|stc/i.test(name(m)))
+                || list[0];
             const id = preferred.paymentMethodId ?? preferred.PaymentMethodId;
             if (id !== undefined && id !== null) return Number(id);
         }
@@ -2226,11 +2230,7 @@ async function createMyFatoorahInvoice(user, settings, payment, hostBase) {
     const callbackUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id;
     const errorUrl = host + '/api/payments/callback?userId=' + user._id + '&ref=' + payment._id + '&error=1';
 
-    // اختيار وسيلة الدفع: من قائمة البوابة الفعلية إن أمكن، وإلا فيزا/ماستر (2) — يعمل مع التوكن التجريبي
-    const methodsId = await getMyFatoorahPaymentMethods(config.token, config.baseUrl);
-    const paymentMethodId = methodsId !== null ? methodsId : 2;
-
-    const data = await myfatoorahRequest('/v2/ExecutePayment', {
+    const commonPayload = {
         CustomerName: user.username || 'عميل',
         InvoiceValue: settings.planPrice,
         DisplayCurrencyIso: 'SAR',
@@ -2241,9 +2241,14 @@ async function createMyFatoorahInvoice(user, settings, payment, hostBase) {
         CustomerEmail: user.email || 'noreply@example.com',
         CustomerMobile: normalizeMobileForMyFatoorah(user.phoneNumber),
         MobileCountryCode: '+966',
-        Language: 'ar',
-        PaymentMethodId: paymentMethodId
-    }, config.token);
+        Language: 'ar'
+    };
+
+    // الوضع الحقيقي: يعرض كل وسائل الدفع (مدى/فيزا/ماستركارد/أبل باي) ليختار العميل
+    // الوضع التجريبي: فيزا/ماستر فقط (بطاقة الاختبار 4111... هي فيزا)
+    const data = config.mode === 'live'
+        ? await executeLivePayment(config, commonPayload)
+        : await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 2 }, config.token);
 
     if (!data.Data || !data.Data.PaymentURL) throw new Error('لم يتم استلام رابط الدفع من البوابة');
 
@@ -2252,6 +2257,37 @@ async function createMyFatoorahInvoice(user, settings, payment, hostBase) {
     await payment.save();
 
     return data.Data.PaymentURL;
+}
+
+// تنفيذ الدفع في الوضع الحقيقي — يضمن ظهور كل وسائل الدفع للعميل
+// (مهم جداً في السعودية: بطاقات مدى المحلية لا تعمل عبر فيزا — خطأ MADA_VISA)
+async function executeLivePayment(config, commonPayload) {
+    // المحاولة 1: جلسة دفع (InitiateSession) تعرض كل الوسائل في صفحة الدفع
+    try {
+        const init = await myfatoorahRequest('/v2/InitiateSession', { SaveToken: false, IsRecurring: false }, config.token);
+        const sessionId = init.Data && init.Data.SessionId;
+        if (sessionId) {
+            const r = await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, SessionId: sessionId }, config.token);
+            console.log('✅ [دفع] أنشئت فاتورة بجلسة كل الوسائل (مدى/فيزا/أبل باي)');
+            return r;
+        }
+    } catch (e) { console.log('⚠️ [دفع] مسار الجلسة فشل — نجرب وسائل أخرى:', e.message); }
+
+    // المحاولة 2: PaymentMethodId=0 (كل الوسائل) بدون جلسة
+    try {
+        return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 0 }, config.token);
+    } catch (e) { console.log('⚠️ [دفع] PaymentMethodId=0 فشل — نجرب وسيلة من قائمة الحساب:', e.message); }
+
+    // المحاولة 3: وسيلة بطاقة من قائمة الحساب الفعلية (يفضّل مدى في السعودية)
+    const methodsId = await getMyFatoorahPaymentMethods(config.token, config.baseUrl);
+    if (methodsId !== null) {
+        try {
+            return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: methodsId }, config.token);
+        } catch (e) { console.log('⚠️ [دفع] الوسيلة المفضلة فشلت — ننتقل لفيزا/ماستر:', e.message); }
+    }
+
+    // المحاولة الأخيرة: فيزا/ماستر (2)
+    return await myfatoorahRequest('/v2/ExecutePayment', { ...commonPayload, PaymentMethodId: 2 }, config.token);
 }
 
 // الاستعلام عن حالة دفع لدى ماي فاتورة
@@ -2298,6 +2334,11 @@ function isMyFatoorahSuccess(status) {
 // ترجع null إذا لم تكن الحالة فشلاً نهائياً (معلقة/قيد التنفيذ — لا نغير الحالة حينها)
 function paymentFailureMessage(status) {
     const raw = String(status.TransactionStatus || status.InvoiceStatus || '').toLowerCase();
+    const rawErr = String(status.Error || '').toLowerCase();
+    // 🎯 خطأ مدى الشهير: بطاقة محلية سعودية تمر عبر فيزا — يُرفض لأن نظام ساما يلزم معالجة مدى عبر شبكة مدى
+    if (rawErr.includes('not_supported') || rawErr.includes('local debit scheme') || rawErr.includes('mada')) {
+        return 'بطاقة مدى المحلية يجب معالجتها عبر شبكة مدى وليس فيزا — في صفحة الدفع اختر وسيلة "مدى" أو استخدم بطاقة دولية';
+    }
     if (!raw || raw === 'pending' || raw === 'not completed' || raw === 'notcompleted' || raw === 'waiting') return null;
     const map = {
         'failed': 'فشل الدفع — حاول مرة أخرى أو تواصل مع الدعم',
@@ -2314,11 +2355,14 @@ function paymentFailureMessage(status) {
     return map[raw] || null;
 }
 
-// رسالة تذكير إضافية عندما يفشل الدفع في الوضع التجريبي
-// (في بيئة الاختبار لا تعمل البطاقات الحقيقية — هذا سبب شائع للفشل)
-function testModeHint(config) {
-    if (config.mode !== 'test') return '';
-    return ' تذكير: في الوضع التجريبي تُقبل بطاقات الاختبار فقط (4111 1111 1111 1111) — البطاقات الحقيقية تعمل في الوضع الحقيقي فقط.';
+// رسالة الفشل النهائية (المعروضة للعميل والمخزنة) مع تذكير الوضع التجريبي عند الحاجة
+// في بيئة الاختبار لا تعمل البطاقات الحقيقية — هذا سبب شائع للفشل
+function failMessageWithHint(failMsg, config) {
+    let msg = failMsg || 'فشل الدفع — حاول مرة أخرى أو تواصل مع الدعم';
+    if (config.mode === 'test') {
+        msg += ' — تذكير: في الوضع التجريبي تُقبل بطاقات الاختبار فقط (4111 1111 1111 1111) ولا تعمل البطاقات الحقيقية.';
+    }
+    return msg;
 }
 
 // تمديد اشتراك المستخدم بعد الدفع الناجح
@@ -2435,12 +2479,12 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
         const failMsg = paymentFailureMessage(status);
         if (failMsg) {
             payment.status = 'failed';
-            payment.errorMessage = failMsg;
+            payment.errorMessage = failMessageWithHint(failMsg, config);
             await payment.save();
-            return res.json({ success: false, message: failMsg + testModeHint(config) });
+            return res.json({ success: false, message: failMessageWithHint(failMsg, config) });
         }
         await payment.save();
-        res.json({ success: false, message: 'العملية ما تزال قيد التنفيذ عند البوابة — حاول مرة أخرى بعد دقائق' + testModeHint(config) });
+        res.json({ success: false, message: failMessageWithHint(null, config) });
     } catch (e) {
         console.error('❌ خطأ تحقق يدوي:', e.message);
         res.status(500).json({ success: false, message: 'تعذر التحقق: ' + e.message });
@@ -2479,13 +2523,13 @@ app.post('/admin/payments/verify/:id', requireAdmin, async (req, res) => {
         const failMsg = paymentFailureMessage(status);
         if (failMsg) {
             payment.status = 'failed';
-            payment.errorMessage = failMsg;
+            payment.errorMessage = failMessageWithHint(failMsg, config);
             await payment.save();
             console.error('❌ [دفع] تحقق إداري — فشل:', JSON.stringify(status));
         } else {
             await payment.save();
         }
-        res.json({ success: false, message: (failMsg || 'الدفع لم يكتمل عند البوابة') + testModeHint(config) });
+        res.json({ success: false, message: failMessageWithHint(failMsg, config) });
     } catch (e) {
         console.error('❌ خطأ إعادة تحقق:', e.message);
         res.status(500).json({ success: false, message: 'تعذر التحقق: ' + e.message });
@@ -2583,7 +2627,7 @@ app.post('/api/payments/webhook', async (req, res) => {
             if (failMsg) {
                 // فشل نهائي — نحدّث الحالة
                 payment.status = 'failed';
-                payment.errorMessage = failMsg;
+                payment.errorMessage = failMessageWithHint(failMsg, config);
                 await payment.save();
                 console.error('❌ [دفع] فشل من البوابة:', status.TransactionStatus || status.InvoiceStatus, '|', status.Error || '');
             } else {
@@ -2635,7 +2679,7 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                     const failMsg = paymentFailureMessage(status);
                     if (failMsg && payment.status !== 'paid') {
                         payment.status = 'failed';
-                        payment.errorMessage = failMsg;
+                        payment.errorMessage = failMessageWithHint(failMsg, config);
                         await payment.save();
                         console.error('❌ [دفع] فشل عند العودة:', JSON.stringify(status));
                     } else if (payment.status === 'pending') {
@@ -2643,8 +2687,8 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                         console.log('⏳ [دفع] عودة بلا تغيير (معلقة):', status.InvoiceStatus || status.TransactionStatus || '?');
                     }
                     message = failMsg
-                        ? failMsg + testModeHint(config)
-                        : 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم' + testModeHint(config);
+                        ? failMessageWithHint(failMsg, config)
+                        : failMessageWithHint(null, config);
                 }
             } catch (e) {
                 message = 'تعذر التحقق من الدفع: ' + e.message;
