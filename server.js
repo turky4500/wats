@@ -2129,6 +2129,7 @@ function translateMyFatoorahError(msg) {
 
 async function myfatoorahRequest(path, body, token) {
     const config = getMyFatoorahConfig(await getSettings());
+    if (typeof fetch === 'undefined') throw new Error('بيئة التشغيل قديمة: يتطلب الدفع Node.js 18 أو أحدث');
     if (!token) token = config.token;
     const res = await fetch(config.baseUrl + path, {
         method: 'POST',
@@ -2141,8 +2142,10 @@ async function myfatoorahRequest(path, body, token) {
     const data = await res.json().catch(() => ({}));
     // ماي فاتورة قد يرجع HTTP 200 مع IsSuccess=false — نعالج الحالتين
     if (!res.ok || data.IsSuccess === false) {
+        const raw = (data.ValidationErrors && data.ValidationErrors[0] && data.ValidationErrors[0].Error) || '';
         const msg = translateMyFatoorahError(data && data.Message);
-        throw new Error(msg || ('خطأ في بوابة الدفع (HTTP ' + res.status + ')'));
+        console.error('❌ [ماي فاتورة] فشل الطلب:', config.baseUrl + path, '| HTTP', res.status, '| الرسالة:', data.Message, '| التفاصيل:', raw, '| التوكن:', token.slice(0, 8) + '...');
+        throw new Error([msg, (raw && msg !== raw) ? '(' + raw + ')' : ''].filter(Boolean).join(' '));
     }
     return data;
 }
@@ -2316,7 +2319,36 @@ app.post('/api/payments/create', requireAuth, async (req, res) => {
         res.json({ success: true, paymentUrl });
     } catch (e) {
         console.error('❌ خطأ إنشاء دفع:', e.message);
-        res.status(500).json({ success: false, error: e.message || 'فشل إنشاء الدفع' });
+        // نضيف معلومات تشخيصية (بدون كشف التوكن كاملاً) لتسهيل حل المشكلة
+        let err = e.message || 'فشل إنشاء الدفع';
+        try {
+            const cfg = getMyFatoorahConfig(await getSettings());
+            err += ' [الوضع: ' + (cfg.mode === 'live' ? 'حقيقي' : 'تجريبي') + ' | التوكن المستخدم: ' + (cfg.token ? cfg.token.slice(0, 8) + '...' : 'بدون') + ']';
+        } catch (e2) {}
+        res.status(500).json({ success: false, error: err });
+    }
+});
+
+// 🔍 نقطة فحص سريعة لإعدادات الدفع (للمساعدة التقنية — للمشرف فقط)
+app.get('/api/payments/debug', requireAdmin, async (req, res) => {
+    try {
+        const settings = await getSettings();
+        const cfg = getMyFatoorahConfig(settings);
+        res.json({
+            paymentsEnabled: settings.paymentsEnabled,
+            mode: cfg.mode,
+            baseUrl: cfg.baseUrl,
+            tokenUsed: cfg.token ? (cfg.token.slice(0, 8) + '...' + cfg.token.slice(-4)) : 'بدون',
+            storedTokenLength: (settings.myfatoorahToken || '').length,
+            planPrice: settings.planPrice,
+            planDays: settings.planDays,
+            planName: settings.planName,
+            nodeVersion: process.version,
+            fetchAvailable: typeof fetch !== 'undefined',
+            publicBaseUrl: process.env.PUBLIC_BASE_URL || '(غير مضبوط — سيُستخدم http://127.0.0.1:' + (process.env.PORT || 3000) + ')'
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
