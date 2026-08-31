@@ -151,6 +151,7 @@
                                     <span class="badge badge-pending">⏳ قيد التنفيذ</span>
                                 <% } else if (p.status === 'failed') { %>
                                     <span class="badge badge-failed">❌ فشل</span>
+                                    <% if (p.errorMessage) { %><br><span style="color:var(--danger); font-size:11px; font-weight:600;"><%= p.errorMessage %></span><% } %>
                                 <% } else { %>
                                     <span class="badge badge-cancelled">✕ ملغي</span>
                                 <% } %>

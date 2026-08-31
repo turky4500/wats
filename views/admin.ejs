@@ -663,7 +663,12 @@
                                     <% } %>
                                 </td>
                                 <td style="color:var(--ink-500);"><%= p.paymentMethod || '—' %></td>
-                                <td style="color:var(--ink-500); font-size:12.5px;"><%= p.errorMessage || (p.myfatoorahInvoiceId ? ('فاتورة: ' + p.myfatoorahInvoiceId) : '—') %></td>
+                                <td style="color:var(--ink-500); font-size:12.5px;">
+                                    <%= p.errorMessage || '—' %>
+                                    <% if (p.rawStatus) { %><br><span style="color:var(--ink-300); font-size:11px;" dir="ltr">[<%= p.rawStatus %><% if (p.rawInvoiceStatus) { %> / <%= p.rawInvoiceStatus %><% } %>]</span><% } %>
+                                    <% if (p.rawError) { %><br><span style="color:var(--danger); font-size:11px;" dir="ltr"><%= p.rawError %></span><% } %>
+                                    <% if (!p.errorMessage && !p.rawStatus && p.myfatoorahInvoiceId) { %>فاتورة: <%= p.myfatoorahInvoiceId %><% } %>
+                                </td>
                                 <td>
                                     <% if (p.status === 'pending') { %>
                                         <button class="btn btn-green" style="padding:6px 12px; font-size:12.5px;" onclick="verifyPayment('<%= p._id %>', this)">🔍 تحقق الآن</button>

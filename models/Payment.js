@@ -16,6 +16,10 @@ const paymentSchema = new mongoose.Schema({
     myfatoorahInvoiceId: { type: String, default: null },               // InvoiceId
     transactionId: { type: String, default: null },
     errorMessage: { type: String, default: null },
+    // 🩺 بيانات تشخيصية خام من البوابة (تُعرض في لوحة الإدارة لتحديد سبب الفشل بدقة)
+    rawStatus: { type: String, default: null },           // TransactionStatus كما أرسلته ماي فاتورة
+    rawInvoiceStatus: { type: String, default: null },    // InvoiceStatus
+    rawError: { type: String, default: null },            // رسالة الخطأ الخام
     createdAt: { type: Date, default: Date.now, index: true },
     updatedAt: { type: Date, default: Date.now }
 });
