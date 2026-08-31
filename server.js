@@ -1494,7 +1494,25 @@ app.get('/admin', requireAdmin, async (req, res) => {
         item.username = foundUser ? foundUser.username : 'عميل محذوف';
     }
 
-    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers, settings });
+    // 💳 عمليات الدفع: آخر 50 عملية مع اسم العميل
+    const payments = await Payment.find().sort({ createdAt: -1 }).limit(50);
+    for (const p of payments) {
+        const u = await User.findById(p.userId);
+        p.username = u ? u.username : 'عميل محذوف';
+    }
+    // إحصائيات الدفع
+    const payStats = await Payment.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 }, total: { $sum: '$amount' } } }
+    ]);
+    const paySummary = { paid: 0, paidTotal: 0, pending: 0, failed: 0, cancelled: 0 };
+    for (const s of payStats) {
+        if (s._id === 'paid') { paySummary.paid = s.count; paySummary.paidTotal = s.total; }
+        else if (s._id === 'pending') paySummary.pending = s.count;
+        else if (s._id === 'failed') paySummary.failed = s.count;
+        else if (s._id === 'cancelled') paySummary.cancelled = s.count;
+    }
+
+    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers, settings, payments, paySummary });
 });
 
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
@@ -2258,9 +2276,32 @@ async function getMyFatoorahPaymentStatus(payment, token) {
     };
 }
 
-// هل عملية الدفع ناجحة؟ (بيئة الاختبار ترجع Succss بخطأ إملائي معروف في نظامهم)
+// هل عملية الدفع ناجحة؟
+// - TransactionStatus قد تأتي Success أو Succss (خطأ إملائي معروف في بيئة الاختبار)
+// - بعض البيئات ترجع InvoiceStatus = Paid فقط بدون تفاصيل العملية — نعتبرها نجاحاً أيضاً
 function isMyFatoorahSuccess(status) {
-    return status.TransactionStatus === 'Success' || status.TransactionStatus === 'Succss';
+    const ts = String(status.TransactionStatus || '').toLowerCase();
+    const inv = String(status.InvoiceStatus || '').toLowerCase();
+    return ts === 'success' || ts === 'succss' || inv === 'paid' || inv === 'success';
+}
+
+// ترجمة حالة الفشل من البوابة إلى رسالة عربية واضحة للمستخدم
+function paymentFailureMessage(status) {
+    const raw = String(status.TransactionStatus || status.InvoiceStatus || '').toLowerCase();
+    const map = {
+        'failed': 'فشل الدفع — حاول مرة أخرى أو تواصل مع الدعم',
+        'not completed': 'لم يكتمل الدفع — حاول مرة أخرى',
+        'notcompleted': 'لم يكتمل الدفع — حاول مرة أخرى',
+        'cancelled': 'تم إلغاء الدفع',
+        'canceled': 'تم إلغاء الدفع',
+        'expired': 'انتهت صلاحية رابط الدفع — أنشئ عملية دفع جديدة',
+        'declined': 'تم رفض البطاقة — تحقق من بياناتها أو استخدم بطاقة أخرى',
+        'insufficient funds': 'رصيد غير كافٍ في البطاقة',
+        'invalid card': 'بيانات البطاقة غير صحيحة',
+        'pending': 'العملية ما تزال قيد التنفيذ عند البوابة',
+        'paid': 'الدفع مكتمل'
+    };
+    return map[raw] || null;
 }
 
 // تمديد اشتراك المستخدم بعد الدفع الناجح
@@ -2384,6 +2425,45 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
     }
 });
 
+// ✅ إعادة التحقق من عملية دفع من لوحة الإدارة (للعمليات العالقة)
+app.post('/admin/payments/verify/:id', requireAdmin, async (req, res) => {
+    try {
+        const payment = await Payment.findById(req.params.id);
+        if (!payment) return res.status(404).json({ success: false, message: 'العملية غير موجودة' });
+        if (payment.status === 'paid') return res.json({ success: true, message: 'العملية مدفوعة بالفعل', alreadyPaid: true });
+
+        const settings = await getSettings();
+        const config = getMyFatoorahConfig(settings);
+        if (!payment.myfatoorahPaymentId && !payment.myfatoorahInvoiceId) {
+            return res.json({ success: false, message: 'هذه العملية لم تصل لبوابة الدفع — لا يمكن التحقق منها' });
+        }
+
+        const status = await getMyFatoorahPaymentStatus(payment, config.token);
+
+        if (isMyFatoorahSuccess(status)) {
+            const user = await User.findById(payment.userId);
+            if (!user) return res.status(404).json({ success: false, message: 'العميل غير موجود' });
+            if (!payment.myfatoorahPaymentId && status.PaymentId) payment.myfatoorahPaymentId = status.PaymentId;
+            payment.paymentMethod = status.PaymentMethod || payment.paymentMethod;
+            payment.transactionId = status.TransactionId || payment.transactionId;
+            const newExp = await extendSubscriptionAfterPayment(user, payment);
+            if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+            return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراك ' + user.username + ' حتى ' + newExp.toLocaleDateString('ar-EG') });
+        }
+
+        const failMsg = paymentFailureMessage(status);
+        if (failMsg) {
+            payment.status = 'failed';
+            payment.errorMessage = failMsg;
+            await payment.save();
+        }
+        res.json({ success: false, message: failMsg || 'الدفع لم يكتمل عند البوابة' });
+    } catch (e) {
+        console.error('❌ خطأ إعادة تحقق:', e.message);
+        res.status(500).json({ success: false, message: 'تعذر التحقق: ' + e.message });
+    }
+});
+
 // 🔍 نقطة فحص سريعة لإعدادات الدفع (للمساعدة التقنية — للمشرف فقط)
 app.get('/api/payments/debug', requireAdmin, async (req, res) => {
     try {
@@ -2446,7 +2526,7 @@ app.post('/api/payments/webhook', async (req, res) => {
             }
         } else {
             payment.status = 'failed';
-            payment.errorMessage = status.TransactionStatus || 'لم ينجح الدفع';
+            payment.errorMessage = paymentFailureMessage(status) || status.TransactionStatus || 'لم ينجح الدفع';
             await payment.save();
         }
         res.json({ success: true });
@@ -2487,7 +2567,14 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                         }
                     }
                 } else {
-                    message = 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم';
+                    // فشل أو لم يكتمل: نحدّث حالة العملية ورسالتها في السجل بدل تركها معلقة
+                    const failMsg = paymentFailureMessage(status);
+                    if (failMsg && payment.status !== 'paid') {
+                        payment.status = 'failed';
+                        payment.errorMessage = failMsg;
+                        await payment.save();
+                    }
+                    message = failMsg || 'لم يتم تأكيد الدفع بعد — حاول مرة أخرى أو تواصل مع الدعم';
                 }
             } catch (e) {
                 message = 'تعذر التحقق من الدفع: ' + e.message;

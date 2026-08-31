@@ -235,6 +235,7 @@
             <button class="tab-btn" onclick="switchAdminTab('clients', this)">👥 العملاء (<%= users.length %>)</button>
             <button class="tab-btn" onclick="switchAdminTab('system', this)">🤖 رقم الإدارة</button>
             <button class="tab-btn" onclick="switchAdminTab('settings', this)">⚙️ الإعدادات</button>
+            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (payments||[]).filter(p=>p.status==='pending').length %>)</button>
         </div>
 
         <!-- ============ تبويب: نظرة عامة ============ -->
@@ -590,6 +591,94 @@
         </div>
     </div>
 
+        <!-- ============ تبويب: الدفعات ============ -->
+        <div class="tab-panel" id="tab-payments">
+            <% const ps = payments || []; const paySum = paySummary || { paid:0, paidTotal:0, pending:0, failed:0, cancelled:0 }; %>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-bg">💰</div>
+                    <div class="stat-icon" style="background:var(--primary-soft); color:var(--primary);">💰</div>
+                    <div class="stat-label">إجمالي المقبوضات</div>
+                    <div class="stat-value"><%= paySum.paidTotal %> <small style="font-size:14px;">ر.س</small></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">✅</div>
+                    <div class="stat-icon" style="background:var(--info-soft); color:var(--info);">✅</div>
+                    <div class="stat-label">عمليات ناجحة</div>
+                    <div class="stat-value"><%= paySum.paid %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">⏳</div>
+                    <div class="stat-icon" style="background:#fff7e6; color:#b45309;">⏳</div>
+                    <div class="stat-label">معلقة (تحتاج تحقق)</div>
+                    <div class="stat-value"><%= paySum.pending %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">❌</div>
+                    <div class="stat-icon" style="background:var(--danger-soft); color:var(--danger);">❌</div>
+                    <div class="stat-label">فاشلة / ملغاة</div>
+                    <div class="stat-value"><%= paySum.failed + paySum.cancelled %></div>
+                </div>
+            </div>
+
+            <div class="card table-card">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <span style="font-weight:900;">💳 سجل عمليات الدفع (آخر 50)</span>
+                    <span class="badge badge-blue">يظهر تلقائياً عند أي عملية دفع من العملاء</span>
+                </div>
+                <div class="table-wrap">
+                    <table id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>التاريخ</th>
+                                <th>العميل</th>
+                                <th>المبلغ</th>
+                                <th>المدة</th>
+                                <th>الحالة</th>
+                                <th>وسيلة الدفع</th>
+                                <th>ملاحظة / خطأ</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (ps.length === 0) { %>
+                                <tr><td colspan="9" style="text-align:center; color:var(--ink-400); padding:24px;">لا توجد عمليات دفع بعد — عندما يدفع أي عميل ستظهر هنا</td></tr>
+                            <% } else { ps.forEach((p, i) => { %>
+                            <tr>
+                                <td style="color:var(--ink-300); font-weight:800;"><%= i + 1 %></td>
+                                <td style="color:var(--ink-500); font-size:13px;"><%= p.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                                <td style="font-weight:800;"><%= p.username %></td>
+                                <td style="font-weight:900;"><%= p.amount %> ر.س</td>
+                                <td><%= p.planDays %> يوم</td>
+                                <td>
+                                    <% if (p.status === 'paid') { %>
+                                        <span class="badge badge-green">✅ مدفوع</span>
+                                    <% } else if (p.status === 'pending') { %>
+                                        <span class="badge" style="background:#fff7e6; color:#b45309;">⏳ قيد التنفيذ</span>
+                                    <% } else if (p.status === 'failed') { %>
+                                        <span class="badge badge-red">❌ فشل</span>
+                                    <% } else { %>
+                                        <span class="badge badge-gray">✕ ملغي</span>
+                                    <% } %>
+                                </td>
+                                <td style="color:var(--ink-500);"><%= p.paymentMethod || '—' %></td>
+                                <td style="color:var(--ink-500); font-size:12.5px;"><%= p.errorMessage || (p.myfatoorahInvoiceId ? ('فاتورة: ' + p.myfatoorahInvoiceId) : '—') %></td>
+                                <td>
+                                    <% if (p.status === 'pending') { %>
+                                        <button class="btn btn-green" style="padding:6px 12px; font-size:12.5px;" onclick="verifyPayment('<%= p._id %>', this)">🔍 تحقق الآن</button>
+                                    <% } else { %>
+                                        <span style="color:var(--ink-300); font-size:12px;">—</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                            <% }); } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // ===== التبويبات =====
@@ -598,11 +687,28 @@
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             if (btn) btn.classList.add('active');
             else {
-                const idx = { overview: 0, clients: 1, system: 2, settings: 3 }[name] || 0;
+                const idx = { overview: 0, clients: 1, system: 2, settings: 3, payments: 4 }[name] || 0;
                 document.querySelectorAll('.tab-btn')[idx].classList.add('active');
             }
             document.getElementById('tab-' + name).classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ===== إعادة التحقق من عملية دفع معلقة =====
+        async function verifyPayment(id, btn) {
+            if (!confirm('التحقق من هذه العملية لدى بوابة ماي فاتورة؟ إذا كان الدفع ناجحاً سيُجدد اشتراك العميل فوراً.')) return;
+            const old = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+            try {
+                const res = await fetch('/admin/payments/verify/' + id, { method: 'POST' });
+                const data = await res.json();
+                alert(data.message || 'تم');
+                if (data.success) setTimeout(() => location.reload(), 800);
+            } catch (e) {
+                alert('تعذر التحقق: ' + e.message);
+            } finally {
+                btn.disabled = false; btn.innerHTML = old;
+            }
         }
 
         // ===== بحث العملاء =====
