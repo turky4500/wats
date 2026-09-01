@@ -235,7 +235,9 @@
             <button class="tab-btn" onclick="switchAdminTab('clients', this)">👥 العملاء (<%= users.length %>)</button>
             <button class="tab-btn" onclick="switchAdminTab('system', this)">🤖 رقم الإدارة</button>
             <button class="tab-btn" onclick="switchAdminTab('settings', this)">⚙️ الإعدادات</button>
-            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (typeof payments !== 'undefined' && payments ? payments : []).filter(p=>p.status==='pending').length %>)</button>        </div>
+            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (typeof payments !== 'undefined' && payments ? payments : []).filter(p=>p.status==='pending').length %>)</button>
+            <button class="tab-btn" onclick="switchAdminTab('notifications', this)">📨 رسائل الإشعارات</button>
+        </div>
 
         <!-- ============ تبويب: نظرة عامة ============ -->
         <div class="tab-panel active" id="tab-overview">
@@ -692,15 +694,94 @@
             </div>
         </div>
 
+        <!-- ============ تبويب: رسائل الإشعارات ============ -->
+        <div class="tab-panel" id="tab-notifications">
+            <% const tmpls = (typeof templates !== 'undefined' && templates) || []; %>
+            <div class="card" style="margin-bottom:18px; background:linear-gradient(135deg,#0b1220,#131c2e); border:none;">
+                <div style="padding:20px 24px; color:#fff;">
+                    <div style="font-size:16px; font-weight:900; margin-bottom:6px;">📨 مركز رسائل الإشعارات</div>
+                    <div style="font-size:12.5px; color:rgba(255,255,255,.65); line-height:1.8;">
+                        فعّل أو عطّل أي رسالة، وعدّل نصها كما تريد، واختر لمن تصل (الأدمن / العميل / للاثنين).<br>
+                        رسائل الأدمن تصل لجوال الإشعارات المضبوط في <strong>⚙️ الإعدادات</strong> — ورسائل العميل تُرسل من جوال الإدارة المسجل مباشرة على واتساب العميل.
+                    </div>
+                </div>
+            </div>
+
+            <% tmpls.forEach(t => { %>
+                <div class="card" style="margin-bottom:14px; <%= !t.enabled ? 'opacity:.72;' : '' %>">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <h3 style="margin:0; font-size:15px;"><%= t.title %></h3>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span class="badge <%= t.target === 'admin' ? 'badge-blue' : (t.target === 'user' ? 'badge-green' : 'badge-gray') %>">
+                                <%= t.target === 'admin' ? '👑 للأدمن' : (t.target === 'user' ? '👤 للعميل' : '🔗 للاثنين') %>
+                            </span>
+                            <span class="badge <%= t.enabled ? 'badge-green' : 'badge-red' %>"><%= t.enabled ? '✅ مفعّلة' : '⛔ معطّلة' %></span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:12px; color:var(--ink-400); margin-bottom:10px;">📌 <%= t.description %></div>
+                        <form method="POST" action="/admin/notification-templates/<%= t.key %>">
+                            <div class="form-group">
+                                <label>✏️ نص الرسالة (المتغيرات: <code dir="ltr">{username} {phone} {amount} {days} {method} {reason} {date} {clients_today} {messages_today} {success_today} {failed_today} {payments_today} {payments_amount} {total_clients}</code>)</label>
+                                <textarea name="text" rows="3" style="width:100%; padding:10px 12px; border:1px solid var(--ink-100); border-radius:10px; font-family:inherit; font-size:13px; direction:rtl;"><%= t.text %></textarea>
+                            </div>
+                            <% if (t.key === 'daily_report') { %>
+                                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>🕐 وقت الإرسال اليومي (الساعة)</label>
+                                        <input type="number" name="dailyReportHour" value="<%= settings.dailyReportHour === undefined ? 23 : settings.dailyReportHour %>" min="0" max="23" style="width:80px;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>🕐 الدقيقة</label>
+                                        <input type="number" name="dailyReportMinute" value="<%= settings.dailyReportMinute === undefined ? 30 : settings.dailyReportMinute %>" min="0" max="59" style="width:80px;">
+                                    </div>
+                                    <span style="font-size:12px; color:var(--ink-400);">بتوقيت السعودية</span>
+                                </div>
+                            <% } %>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <label style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:13px; margin:0;">
+                                    <input type="checkbox" name="enabled" <%= t.enabled ? 'checked' : '' %> style="width:17px; height:17px; accent-color:var(--primary);"> مفعّلة
+                                </label>
+                                <button type="submit" class="btn btn-green" style="padding:8px 18px;">💾 حفظ</button>
+                                <% if (t.key === 'daily_report') { %>
+                                    <button type="button" class="btn btn-outline" style="padding:8px 18px;" onclick="sendReportNow(this)">🚀 إرسال التقرير الآن (تجربة)</button>
+                                <% } %>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+            <% if (tmpls.length === 0) { %>
+                <div class="card"><div class="card-body" style="color:var(--ink-400); text-align:center; padding:30px;">لا توجد قوالب إشعارات بعد</div></div>
+            <% } %>
+        </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // ===== إرسال التقرير اليومي الآن (تجربة) =====
+        async function sendReportNow(btn) {
+            const old = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+            try {
+                const res = await fetch('/admin/daily-report/send-now', { method: 'POST' });
+                const data = await res.json();
+                alert(data.message || 'تم');
+            } catch (e) {
+                alert('خطأ: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = old;
+            }
+        }
+
         // ===== التبويبات =====
         function switchAdminTab(name, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             if (btn) btn.classList.add('active');
             else {
-                const idx = { overview: 0, clients: 1, system: 2, settings: 3, payments: 4 }[name] || 0;
+                const idx = { overview: 0, clients: 1, system: 2, settings: 3, payments: 4, notifications: 5 }[name] || 0;
                 document.querySelectorAll('.tab-btn')[idx].classList.add('active');
             }
             document.getElementById('tab-' + name).classList.add('active');

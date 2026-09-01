@@ -23,6 +23,7 @@ const Campaign = require('./models/Campaign');
 const CampaignRecipient = require('./models/CampaignRecipient');
 const Group = require('./models/Group');
 const Payment = require('./models/Payment');
+const NotificationTemplate = require('./models/NotificationTemplate');
 const { startWhatsAppSession, getSession, disconnectSession, requestPairingCode, waitForReadySession, isSessionReady } = require('./whatsappManager');
 
 const app = express();
@@ -669,6 +670,209 @@ async function sendAdminNotification(message) {
     }
 }
 
+// ================================================================
+// 📨 نظام قوالب رسائل الإشعارات (يُدار من تبويب "رسائل الإشعارات")
+// ================================================================
+
+// القوالب الافتراضية — تُنشأ تلقائياً عند أول تشغيل
+const DEFAULT_NOTIFICATION_TEMPLATES = [
+    {
+        key: 'welcome',
+        title: '👋 رسالة الترحيب بعد التسجيل',
+        description: 'تصل للعميل مباشرة بعد تفعيل حسابه (إدخال كود التفعيل) أو عند إضافته من لوحة الإدارة',
+        target: 'user',
+        text: 'أهلاً بك {username} في منصة تكوين لإرسال رسائل الواتساب 🎉\nتم تفعيل حسابك بنجاح واشتراكك بدأ الآن.\nيمكنك إرسال رسائلك بكل سهولة، وإن احتجت أي مساعدة نحن في خدمتك 💚'
+    },
+    {
+        key: 'expiry_reminder',
+        title: '⏰ تذكير انتهاء الاشتراك',
+        description: 'رسالة ودية تلقائية تصل للعميل عندما ينتهي اشتراكه (تُرسل مرة واحدة لكل انتهاء)',
+        target: 'user',
+        text: 'مرحباً {username} 💚\nلاحظنا أن اشتراكك في منصة تكوين انتهى اليوم.\nلا تقلق — كل رسائلك وبياناتك محفوظة بأمان!\nإذا أردت الاستمرار، جدد اشتراكك بضغطة واحدة من صفحة الاشتراك والدفع.\nنحن سعداء بخدمتك دائماً 🌟'
+    },
+    {
+        key: 'daily_report',
+        title: '📊 التقرير اليومي',
+        description: 'ملخص يومي مبسط يصل لجوال إشعارات الإدارة في نهاية كل يوم (الوقت من إعدادات هذه البطاقة)',
+        target: 'admin',
+        text: '📊 *تقرير منصة تكوين اليومي*\nالتاريخ: {date}\n\n👥 عملاء جدد اليوم: {clients_today}\n📨 رسائل مرسلة اليوم: {messages_today}\n✅ ناجحة: {success_today}\n❌ فاشلة: {failed_today}\n💰 مدفوعات اليوم: {payments_today} عملية بمبلغ {payments_amount} ر.س\n\nإجمالي العملاء في المنصة: {total_clients}'
+    },
+    {
+        key: 'new_client',
+        title: '👤 عميل جديد سجّل بالمنصة',
+        description: 'تنبيه فوري لجوال الإشعارات عند تسجيل عميل جديد بنفسه',
+        target: 'admin',
+        text: '👤 *عميل جديد سجّل بالمنصة*\nالاسم: {username}\nالجوال: {phone}'
+    },
+    {
+        key: 'client_added',
+        title: '👤 إضافة عميل من لوحة الإدارة',
+        description: 'تنبيه عند إضافة عميل يدوياً من لوحة الإدارة',
+        target: 'admin',
+        text: '👤 *تمت إضافة عميل جديد (من لوحة الإدارة)*\nالاسم: {username}\nالجوال: {phone}'
+    },
+    {
+        key: 'payment_success',
+        title: '💰 دفع ناجح',
+        description: 'تنبيه فوري عند نجاح أي عملية دفع وتجديد اشتراك',
+        target: 'admin',
+        text: '💰 *دفع ناجح*\nالعميل: {username}\nالمبلغ: {amount} ر.س\nالمدة: {days} يوم\nالطريقة: {method}'
+    },
+    {
+        key: 'payment_failed',
+        title: '⚠️ محاولة دفع فشلت',
+        description: 'تنبيه عند فشل محاولة دفع (لفت انتباه الأدمن لسبب الفشل)',
+        target: 'admin',
+        text: '⚠️ *محاولة دفع فشلت*\nالعميل: {username}\nالمبلغ: {amount} ر.س\nالسبب: {reason}'
+    },
+    {
+        key: 'password_changed',
+        title: '🔐 تغيير كلمة مرور الإدارة',
+        description: 'تنبيه أمني عند تغيير كلمة مرور لوحة الإدارة',
+        target: 'admin',
+        text: '🔐 *تغيير كلمة مرور الإدارة*\nتم تغيير كلمة مرور لوحة الإدارة بنجاح.'
+    }
+];
+
+// إنشاء القوالب الافتراضية إذا لم تكن موجودة
+async function ensureDefaultTemplates() {
+    try {
+        for (const t of DEFAULT_NOTIFICATION_TEMPLATES) {
+            const exists = await NotificationTemplate.findOne({ key: t.key });
+            if (!exists) await NotificationTemplate.create(t);
+        }
+    } catch (e) {
+        console.error('⚠️ فشل إنشاء قوالب الإشعارات:', e.message);
+    }
+}
+
+// جلب قالب (مع قيم افتراضية إن لم يوجد)
+async function getNotificationTemplate(key) {
+    const t = await NotificationTemplate.findOne({ key });
+    if (t) return t;
+    const def = DEFAULT_NOTIFICATION_TEMPLATES.find(d => d.key === key);
+    return def || null;
+}
+
+// استبدال المتغيرات {placeholder} في نص القالب
+function renderTemplateText(text, vars = {}) {
+    let out = String(text || '');
+    for (const [k, v] of Object.entries(vars)) {
+        out = out.split('{' + k + '}').join(v === undefined || v === null ? '' : String(v));
+    }
+    return out;
+}
+
+// إرسال إشعار للأدمن عبر قالب (يُهمل إذا كان القالب معطلاً)
+async function sendTemplateAdmin(key, vars = {}) {
+    try {
+        const t = await getNotificationTemplate(key);
+        if (!t || !t.enabled) return;
+        if (t.target !== 'admin' && t.target !== 'both') return;
+        await sendAdminNotification(renderTemplateText(t.text, vars));
+    } catch (e) {
+        console.error('⚠️ [قالب إشعار أدمن] فشل (' + key + '):', e.message);
+    }
+}
+
+// إرسال رسالة للعميل عبر قالب (يُهمل إذا كان القالب معطلاً) — من جوال الإدارة المسجل
+async function sendTemplateUser(key, user, vars = {}) {
+    try {
+        const t = await getNotificationTemplate(key);
+        if (!t || !t.enabled) return;
+        if (t.target !== 'user' && t.target !== 'both') return;
+        if (!user || !user.phone) return;
+        const text = renderTemplateText(t.text, { username: user.username || '', phone: user.phone, ...vars });
+        await sendSystemOTP(user.phone, text);
+        console.log('✅ [قالب مستخدم] أُرسلت رسالة (' + key + ') إلى:', user.username);
+    } catch (e) {
+        console.error('⚠️ [قالب مستخدم] فشل (' + key + ') إلى ' + (user ? user.username : '?' ) + ':', e.message);
+    }
+}
+
+// 📆 أدوات التوقيت السعودي (UTC+3)
+function ksaNowDate() {
+    return new Date(Date.now() + 3 * 60 * 60 * 1000);
+}
+function ksaDayStartUtc() {
+    const k = ksaNowDate();
+    k.setUTCHours(0, 0, 0, 0);
+    return new Date(k.getTime() - 3 * 60 * 60 * 1000);
+}
+function ksaDateString(d) {
+    return d.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// ⏰ التقرير اليومي — يُرسل في الوقت المضبوط (افتراضياً 11:30 ليلاً) مرة واحدة يومياً
+async function maybeSendDailyReport() {
+    const settings = await getSettings();
+    const t = await getNotificationTemplate('daily_report');
+    if (!t || !t.enabled) return;
+
+    const ksa = ksaNowDate();
+    const hh = settings.dailyReportHour === undefined ? 23 : settings.dailyReportHour;
+    const mm = settings.dailyReportMinute === undefined ? 30 : settings.dailyReportMinute;
+    if (ksa.getUTCHours() !== hh || ksa.getUTCMinutes() !== mm) return;
+
+    const todayKey = ksa.toISOString().slice(0, 10);
+    if (settings.dailyReportLastSentAt && new Date(settings.dailyReportLastSentAt).toISOString().slice(0, 10) === todayKey) return; // أُرسل اليوم
+
+    const dayStart = ksaDayStartUtc();
+    const [clientsToday, messagesToday, successToday, failedToday, paymentsToday, totalClients] = await Promise.all([
+        User.countDocuments({ role: 'user', createdAt: { $gte: dayStart } }),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart } }),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'success' }),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'failed' }),
+        Payment.find({ status: 'paid', createdAt: { $gte: dayStart } }).select('amount'),
+        User.countDocuments({ role: 'user' })
+    ]);
+    const paymentsAmount = paymentsToday.reduce((s, p) => s + (p.amount || 0), 0);
+
+    await sendTemplateAdmin('daily_report', {
+        date: ksaDateString(ksa),
+        clients_today: clientsToday,
+        messages_today: messagesToday,
+        success_today: successToday,
+        failed_today: failedToday,
+        payments_today: paymentsToday.length,
+        payments_amount: paymentsAmount,
+        total_clients: totalClients
+    });
+
+    settings.dailyReportLastSentAt = new Date();
+    await settings.save();
+    console.log('✅ [تقرير يومي] أُرسل تقرير اليوم إلى جوال الإشعارات');
+}
+
+// ⏰ تذكير انتهاء الاشتراك — يُفحص كل 30 دقيقة ويُرسل مرة واحدة لكل عميل منتهي اشتراكه
+async function remindExpiredSubscriptions() {
+    const t = await getNotificationTemplate('expiry_reminder');
+    if (!t || !t.enabled) return;
+
+    const expired = await User.find({
+        role: 'user',
+        phone: { $ne: null, $ne: '' },
+        subscriptionEndsAt: { $lt: new Date() },
+        expiryReminderSentAt: null
+    });
+    for (const u of expired) {
+        await sendTemplateUser('expiry_reminder', u, { expiry_date: u.subscriptionEndsAt ? u.subscriptionEndsAt.toLocaleDateString('ar-EG') : '—' });
+        u.expiryReminderSentAt = new Date();
+        await u.save().catch(() => {});
+    }
+    if (expired.length) console.log('⏰ [تذكير اشتراك] أُرسلت تذكيرات لـ ' + expired.length + ' عميل منتهي الاشتراك');
+}
+
+// جدولة المهام اليومية
+function scheduleDailyTasks() {
+    // التقرير اليومي: فحص كل دقيقة (لضمان الدقة في موعد الإرسال)
+    setInterval(() => { maybeSendDailyReport().catch(e => console.error('❌ خطأ تقرير يومي:', e.message)); }, 60 * 1000);
+    // تذكير انتهاء الاشتراك: كل 30 دقيقة
+    setInterval(() => { remindExpiredSubscriptions().catch(e => console.error('❌ خطأ تذكير اشتراك:', e.message)); }, 30 * 60 * 1000);
+}
+scheduleDailyTasks();
+ensureDefaultTemplates();
+
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
     if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
@@ -987,7 +1191,7 @@ app.post('/register', async (req, res) => {
         try {
             await sendSystemOTP(cleanPhone, `مرحباً بك في منصة تكوين لإرسال رسائل الواتساب 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
             // 🔔 إشعار للأدمن: عميل جديد سجّل بالموقع
-            sendAdminNotification(`👤 *عميل جديد سجّل بالمنصة*\nالاسم: ${req.body.username || '—'}\nالجوال: ${cleanPhone}`).catch(err => console.error('⚠️ فشل إشعار تسجيل جديد:', err.message));
+            sendTemplateAdmin('new_client', { username: req.body.username || '—', phone: cleanPhone }).catch(err => console.error('⚠️ فشل إشعار تسجيل جديد:', err.message));
             res.redirect('/verify');
         } catch (otpErr) {
             console.error('⚠️ فشل إرسال OTP لكن الحساب تم إنشاؤه:', otpErr.message);
@@ -1016,6 +1220,8 @@ app.post('/verify', async (req, res) => {
         await user.save();
         req.session.userId = user._id;
         req.session.verifyUserId = null;
+        // 👋 رسالة ترحيب بعد تفعيل الحساب (من قوالب الإشعارات)
+        sendTemplateUser('welcome', user).catch(() => {});
         res.redirect('/dashboard');
     } catch (e) {
         res.render('verify', { error: 'حدث خطأ', success: null });
@@ -1545,7 +1751,71 @@ app.get('/admin', requireAdmin, async (req, res) => {
         else if (s._id === 'cancelled') paySummary.cancelled = s.count;
     }
 
-    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers, settings, payments, paySummary });
+    // 📨 قوالب رسائل الإشعارات (تبويب رسائل الإشعارات)
+    const templates = await NotificationTemplate.find().sort({ key: 1 });
+
+    res.render('admin', { users, totalSystemMessages, dailyStats, topUsers, settings, payments, paySummary, templates });
+});
+
+// ✅ حفظ قالب إشعار (تفعيل/تعطيل + تعديل النص) من لوحة الإدارة
+app.post('/admin/notification-templates/:key', requireAdmin, async (req, res) => {
+    try {
+        const t = await NotificationTemplate.findOne({ key: req.params.key });
+        if (!t) return res.status(404).send('القالب غير موجود');
+        t.enabled = req.body.enabled === 'on' || req.body.enabled === 'true';
+        if (req.body.text) t.text = req.body.text.trim();
+        t.updatedAt = new Date();
+        await t.save();
+
+        // القالب اليومي: حفظ وقت التقرير أيضاً
+        if (t.key === 'daily_report') {
+            const settings = await getSettings();
+            settings.dailyReportHour = Math.min(23, Math.max(0, parseInt(req.body.dailyReportHour) || 23));
+            settings.dailyReportMinute = Math.min(59, Math.max(0, parseInt(req.body.dailyReportMinute) || 30));
+            await settings.save();
+        }
+        res.redirect('/admin');
+    } catch (e) {
+        console.error('❌ خطأ حفظ قالب إشعار:', e.message);
+        res.status(500).send('خطأ في الحفظ');
+    }
+});
+
+// ✅ إرسال التقرير اليومي الآن (للتجربة/الاختبار الفوري من لوحة الإدارة)
+app.post('/admin/daily-report/send-now', requireAdmin, async (req, res) => {
+    try {
+        const settings = await getSettings();
+        const t = await getNotificationTemplate('daily_report');
+        if (!t || !t.enabled) return res.status(400).json({ success: false, message: 'قالب التقرير اليومي معطّل — فعّله أولاً' });
+        if (!settings.notificationPhone) return res.status(400).json({ success: false, message: 'لم تُضبط رقم استقبال الإشعارات في الإعدادات' });
+
+        // إرسال فوري دون التحقق من الوقت
+        const dayStart = ksaDayStartUtc();
+        const [clientsToday, messagesToday, successToday, failedToday, paymentsToday, totalClients] = await Promise.all([
+            User.countDocuments({ role: 'user', createdAt: { $gte: dayStart } }),
+            MessageLog.countDocuments({ createdAt: { $gte: dayStart } }),
+            MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'success' }),
+            MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'failed' }),
+            Payment.find({ status: 'paid', createdAt: { $gte: dayStart } }).select('amount'),
+            User.countDocuments({ role: 'user' })
+        ]);
+        const paymentsAmount = paymentsToday.reduce((s, p) => s + (p.amount || 0), 0);
+
+        await sendTemplateAdmin('daily_report', {
+            date: ksaDateString(ksaNowDate()),
+            clients_today: clientsToday,
+            messages_today: messagesToday,
+            success_today: successToday,
+            failed_today: failedToday,
+            payments_today: paymentsToday.length,
+            payments_amount: paymentsAmount,
+            total_clients: totalClients
+        });
+        res.json({ success: true, message: '✅ تم إرسال التقرير إلى جوال الإشعارات' });
+    } catch (e) {
+        console.error('❌ خطأ إرسال تقرير فوري:', e.message);
+        res.status(500).json({ success: false, message: e.message });
+    }
 });
 
 app.post('/admin/add-user', requireAdmin, async (req, res) => {
@@ -1557,7 +1827,10 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
         subDate.setDate(subDate.getDate() + settings.freeTrialDays);
         await User.create({ username, phone, password, apiToken, subscriptionEndsAt: subDate, isVerified: true });
         // 🔔 إشعار للأدمن: إضافة عميل يدوياً
-        sendAdminNotification(`👤 *تمت إضافة عميل جديد (من لوحة الإدارة)*\nالاسم: ${username}\nالجوال: ${phone}`).catch(() => {});
+        sendTemplateAdmin('client_added', { username, phone }).catch(() => {});
+        // 👋 رسالة ترحيب للعميل المضاف من لوحة الإدارة
+        const addedUser = await User.findOne({ username });
+        if (addedUser) sendTemplateUser('welcome', addedUser).catch(() => {});
         res.redirect('/admin');
     } catch (e) {
         res.status(400).send('خطأ: المستخدم أو الجوال موجود.');
@@ -1663,7 +1936,7 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
     admin.password = newPassword;
     await admin.save();
     // 🔔 إشعار للأدمن: تغيير كلمة مرور الإدارة (حدث أمني)
-    sendAdminNotification('🔐 *تغيير كلمة مرور الإدارة*\nتم تغيير كلمة مرور لوحة الإدارة بنجاح.').catch(() => {});
+    sendTemplateAdmin('password_changed', {}).catch(() => {});
     res.redirect('/admin');
 });
 
@@ -2581,7 +2854,7 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             await extendSubscriptionAfterPayment(user, payment);
             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
             // 🔔 إشعار للأدمن: تأكيد دفع (العميل ضغط تحقق الآن)
-            sendAdminNotification(`💰 *تأكيد دفع (تحقق العميل)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س`).catch(() => {});
+            sendTemplateAdmin('payment_success', { username: user.username, amount: payment.amount, days: payment.planDays, method: payment.paymentMethod || '—' }).catch(() => {});
             return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراكك بنجاح!' });
         }
 
@@ -2627,7 +2900,7 @@ app.post('/admin/payments/verify/:id', requireAdmin, async (req, res) => {
             const newExp = await extendSubscriptionAfterPayment(user, payment);
             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
             // 🔔 إشعار للأدمن: تأكيد دفع من لوحة الإدارة
-            sendAdminNotification(`💰 *تأكيد دفع (من لوحة الإدارة)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س\nالاشتراك حتى: ${newExp.toLocaleDateString('ar-EG')}`).catch(() => {});
+            sendTemplateAdmin('payment_success', { username: user.username, amount: payment.amount, days: payment.planDays, method: payment.paymentMethod || '—' }).catch(() => {});
             return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراك ' + user.username + ' حتى ' + newExp.toLocaleDateString('ar-EG') });
         }
 
@@ -2733,7 +3006,7 @@ app.post('/api/payments/webhook', async (req, res) => {
                 console.log('✅ [دفع] تم تجديد اشتراك ' + user.username + ' (' + payment.amount + ' ر.س)');
                 if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
                 // 🔔 إشعار للأدمن: دفع ناجح
-                sendAdminNotification(`💰 *دفع ناجح*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س\nالمدة: ${payment.planDays} يوم\nالطريقة: ${payment.paymentMethod || '—'}`).catch(() => {});
+                sendTemplateAdmin('payment_success', { username: user.username, amount: payment.amount, days: payment.planDays, method: payment.paymentMethod || '—' }).catch(() => {});
             }
         } else {
             // حفظ السبب الخام دائماً لتشخيص دقيق في لوحة الإدارة
@@ -2787,7 +3060,7 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                             await extendSubscriptionAfterPayment(user, payment);
                             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
                             // 🔔 إشعار للأدمن: دفع ناجح (عودة من صفحة الدفع)
-                            sendAdminNotification(`💰 *دفع ناجح (عودة من صفحة الدفع)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س`).catch(() => {});
+                            sendTemplateAdmin('payment_success', { username: user.username, amount: payment.amount, days: payment.planDays, method: payment.paymentMethod || '—' }).catch(() => {});
                         }
                     }
                 } else {
@@ -2808,7 +3081,7 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                         : failMessageWithHint(null, config);
                     // 🔔 إشعار للأدمن: محاولة دفع فشلت
                     const payUser = await User.findById(payment.userId).catch(() => null);
-                    sendAdminNotification(`⚠️ *محاولة دفع فشلت*\nالعميل: ${payUser ? payUser.username : '—'}\nالمبلغ: ${payment.amount} ر.س\nالسبب: ${failMsg || status.TransactionStatus || 'غير معروف'}`).catch(() => {});
+                    sendTemplateAdmin('payment_failed', { username: payUser ? payUser.username : '—', amount: payment.amount, reason: failMsg || status.TransactionStatus || 'غير معروف' }).catch(() => {});
                 }
             } catch (e) {
                 message = 'تعذر التحقق من الدفع: ' + e.message;

@@ -16,7 +16,11 @@ const settingsSchema = new mongoose.Schema({
     planDays: { type: Number, default: 30 },
     planName: { type: String, default: 'الباقة الشهرية' },
     // 🔔 رقم استقبال إشعارات الإدارة (تسجيل عميل، دفع، أحداث) — يُرسل إليه من جوال الإدارة المسجل
-    notificationPhone: { type: String, default: '' }
+    notificationPhone: { type: String, default: '' },
+    // 📊 التقرير اليومي
+    dailyReportHour: { type: Number, default: 23 },
+    dailyReportMinute: { type: Number, default: 30 },
+    dailyReportLastSentAt: { type: Date, default: null }
 });
 
 module.exports = mongoose.model('Settings', settingsSchema);
