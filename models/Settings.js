@@ -14,7 +14,9 @@ const settingsSchema = new mongoose.Schema({
     myfatoorahToken: { type: String, default: '' },
     planPrice: { type: Number, default: 100 },
     planDays: { type: Number, default: 30 },
-    planName: { type: String, default: 'الباقة الشهرية' }
+    planName: { type: String, default: 'الباقة الشهرية' },
+    // 🔔 رقم استقبال إشعارات الإدارة (تسجيل عميل، دفع، أحداث) — يُرسل إليه من جوال الإدارة المسجل
+    notificationPhone: { type: String, default: '' }
 });
 
 module.exports = mongoose.model('Settings', settingsSchema);

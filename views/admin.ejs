@@ -235,8 +235,7 @@
             <button class="tab-btn" onclick="switchAdminTab('clients', this)">👥 العملاء (<%= users.length %>)</button>
             <button class="tab-btn" onclick="switchAdminTab('system', this)">🤖 رقم الإدارة</button>
             <button class="tab-btn" onclick="switchAdminTab('settings', this)">⚙️ الإعدادات</button>
-            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (payments||[]).filter(p=>p.status==='pending').length %>)</button>
-        </div>
+            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (typeof payments !== 'undefined' && payments ? payments : []).filter(p=>p.status==='pending').length %>)</button>        </div>
 
         <!-- ============ تبويب: نظرة عامة ============ -->
         <div class="tab-panel active" id="tab-overview">
@@ -479,6 +478,11 @@
                                 <span class="form-hint">يظهر للعملاء عند انتهاء اشتراكهم</span>
                             </div>
                             <div class="form-group">
+                                <label>🔔 رقم استقبال إشعارات الإدارة (واتساب)</label>
+                                <input type="text" name="notificationPhone" value="<%= settings.notificationPhone || '' %>" placeholder="966598686902 — اتركه فارغاً لإيقاف الإشعارات" dir="ltr">
+                                <span class="form-hint">يُرسل إليه إشعار من جوال الإدارة المسجل عند: تسجيل عميل جديد، دفع ناجح/فاشل، وأي حدث مهم</span>
+                            </div>
+                            <div class="form-group">
                                 <label>🎁 الأيام المجانية للتجربة</label>
                                 <input type="number" name="freeTrialDays" value="<%= settings.freeTrialDays %>" min="0" required>
                                 <span class="form-hint">عدد الأيام المجانية عند إنشاء حساب جديد</span>
@@ -597,7 +601,7 @@
 
         <!-- ============ تبويب: الدفعات ============ -->
         <div class="tab-panel" id="tab-payments">
-            <% const ps = payments || []; const paySum = paySummary || { paid:0, paidTotal:0, pending:0, failed:0, cancelled:0 }; %>
+            <% const ps = (typeof payments !== 'undefined' && payments) || []; const paySum = (typeof paySummary !== 'undefined' && paySummary) || { paid:0, paidTotal:0, pending:0, failed:0, cancelled:0 }; %>
             <div class="stats-row">
                 <div class="stat-card">
                     <div class="stat-bg">💰</div>

@@ -92,6 +92,11 @@ async function getSettings() {
         settings.planName = 'الباقة الشهرية';
         shouldSave = true;
     }
+    // 🔔 رقم الإشعارات للأدمن
+    if (settings.notificationPhone === undefined || settings.notificationPhone === null) {
+        settings.notificationPhone = '';
+        shouldSave = true;
+    }
     if (shouldSave) await settings.save();
     return settings;
 }
@@ -638,6 +643,32 @@ async function sendSystemOTP(phone, message) {
     console.log('✅ تم إرسال OTP بنجاح إلى:', phone);
 }
 
+// 🔔 إرسال إشعار واتساب للأدمن (من جوال الإدارة المسجل) على الرقم المضبوط في الإعدادات
+// يُستخدم لتنبيه الأدمن: تسجيل عميل جديد، عمليات دفع، وأي أحداث مهمة
+async function sendAdminNotification(message) {
+    try {
+        const settings = await getSettings();
+        const target = String(settings.notificationPhone || '').replace(/[^\d]/g, '');
+        if (!target) return; // لم يُضبط رقم للإشعارات — تجاهل بهدوء
+
+        let sock = getSession(SYSTEM_ID);
+        if (!sock || !sock.user) {
+            console.log('❌ [إشعار] رقم الإدارة غير متصل — لم يُرسل إشعار للأدمن');
+            return;
+        }
+        const jid = `${target}@s.whatsapp.net`;
+        const wpCheck = await sock.onWhatsApp(jid);
+        if (!wpCheck || wpCheck.length === 0 || !wpCheck[0].exists) {
+            console.log('⚠️ [إشعار] الرقم المضبوط للإشعارات غير موجود في الواتساب:', target);
+            return;
+        }
+        await sock.sendMessage(jid, { text: '🔔 *إشعار منصة تكوين*\n' + message });
+        console.log('✅ [إشعار] أُرسل إشعار للأدمن على:', target);
+    } catch (e) {
+        console.error('⚠️ [إشعار] فشل إرسال إشعار للأدمن:', e.message);
+    }
+}
+
 async function createDefaultAdmin() {
     const admin = await User.findOne({ username: 'admin' });
     if (!admin) await User.create({ username: 'admin', password: 'password', role: 'admin' });
@@ -954,7 +985,9 @@ app.post('/register', async (req, res) => {
         req.session.verifyUserId = user._id;
 
         try {
-            await sendSystemOTP(cleanPhone, `أهلاً بك في منصتنا 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
+            await sendSystemOTP(cleanPhone, `مرحباً بك في منصة تكوين لإرسال رسائل الواتساب 🚀\nرمز التفعيل الخاص بك هو: *${otp}*\n(صالح لمدة 10 دقائق)`);
+            // 🔔 إشعار للأدمن: عميل جديد سجّل بالموقع
+            sendAdminNotification(`👤 *عميل جديد سجّل بالمنصة*\nالاسم: ${req.body.username || '—'}\nالجوال: ${cleanPhone}`).catch(err => console.error('⚠️ فشل إشعار تسجيل جديد:', err.message));
             res.redirect('/verify');
         } catch (otpErr) {
             console.error('⚠️ فشل إرسال OTP لكن الحساب تم إنشاؤه:', otpErr.message);
@@ -1523,6 +1556,8 @@ app.post('/admin/add-user', requireAdmin, async (req, res) => {
         const subDate = new Date();
         subDate.setDate(subDate.getDate() + settings.freeTrialDays);
         await User.create({ username, phone, password, apiToken, subscriptionEndsAt: subDate, isVerified: true });
+        // 🔔 إشعار للأدمن: إضافة عميل يدوياً
+        sendAdminNotification(`👤 *تمت إضافة عميل جديد (من لوحة الإدارة)*\nالاسم: ${username}\nالجوال: ${phone}`).catch(() => {});
         res.redirect('/admin');
     } catch (e) {
         res.status(400).send('خطأ: المستخدم أو الجوال موجود.');
@@ -1612,11 +1647,12 @@ app.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
 });
 
 app.post('/admin/settings', requireAdmin, async (req, res) => {
-    const { supportPhone, freeTrialDays } = req.body;
+    const { supportPhone, freeTrialDays, notificationPhone } = req.body;
 
     const settings = await getSettings();
     settings.supportPhone = supportPhone;
     settings.freeTrialDays = freeTrialDays;
+    settings.notificationPhone = String(notificationPhone || '').replace(/[^\d]/g, '');
     await settings.save();
     res.redirect('/admin');
 });
@@ -1626,6 +1662,8 @@ app.post('/admin/change-password', requireAdmin, async (req, res) => {
     const admin = await User.findById(req.session.userId);
     admin.password = newPassword;
     await admin.save();
+    // 🔔 إشعار للأدمن: تغيير كلمة مرور الإدارة (حدث أمني)
+    sendAdminNotification('🔐 *تغيير كلمة مرور الإدارة*\nتم تغيير كلمة مرور لوحة الإدارة بنجاح.').catch(() => {});
     res.redirect('/admin');
 });
 
@@ -2542,6 +2580,8 @@ app.post('/api/payments/verify', requireAuth, async (req, res) => {
             recordPaymentStatusDetails(payment, status);
             await extendSubscriptionAfterPayment(user, payment);
             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+            // 🔔 إشعار للأدمن: تأكيد دفع (العميل ضغط تحقق الآن)
+            sendAdminNotification(`💰 *تأكيد دفع (تحقق العميل)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س`).catch(() => {});
             return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراكك بنجاح!' });
         }
 
@@ -2586,6 +2626,8 @@ app.post('/admin/payments/verify/:id', requireAdmin, async (req, res) => {
             recordPaymentStatusDetails(payment, status);
             const newExp = await extendSubscriptionAfterPayment(user, payment);
             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+            // 🔔 إشعار للأدمن: تأكيد دفع من لوحة الإدارة
+            sendAdminNotification(`💰 *تأكيد دفع (من لوحة الإدارة)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س\nالاشتراك حتى: ${newExp.toLocaleDateString('ar-EG')}`).catch(() => {});
             return res.json({ success: true, message: '✅ تم تأكيد الدفع وتجديد اشتراك ' + user.username + ' حتى ' + newExp.toLocaleDateString('ar-EG') });
         }
 
@@ -2690,6 +2732,8 @@ app.post('/api/payments/webhook', async (req, res) => {
                 await extendSubscriptionAfterPayment(user, payment);
                 console.log('✅ [دفع] تم تجديد اشتراك ' + user.username + ' (' + payment.amount + ' ر.س)');
                 if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+                // 🔔 إشعار للأدمن: دفع ناجح
+                sendAdminNotification(`💰 *دفع ناجح*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س\nالمدة: ${payment.planDays} يوم\nالطريقة: ${payment.paymentMethod || '—'}`).catch(() => {});
             }
         } else {
             // حفظ السبب الخام دائماً لتشخيص دقيق في لوحة الإدارة
@@ -2742,6 +2786,8 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                             payment.transactionId = status.TransactionId || payment.transactionId;
                             await extendSubscriptionAfterPayment(user, payment);
                             if (io) io.to(payment.userId.toString()).emit('subscription-updated', { message: 'تم تجديد اشتراكك بنجاح 🎉' });
+                            // 🔔 إشعار للأدمن: دفع ناجح (عودة من صفحة الدفع)
+                            sendAdminNotification(`💰 *دفع ناجح (عودة من صفحة الدفع)*\nالعميل: ${user.username}\nالمبلغ: ${payment.amount} ر.س`).catch(() => {});
                         }
                     }
                 } else {
@@ -2760,6 +2806,9 @@ app.get('/api/payments/callback', requireAuth, async (req, res) => {
                     message = failMsg
                         ? failMessageWithHint(failMsg, config)
                         : failMessageWithHint(null, config);
+                    // 🔔 إشعار للأدمن: محاولة دفع فشلت
+                    const payUser = await User.findById(payment.userId).catch(() => null);
+                    sendAdminNotification(`⚠️ *محاولة دفع فشلت*\nالعميل: ${payUser ? payUser.username : '—'}\nالمبلغ: ${payment.amount} ر.س\nالسبب: ${failMsg || status.TransactionStatus || 'غير معروف'}`).catch(() => {});
                 }
             } catch (e) {
                 message = 'تعذر التحقق من الدفع: ' + e.message;
