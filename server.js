@@ -754,11 +754,48 @@ async function getNotificationTemplate(key) {
     return def || null;
 }
 
-// استبدال المتغيرات {placeholder} في نص القالب
+// 🏷️ أسماء المتغيرات المعتمدة في قوالب الإشعارات (عربي + إنجليزي)
+// مثال: {الاسم} أو {اسم} أو {username} — كلها تعني اسم العميل
+const TEMPLATE_VAR_ALIASES = {
+    // الاسم
+    'username': 'username', 'الاسم': 'username', 'اسم': 'username', 'اسم_العميل': 'username',
+    // الجوال
+    'phone': 'phone', 'الجوال': 'phone', 'رقم': 'phone', 'الهاتف': 'phone', 'رقم_الجوال': 'phone',
+    // المبلغ
+    'amount': 'amount', 'المبلغ': 'amount', 'السعر': 'amount', 'قيمة': 'amount',
+    // المدة
+    'days': 'days', 'المدة': 'days', 'الأيام': 'days', 'عدد_الأيام': 'days',
+    // طريقة الدفع
+    'method': 'method', 'الطريقة': 'method', 'وسيلة_الدفع': 'method', 'وسيلة': 'method',
+    // سبب الفشل
+    'reason': 'reason', 'السبب': 'reason', 'سبب_الفشل': 'reason',
+    // التاريخ
+    'date': 'date', 'التاريخ': 'date', 'اليوم': 'date',
+    // إحصائيات التقرير اليومي
+    'clients_today': 'clients_today', 'عملاء_اليوم': 'clients_today', 'العملاء_اليوم': 'clients_today',
+    'messages_today': 'messages_today', 'رسائل_اليوم': 'messages_today',
+    'success_today': 'success_today', 'ناجحة_اليوم': 'success_today',
+    'failed_today': 'failed_today', 'فاشلة_اليوم': 'failed_today',
+    'payments_today': 'payments_today', 'مدفوعات_اليوم': 'payments_today',
+    'payments_amount': 'payments_amount', 'مبلغ_اليوم': 'payments_amount', 'مدفوعات_المبلغ': 'payments_amount',
+    'total_clients': 'total_clients', 'اجمالي_العملاء': 'total_clients', 'إجمالي_العملاء': 'total_clients', 'كل_العملاء': 'total_clients'
+};
+
+// استبدال المتغيرات {placeholder} في نص القالب — يدعم العربية والإنجليزية
 function renderTemplateText(text, vars = {}) {
     let out = String(text || '');
-    for (const [k, v] of Object.entries(vars)) {
-        out = out.split('{' + k + '}').join(v === undefined || v === null ? '' : String(v));
+    // خريطة: الاسم المتعارف عليه ← كل صيغه (عربي/إنجليزي) — الأطول أولاً لتفادي التداخل
+    const tokenMap = {};
+    for (const [alias, canonical] of Object.entries(TEMPLATE_VAR_ALIASES)) {
+        if (!tokenMap[canonical]) tokenMap[canonical] = [];
+        tokenMap[canonical].push(alias);
+    }
+    for (const [canonical, value] of Object.entries(vars)) {
+        const tokens = (tokenMap[canonical] || [canonical]).slice().sort((a, b) => b.length - a.length);
+        const v = value === undefined || value === null ? '' : String(value);
+        for (const token of tokens) {
+            out = out.split('{' + token + '}').join(v);
+        }
     }
     return out;
 }

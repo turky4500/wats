@@ -723,7 +723,7 @@
                         <div style="font-size:12px; color:var(--ink-400); margin-bottom:10px;">📌 <%= t.description %></div>
                         <form method="POST" action="/admin/notification-templates/<%= t.key %>">
                             <div class="form-group">
-                                <label>✏️ نص الرسالة (المتغيرات: <code dir="ltr">{username} {phone} {amount} {days} {method} {reason} {date} {clients_today} {messages_today} {success_today} {failed_today} {payments_today} {payments_amount} {total_clients}</code>)</label>
+                                <label>✏️ نص الرسالة — المتغيرات تدعم العربية والإنجليزية: <code dir="ltr">{الاسم}</code> = <code dir="ltr">{username}</code> ، <code dir="ltr">{الجوال}</code> = <code dir="ltr">{phone}</code> ، <code dir="ltr">{المبلغ}</code> = <code dir="ltr">{amount}</code> ، <code dir="ltr">{المدة}</code> = <code dir="ltr">{days}</code> ، <code dir="ltr">{الطريقة}</code> = <code dir="ltr">{method}</code> ، <code dir="ltr">{السبب}</code> = <code dir="ltr">{reason}</code> ، <code dir="ltr">{التاريخ}</code> = <code dir="ltr">{date}</code> ، <code dir="ltr">{عملاء_اليوم}</code> ، <code dir="ltr">{رسائل_اليوم}</code> ، <code dir="ltr">{ناجحة_اليوم}</code> ، <code dir="ltr">{فاشلة_اليوم}</code> ، <code dir="ltr">{مدفوعات_اليوم}</code> ، <code dir="ltr">{مبلغ_اليوم}</code> ، <code dir="ltr">{اجمالي_العملاء}</code></label>
                                 <textarea name="text" rows="3" style="width:100%; padding:10px 12px; border:1px solid var(--ink-100); border-radius:10px; font-family:inherit; font-size:13px; direction:rtl;"><%= t.text %></textarea>
                             </div>
                             <% if (t.key === 'daily_report') { %>

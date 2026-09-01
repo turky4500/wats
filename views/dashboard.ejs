@@ -303,6 +303,15 @@
                             </div>
                             <textarea class="msg-textarea" id="msgInput" placeholder="اكتب نص رسالتك هنا..." oninput="updateLivePreview()"></textarea>
 
+                            <div style="font-size:12px; color:var(--ink-400); font-weight:600; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;">
+                                <span>✨ الزخارف تعمل تلقائياً في واتساب (بدون مسافات داخل الرموز):</span>
+                                <span><b style="color:var(--ink-800);">*عريض*</b></span>
+                                <span style="text-decoration:line-through; color:var(--ink-800);">~وسطي~</span>
+                                <span style="font-style:italic; color:var(--ink-800);">_مائل_</span>
+                                <code style="background:#f1f5f9; padding:1px 7px; border-radius:6px;">`كود`</code>
+                                <span style="color:var(--primary); cursor:pointer;" onclick="applyTemplate('promo');" title="استخدم الأزرار B / S / I أعلاه لإدراجها تلقائياً">— استخدم أزرار B و S و I أعلاه</span>
+                            </div>
+
                             <div class="drop-zone" onclick="document.getElementById('mediaFiles').click()">
                                 <div class="dz-icon"><i class="fas fa-paperclip text-blue"></i></div>
                                 <h4>انقر لإضافة مرفق (صورة / فيديو / مستند)</h4>
@@ -733,10 +742,12 @@
                 .replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, `<span class="badge bg-light text-primary border px-1 font-monospace">${timeStr}</span>`)
                 .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">العميل العزيز</span>`)
                 .replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${samplePhone}</span>`)
-                .replace(/\*(.*?)\*/g, '<b>$1</b>')
-                .replace(/_(.*?)_/g, '<i>$1</i>')
-                .replace(/~(.*?)~/g, '<del>$1</del>')
-                .replace(/```(.*?)```/g, '<code>$1</code>');
+                // زخارف واتساب — بنفس قواعده تماماً (بدون مسافة داخل الرموز، ولا تمتد لسطر جديد)
+                .replace(/\*(?!\s)([^*\n]*?)(?<!\s)\*/g, '<b>$1</b>')
+                .replace(/_(?!\s)([^_\n]*?)(?<!\s)_/g, '<i>$1</i>')
+                .replace(/~(?!\s)([^~\n]*?)(?<!\s)~/g, '<del>$1</del>')
+                .replace(/```(?!\s)([^`\n]*?)(?<!\s)```/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
 
             preview.innerHTML = formatted;
         }
