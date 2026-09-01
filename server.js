@@ -394,6 +394,39 @@ async function ensureWhatsAppReady(userId, waitMs = 25000) {
     throw new Error('الواتساب غير متصل حالياً');
 }
 
+// 🔍 البحث عن اسم العميل: (1) من مجموعات جهات الاتصال (2) من المستخدمين المسجلين
+async function resolveRecipientName(userId, phoneNumber) {
+    try {
+        // أرقام المجموعات قد تكون مخزنة بصيغ مختلفة (05... / 9665... / 5...)
+        // فنجمع كل الصيغ الممكنة للبحث
+        const variants = new Set([phoneNumber]);
+        const stripped = String(phoneNumber || '').replace(/\D/g, '');
+        if (stripped.startsWith('966')) {
+            variants.add('0' + stripped.slice(3));
+            variants.add(stripped.slice(3));
+        } else {
+            variants.add('966' + stripped.replace(/^0/, ''));
+        }
+        variants.add(stripped.replace(/^0/, ''));
+
+        // 1) ابحث في مجموعات المستخدم عن رقم مطابق
+        const groups = await Group.find({ userId, 'contacts.phone': { $in: [...variants] } }).select('contacts').lean();
+        for (const g of groups) {
+            for (const c of (g.contacts || [])) {
+                const cp = String(c.phone || '').replace(/\D/g, '');
+                const cNorm = normalizeSaudiPhoneNumber(cp);
+                if ((cNorm && cNorm === phoneNumber) || variants.has(cp)) {
+                    if (c.name && c.name.trim()) return c.name.trim();
+                }
+            }
+        }
+        // 2) ابحث في المستخدمين المسجلين
+        const registered = await User.findOne({ phone: { $in: [...variants] }, isActive: true }).select('username').lean();
+        if (registered && registered.username && registered.username.trim()) return registered.username.trim();
+    } catch (_) { /* تجاهل أخطاء البحث */ }
+    return null;
+}
+
 async function getNextCampaignRecipient(campaignId) {
     let recipient = await CampaignRecipient.findOne({ campaignId, status: 'pending' }).sort({ createdAt: 1, _id: 1 });
     if (!recipient) {
@@ -426,7 +459,9 @@ async function handleCampaignRecipient(campaign, recipient) {
             throw buildPermanentError('الرقم غير مسجل في واتساب');
         }
 
-        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || []);
+        // إن لم يكن الاسم محفوظاً (حملة قديمة) نبحث عنه الآن
+        const recipientName = recipient.recipientName || (await resolveRecipientName(campaign.userId, recipient.phoneNumber)) || '';
+        await sendWhatsAppMessage(currentSock, jid, campaign.body, campaign.media || [], { name: recipientName });
 
         await CampaignRecipient.findByIdAndUpdate(recipient._id, {
             status: 'sent',
@@ -946,7 +981,7 @@ function formatMessagePlaceholders(text, phone = '', extraData = {}) {
         displayPhone = '0' + displayPhone.substring(3);
     }
 
-    const nameStr = extraData.name || extraData.username || extraData.recipientName || 'العميل العزيز';
+    const nameStr = extraData.name || extraData.username || extraData.recipientName || '';
 
     let result = text;
 
@@ -956,8 +991,10 @@ function formatMessagePlaceholders(text, phone = '', extraData = {}) {
     // 2. استبدال الوقت
     result = result.replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, timeStr);
 
-    // 3. استبدال الاسم
-    result = result.replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, nameStr);
+    // 3. استبدال الاسم — لو لم نعرف الاسم يبقى الرمز {الاسم} ظاهراً بدلاً من استبداله بنص بديل خاطئ
+    if (nameStr) {
+        result = result.replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, nameStr);
+    }
 
     // 4. استبدال الرقم
     result = result.replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, displayPhone);
@@ -2341,13 +2378,18 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             controlStatus: 'active'
         });
 
-        await CampaignRecipient.insertMany(normalizedNumbers.map(phoneNumber => ({
-            campaignId: campaign._id,
-            userId: user._id,
-            phoneNumber,
-            status: 'pending',
-            retryCount: 0
-        })));
+        const recipientDocs = [];
+        for (const phoneNumber of normalizedNumbers) {
+            recipientDocs.push({
+                campaignId: campaign._id,
+                userId: user._id,
+                phoneNumber,
+                recipientName: await resolveRecipientName(user._id, phoneNumber),
+                status: 'pending',
+                retryCount: 0
+            });
+        }
+        await CampaignRecipient.insertMany(recipientDocs);
 
         if (scheduledAt) {
             res.status(201).json({ success: true, campaignId: campaign._id, scheduledAt: scheduledAt.toISOString(), message: 'تمت جدولة الحملة بنجاح ⏰ وسيتم الإرسال تلقائياً في الوقت المحدد' });
@@ -2494,9 +2536,11 @@ app.post(['/api/v1/send', '/api/send-message'], upload.array('media', 10), async
 
                 let sent = false;
                 const MAX_API_ATTEMPTS = 5;
+                // ابحث عن اسم العميل لاستبدال {الاسم} — إن وُجد
+                const apiRecipientName = await resolveRecipientName(user._id, num);
                 for (let attempt = 1; attempt <= MAX_API_ATTEMPTS; attempt++) {
                     try {
-                        await sendWhatsAppMessage(currentSock, jid, body, bodyMedia);
+                        await sendWhatsAppMessage(currentSock, jid, body, bodyMedia, { name: apiRecipientName || '' });
                         sent = true;
                         break;
                     } catch (retryErr) {

@@ -4,6 +4,7 @@ const campaignRecipientSchema = new mongoose.Schema({
     campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'Campaign', required: true, index: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     phoneNumber: { type: String, required: true },
+    recipientName: { type: String, default: null },
     status: {
         type: String,
         enum: ['pending', 'pending_retry', 'sent', 'failed'],
