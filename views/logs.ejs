@@ -220,10 +220,14 @@
         <div class="topbar-brand">
             <span><% if(isAdminView) { %>👑<% } else { %>📜<% } %></span>
             <span>سجل الرسائل</span>
-            <% if(isAdminView) { %><span style="background:rgba(245,158,11,0.2); color:#fcd34d; padding:3px 12px; border-radius:20px; font-size:11px;">عرض الإدارة — <%= user.username %></span><% } %>
+            <% if(isAdminView && allClientsView) { %><span style="background:rgba(245,158,11,0.2); color:#fcd34d; padding:3px 12px; border-radius:20px; font-size:11px;">📋 سجل كل العملاء</span><% } %>
+            <% if(isAdminView && !allClientsView) { %><span style="background:rgba(245,158,11,0.2); color:#fcd34d; padding:3px 12px; border-radius:20px; font-size:11px;">عرض الإدارة — <%= user.username %></span><% } %>
         </div>
         <div class="topbar-actions">
             <a href="<%= isAdminView ? '/admin' : '/dashboard' %>" class="btn-back">← العودة للوحة</a>
+            <% if (isAdminView) { %>
+                <a href="/admin/logs" class="btn-back" style="background:rgba(59,130,246,.2); color:#93c5fd;">📋 كل العملاء</a>
+            <% } %>
             <a href="/logout" style="background:rgba(229,72,77,.2); color:#fca5a5;">تسجيل الخروج</a>
         </div>
     </div>
@@ -234,8 +238,11 @@
             <div>
                 <h1>📋 سجل الإرسال</h1>
                 <p class="subtitle">
-                    <% if(isAdminView) { %>سجلات العميل: <strong><%= user.username %></strong><% } else { %>جميع رسائلك المرسلة<% } %>
+                    <% if(isAdminView && allClientsView) { %>سجلات جميع العملاء في المنصة<% } %>
+                    <% if(isAdminView && !allClientsView) { %>سجلات العميل: <strong><%= user.username %></strong><% } %>
+                    <% if(!isAdminView) { %>جميع رسائلك المرسلة<% } %>
                     <% if(query.dateFrom) { %> — تصفية: <%= query.dateFrom %> إلى <%= query.dateTo %><% } %>
+                    <% if(query.status) { %> — الحالة: <%= query.status === 'success' ? 'ناجحة فقط' : 'فاشلة فقط' %><% } %>
                 </p>
             </div>
         </div>
@@ -246,48 +253,101 @@
             logs.forEach(l => { if(l.status === 'success') sCount++; else fCount++; });
             let uniqueNumbers = [];
             logs.forEach(l => { if(!uniqueNumbers.includes(l.to)) uniqueNumbers.push(l.to); });
+            const st = (typeof stats !== 'undefined' && stats) || {};
+            const todayTotal = st.todayCount || 0;
         %>
         <div class="log-stats">
-            <div class="log-stat">
-                <div class="log-stat-icon" style="background: var(--blue-light); color: var(--blue);">📨</div>
-                <div class="log-stat-info">
-                    <div class="value"><%= logs.length %></div>
-                    <div class="label">إجمالي (معروض)</div>
+            <% if(isAdminView && allClientsView) { %>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--blue-light); color: var(--blue);">📊</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= st.totalAll || 0 %></div>
+                        <div class="label">إجمالي رسائل المنصة</div>
+                    </div>
                 </div>
-            </div>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--primary-light); color: var(--primary);">📨</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= todayTotal %></div>
+                        <div class="label">اليوم (ناجحة <%= st.todaySuccess || 0 %> / فاشلة <%= st.todayFailed || 0 %>)</div>
+                    </div>
+                </div>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📅</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= st.weekCount || 0 %></div>
+                        <div class="label">آخر 7 أيام</div>
+                    </div>
+                </div>
+            <% } else { %>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--blue-light); color: var(--blue);">📨</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= st.totalAll || logs.length %></div>
+                        <div class="label">إجمالي رسائلك</div>
+                    </div>
+                </div>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--primary-light); color: var(--primary);">✅</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= st.todaySuccess || 0 %></div>
+                        <div class="label">نجحت اليوم</div>
+                    </div>
+                </div>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= st.todayFailed || 0 %></div>
+                        <div class="label">فشلت اليوم</div>
+                    </div>
+                </div>
+            <% } %>
             <div class="log-stat">
                 <div class="log-stat-icon" style="background: var(--primary-light); color: var(--primary);">✅</div>
                 <div class="log-stat-info">
                     <div class="value"><%= sCount %></div>
-                    <div class="label">ناجحة</div>
+                    <div class="label">ناجحة (معروض)</div>
                 </div>
             </div>
             <div class="log-stat">
                 <div class="log-stat-icon" style="background: var(--danger-light); color: var(--danger);">❌</div>
                 <div class="log-stat-info">
                     <div class="value"><%= fCount %></div>
-                    <div class="label">فاشلة</div>
+                    <div class="label">فاشلة (معروض)</div>
                 </div>
             </div>
-            <div class="log-stat" style="cursor:pointer;" onclick="openNumbersModal()" title="عرض جميع الأرقام">
-                <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📱</div>
-                <div class="log-stat-info">
-                    <div class="value"><%= uniqueNumbers.length %></div>
-                    <div class="label">أرقام فريدة — عرض ←</div>
+            <% if(!isAdminView) { %>
+                <div class="log-stat" style="cursor:pointer;" onclick="openNumbersModal()" title="عرض جميع الأرقام">
+                    <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📱</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= uniqueNumbers.length %></div>
+                        <div class="label">أرقام فريدة — عرض ←</div>
+                    </div>
                 </div>
-            </div>
-            <div class="log-stat">
-                <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
-                <div class="log-stat-info">
-                    <div class="value"><%= logs.length > 0 ? Math.round((sCount/logs.length)*100) : 0 %>%</div>
-                    <div class="label">نسبة النجاح</div>
+                <div class="log-stat">
+                    <div class="log-stat-icon" style="background: var(--accent-light); color: var(--accent);">📈</div>
+                    <div class="log-stat-info">
+                        <div class="value"><%= logs.length > 0 ? Math.round((sCount/logs.length)*100) : 0 %>%</div>
+                        <div class="label">نسبة النجاح (المعروض)</div>
+                    </div>
                 </div>
-            </div>
+            <% } %>
         </div>
 
         <!-- Filter -->
         <div class="filter-card">
             <form method="GET" action="" class="filter-form">
+                <% if(isAdminView && allClientsView) { %>
+                    <div class="filter-group">
+                        <label>👥 العميل</label>
+                        <select name="userId" onchange="this.form.submit()" style="width:100%; padding:11px 14px; border:2px solid #86efac; border-radius:10px; font-family:inherit; font-size:14px; background:white;">
+                            <option value="">— كل العملاء —</option>
+                            <% (clients || []).forEach(c => { %>
+                                <option value="<%= c._id %>" <%= String(query.userId) === String(c._id) ? 'selected' : '' %>><%= c.username %> (<%= c.phone || 'بدون رقم' %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+                <% } %>
                 <div class="filter-group">
                     <label>📅 من تاريخ</label>
                     <input type="date" name="dateFrom" value="<%= query.dateFrom || '' %>">
@@ -296,9 +356,17 @@
                     <label>📅 إلى تاريخ</label>
                     <input type="date" name="dateTo" value="<%= query.dateTo || '' %>">
                 </div>
+                <div class="filter-group">
+                    <label>🔵 الحالة</label>
+                    <select name="status" style="width:100%; padding:11px 14px; border:2px solid #86efac; border-radius:10px; font-family:inherit; font-size:14px; background:white;">
+                        <option value="">— الكل —</option>
+                        <option value="success" <%= query.status === 'success' ? 'selected' : '' %>>✅ ناجحة</option>
+                        <option value="failed" <%= query.status === 'failed' ? 'selected' : '' %>>❌ فاشلة</option>
+                    </select>
+                </div>
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-blue">🔍 بحث</button>
-                    <% if(query.dateFrom) { %>
+                    <% if(query.dateFrom || query.status || query.userId) { %>
                         <a href="?" class="btn btn-outline">✕ إلغاء</a>
                     <% } %>
                 </div>
@@ -320,12 +388,14 @@
                         <button type="button" class="btn btn-green" id="btnResendSelected" disabled>🔄 إعادة إرسال المحدد</button>
                         <button type="button" class="btn btn-outline" id="btnSelectFailed">❌ تحديد الفاشلة فقط</button>
                     <% } %>
-                    <button type="button" class="btn btn-dark" onclick="openNumbersModal()">📱 عرض الأرقام (<%= uniqueNumbers.length %>)</button>
+                    <% if(!isAdminView || !allClientsView) { %>
+                        <button type="button" class="btn btn-dark" onclick="openNumbersModal()">📱 عرض الأرقام (<%= uniqueNumbers.length %>)</button>
+                    <% } %>
                     <form action="/logs/delete" method="POST" onsubmit="return confirm('⚠️ هل أنت متأكد من حذف جميع السجلات؟ لا يمكن التراجع!');" style="margin:0;">
-                        <% if(isAdminView) { %>
+                        <% if(isAdminView && !allClientsView) { %>
                             <input type="hidden" name="targetUserId" value="<%= user._id %>">
                         <% } %>
-                        <button type="submit" class="btn btn-red">🗑️ تفريغ الأرشيف</button>
+                        <button type="submit" class="btn btn-red">🗑️ <%= (isAdminView && allClientsView) ? 'تفريغ كل السجلات' : 'تفريغ الأرشيف' %></button>
                     </form>
                 </div>
             </div>
@@ -343,6 +413,9 @@
                             <tr>
                                 <th style="width:40px;"><input type="checkbox" class="check-all" id="checkAll" title="تحديد الكل"></th>
                                 <th style="width:44px;">#</th>
+                                <% if(isAdminView && allClientsView) { %>
+                                    <th>👤 العميل</th>
+                                <% } %>
                                 <th>التاريخ والوقت</th>
                                 <th>المستلم</th>
                                 <th>محتوى الرسالة</th>
@@ -355,6 +428,15 @@
                             <tr data-log-id="<%= log._id %>" data-to="<%= log.to %>" data-body="<%= log.body.replace(/\"/g, '&quot;') %>" data-status="<%= log.status %>" data-err="<%= (log.errorDetails || '').replace(/\"/g, '&quot;') %>" data-time="<%= log.createdAt.toISOString() %>">
                                 <td><input type="checkbox" class="row-checkbox" value="<%= log._id %>"></td>
                                 <td style="color: var(--gray-light); font-weight: 700;"><%= idx + 1 %></td>
+                                <% if(isAdminView && allClientsView) { %>
+                                    <td>
+                                        <% if (log.client) { %>
+                                            <a href="/admin/logs/<%= log.client._id %>" style="font-weight:800; color:var(--blue); text-decoration:none;"><%= log.client.username %></a>
+                                        <% } else { %>
+                                            <span style="color:var(--gray-light);">عميل محذوف</span>
+                                        <% } %>
+                                    </td>
+                                <% } %>
                                 <td class="time-cell"><%= log.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
                                 <td>
                                     <span class="phone-cell">

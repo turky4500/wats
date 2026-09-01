@@ -237,6 +237,7 @@
             <button class="tab-btn" onclick="switchAdminTab('settings', this)">⚙️ الإعدادات</button>
             <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (typeof payments !== 'undefined' && payments ? payments : []).filter(p=>p.status==='pending').length %>)</button>
             <button class="tab-btn" onclick="switchAdminTab('notifications', this)">📨 رسائل الإشعارات</button>
+            <a class="tab-btn" href="/admin/logs" style="text-decoration:none;">📜 سجل الرسائل</a>
         </div>
 
         <!-- ============ تبويب: نظرة عامة ============ -->

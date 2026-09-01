@@ -2016,6 +2016,55 @@ app.post('/api/verify-phone-change', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/admin/logs', requireAdmin, async (req, res) => {
+    // 📋 سجل الرسائل لكل العملاء (للأدمن) — مع فلاتر عميل/تاريخ/حالة
+    let query = {};
+    if (req.query.userId) query.userId = req.query.userId;
+    if (req.query.status && ['success', 'failed'].includes(req.query.status)) query.status = req.query.status;
+    if (req.query.dateFrom && req.query.dateTo) {
+        const endDate = new Date(req.query.dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        query.createdAt = { $gte: new Date(req.query.dateFrom), $lte: endDate };
+    }
+    // بحث نصي (رقم أو محتوى الرسالة)
+    if (req.query.q) {
+        const q = req.query.q;
+        query.$or = [
+            { to: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+            { body: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }
+        ];
+    }
+
+    const logs = await MessageLog.find(query).sort({ createdAt: -1 }).limit(500);
+    const clients = await User.find({ role: 'user' }).select('username phone _id').sort({ username: 1 });
+
+    // إحصائيات عامة لكل السجلات (اليوم والأسبوع والكل)
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7);
+    const [totalAll, todayCount, todaySuccess, todayFailed, weekCount] = await Promise.all([
+        MessageLog.countDocuments(),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart } }),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'success' }),
+        MessageLog.countDocuments({ createdAt: { $gte: dayStart }, status: 'failed' }),
+        MessageLog.countDocuments({ createdAt: { $gte: weekStart } })
+    ]);
+
+    // إرفاق اسم العميل لكل سجل
+    const clientMap = {};
+    clients.forEach(c => { clientMap[c._id.toString()] = c; });
+    logs.forEach(l => { l.client = clientMap[l.userId.toString()] || null; });
+
+    res.render('logs', {
+        user: { username: 'الإدارة', _id: null },
+        logs,
+        isAdminView: true,
+        allClientsView: true,
+        clients,
+        query: req.query,
+        stats: { totalAll, todayCount, todaySuccess, todayFailed, weekCount }
+    });
+});
+
 app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
     const user = await User.findById(req.params.id);
     let query = { userId: user._id };
@@ -2025,7 +2074,14 @@ app.get('/admin/logs/:id', requireAdmin, async (req, res) => {
         query.createdAt = { $gte: new Date(req.query.dateFrom), $lte: endDate };
     }
     const logs = await MessageLog.find(query).sort({ createdAt: -1 }).limit(200);
-    res.render('logs', { user, logs, isAdminView: true, query: req.query });
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+    const [totalAll, todayCount, todaySuccess, todayFailed] = await Promise.all([
+        MessageLog.countDocuments({ userId: user._id }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart } }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart }, status: 'success' }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart }, status: 'failed' })
+    ]);
+    res.render('logs', { user, logs, isAdminView: true, allClientsView: false, clients: [], query: req.query, stats: { totalAll, todayCount, todaySuccess, todayFailed, weekCount: totalAll } });
 });
 
 app.get('/logs', requireAuth, async (req, res) => {
@@ -2038,14 +2094,25 @@ app.get('/logs', requireAuth, async (req, res) => {
         query.createdAt = { $gte: new Date(req.query.dateFrom), $lte: endDate };
     }
     const logs = await MessageLog.find(query).sort({ createdAt: -1 }).limit(100);
-    res.render('logs', { user, logs, isAdminView: false, query: req.query });
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+    const [totalAll, todayCount, todaySuccess, todayFailed] = await Promise.all([
+        MessageLog.countDocuments({ userId: user._id }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart } }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart }, status: 'success' }),
+        MessageLog.countDocuments({ userId: user._id, createdAt: { $gte: dayStart }, status: 'failed' })
+    ]);
+    res.render('logs', { user, logs, isAdminView: false, allClientsView: false, clients: [], query: req.query, stats: { totalAll, todayCount, todaySuccess, todayFailed, weekCount: totalAll } });
 });
 
 app.post('/logs/delete', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
-    let targetId = user._id;
-    if (user.role === 'admin' && req.body.targetUserId) targetId = req.body.targetUserId;
-    await MessageLog.deleteMany({ userId: targetId });
+    if (user.role === 'admin') {
+        // الأدمن: يحذف سجل عميل معين أو كل السجلات
+        if (req.body.targetUserId) await MessageLog.deleteMany({ userId: req.body.targetUserId });
+        else await MessageLog.deleteMany({});
+    } else {
+        await MessageLog.deleteMany({ userId: user._id });
+    }
     res.redirect('back');
 });
 
