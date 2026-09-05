@@ -3,191 +3,667 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتساب تكوين | الإرسال الذكي</title>
-    <meta name="description" content="منصة سحابية متكاملة لربط رقمك وإرسال الرسائل والمرفقات الجماعية لعملائك بسهولة">
+    <title>واتساب تكوين | حلول واتساب للأعمال - إرسال جماعي ذكي</title>
+    <meta name="description" content="نظام متكامل لإدارة الحملات التسويقية، المجموعات، والإرسال المجدول عبر واتساب للأعمال — أرسل رسائلك بضغطة واحدة وتابع النتائج لحظياً">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #0f172a; overflow-x: hidden;}
-        /* Navbar */
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 50px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .logo { font-size: 24px; font-weight: 900; color: #25d366; display:flex; align-items:center; gap:10px;}
-        .nav-links { display: flex; align-items: center; gap: 10px; }
-        .nav-links a { text-decoration: none; color: #475569; font-weight: 700; transition: 0.3s; padding: 8px 15px; border-radius: 8px; }
-        .nav-links a:hover { color: #25d366; background: #f0fdf4; }
-        .nav-btn { background: #25d366 !important; color: white !important; padding: 10px 25px !important; border-radius: 30px !important; box-shadow: 0 4px 6px rgba(37, 211, 102, 0.3); transition: 0.3s; }
-        .nav-btn:hover { background: #22c35e !important; transform: translateY(-2px); }
-        /* Hero Section */
-        .hero { text-align: center; padding: 100px 20px 80px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%); position: relative; }
-        .hero h1 { font-size: clamp(30px, 5vw, 55px); font-weight: 900; color: #1e293b; margin-bottom: 20px; line-height: 1.3; }
-        .hero h1 span { color: #25d366; }
-        .hero p { font-size: clamp(16px, 2vw, 20px); color: #475569; max-width: 600px; margin: 0 auto 40px; line-height: 1.8; }
-        .cta-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .btn-primary { background: #25d366; color: white; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.4); transition: 0.3s; display: inline-block; }
-        .btn-primary:hover { background: #16a34a; transform: translateY(-3px); box-shadow: 0 15px 20px -3px rgba(37, 211, 102, 0.5); }
-        .btn-outline { background: white; color: #475569; padding: 15px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; text-decoration: none; border: 2px solid #cbd5e1; transition: 0.3s; display: inline-block; }
-        .btn-outline:hover { border-color: #94a3b8; background: #f1f5f9; }
-        /* Features */
-        .features { padding: 80px 20px; max-width: 1200px; margin: 0 auto; text-align: center; }
-        .features h2 { font-size: clamp(24px, 3vw, 35px); font-weight: 800; margin-bottom: 50px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
-        .card { background: white; padding: 40px 30px; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: 0.3s; border: 1px solid #e2e8f0; }
-        .card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #25d366; }
-        .card-icon { font-size: 50px; margin-bottom: 20px; }
-        .card h3 { font-size: 22px; font-weight: 800; margin-bottom: 15px; }
-        .card p { color: #64748b; font-size: 15px; line-height: 1.8; }
-        /* Stats */
-        .stats-section { background: #1e293b; padding: 60px 20px; text-align: center; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; max-width: 900px; margin: 0 auto; }
-        .stat-item h3 { font-size: 40px; font-weight: 900; color: #25d366; margin-bottom: 5px; }
-        .stat-item p { color: #94a3b8; font-size: 16px; }
-        /* Footer */
-        footer { background: #1e293b; color: #cbd5e1; text-align: center; padding: 30px 20px; }
-        footer a { color: #25d366; text-decoration: none; }
-        /* Pricing */
-        .pricing { padding: 80px 20px; max-width: 500px; margin: 0 auto; text-align: center; }
-        .pricing h2 { font-size: clamp(24px, 3vw, 35px); font-weight: 800; margin-bottom: 15px; }
-        .pricing .subtitle { color: #64748b; font-size: 16px; margin-bottom: 40px; }
-        .pricing-card {
-            background: white; border-radius: 24px; padding: 40px 30px;
-            box-shadow: 0 20px 40px -10px rgba(37, 211, 102, 0.15);
-            border: 2px solid #25d366; position: relative; overflow: hidden;
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Tajawal', sans-serif; background: #ffffff; color: #1e293b; overflow-x: hidden; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        a { text-decoration: none; }
+        .whatsapp { color: #25D366; }
+        .teal { color: #128C7E; }
+
+        /* ===== Navbar ===== */
+        nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #e5e7eb; }
+        .nav-inner { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; max-width: 1200px; margin: 0 auto; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 900; color: #0f172a; }
+        .logo-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 6px 14px -4px rgba(37,211,102,.5); }
+        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .nav-links a:not(.btn) { color: #475569; font-weight: 700; font-size: 15px; padding: 8px 14px; border-radius: 10px; transition: .25s; }
+        .nav-links a:not(.btn):hover { color: #128C7E; background: #f0fdf4; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; border-radius: 12px; padding: 11px 22px; font-size: 15px; transition: .25s; border: 2px solid transparent; cursor: pointer; }
+        .btn-green { background: #25D366; color: #fff !important; box-shadow: 0 8px 18px -6px rgba(37,211,102,.55); }
+        .btn-green:hover { background: #1fb958; transform: translateY(-2px); }
+        .btn-ghost { color: #128C7E !important; border-color: #128C7E; background: transparent; }
+        .btn-ghost:hover { background: #f0fdf4; }
+        .btn-white { background: #fff; color: #128C7E !important; border-color: #fff; box-shadow: 0 8px 18px -6px rgba(0,0,0,.25); }
+        .btn-white:hover { transform: translateY(-2px); }
+        .nav-cta { display: flex; gap: 10px; align-items: center; }
+        .hamburger { display: none; background: none; border: none; font-size: 24px; color: #334155; cursor: pointer; }
+        .mobile-menu { display: none; flex-direction: column; gap: 6px; padding: 10px 20px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+        .mobile-menu a { padding: 10px 12px; border-radius: 10px; color: #334155; font-weight: 700; }
+        .mobile-menu a:hover { background: #f0fdf4; color: #128C7E; }
+
+        /* ===== Hero ===== */
+        .hero { background: linear-gradient(160deg, #f0fdf4 0%, #d1fae5 55%, #f0fdf4 100%); padding: 70px 0 90px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; width: 500px; height: 500px; border-radius: 50%; background: radial-gradient(circle, rgba(37,211,102,.14), transparent 70%); top: -180px; left: -120px; }
+        .hero::after { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(18,140,126,.10), transparent 70%); bottom: -160px; right: -100px; }
+        .hero-inner { position: relative; z-index: 2; display: grid; grid-template-columns: 1.1fr .9fr; gap: 50px; align-items: center; }
+        .hero h1 { font-size: clamp(30px, 4.4vw, 52px); font-weight: 900; color: #0f172a; line-height: 1.25; margin-bottom: 18px; }
+        .hero h1 span { background: linear-gradient(90deg, #128C7E, #25D366); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 18px; color: #475569; line-height: 1.9; max-width: 560px; margin-bottom: 30px; }
+        .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 26px; }
+        .hero-trust { display: flex; flex-wrap: wrap; gap: 18px; color: #128C7E; font-weight: 700; font-size: 14px; }
+        .hero-trust span { display: inline-flex; align-items: center; gap: 6px; }
+
+        /* Chat mockup */
+        .chat-mockup { position: relative; }
+        .chat-card { background: #fff; border-radius: 24px; box-shadow: 0 30px 60px -20px rgba(18,140,126,.35); border: 1px solid #e5e7eb; overflow: hidden; max-width: 400px; margin: 0 auto; }
+        .chat-header { background: linear-gradient(135deg, #075E54, #128C7E); padding: 14px 18px; display: flex; align-items: center; gap: 12px; }
+        .chat-avatar { width: 42px; height: 42px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; font-weight: 900; }
+        .chat-header h4 { color: #fff; font-size: 15px; font-weight: 800; }
+        .chat-header p { color: #dcfce7; font-size: 12px; }
+        .chat-online { margin-right: auto; background: #25D366; color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
+        .chat-body { background: #e5ddd5; padding: 18px 14px; min-height: 250px; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { max-width: 82%; padding: 9px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.7; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+        .bubble-in { background: #fff; align-self: flex-start; border-bottom-right-radius: 4px; }
+        .bubble-out { background: #DCF8C6; align-self: flex-end; border-bottom-left-radius: 4px; }
+        .bubble-time { display: block; font-size: 10px; color: #94a3b8; text-align: left; margin-top: 3px; }
+        .chat-input { background: #f0f2f5; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+        .chat-input .fake { flex: 1; background: #fff; border-radius: 20px; padding: 9px 15px; font-size: 13px; color: #94a3b8; }
+        .chat-input .mic { width: 38px; height: 38px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; }
+        .float-badge { position: absolute; bottom: -14px; right: -10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 9px 16px; font-size: 13px; font-weight: 800; color: #075E54; box-shadow: 0 12px 24px -8px rgba(0,0,0,.18); display: flex; align-items: center; gap: 8px; }
+        .pulse-dot { width: 9px; height: 9px; border-radius: 50%; background: #25D366; animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(37,211,102,.5);} 50% { box-shadow: 0 0 0 7px rgba(37,211,102,0);} }
+
+        /* ===== Trust strip ===== */
+        .trust { background: #075E54; padding: 34px 0; }
+        .trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
+        .trust-item h3 { color: #25D366; font-size: 30px; font-weight: 900; font-family: 'Tajawal', sans-serif; }
+        .trust-item p { color: #cbd5e1; font-size: 14px; font-weight: 700; margin-top: 4px; }
+
+        /* ===== Sections common ===== */
+        .section { padding: 80px 0; }
+        .section-head { text-align: center; max-width: 640px; margin: 0 auto 50px; }
+        .section-head h2 { font-size: clamp(26px, 3vw, 38px); font-weight: 900; color: #0f172a; margin-bottom: 12px; }
+        .section-head p { color: #64748b; font-size: 16px; line-height: 1.8; }
+        .tag { display: inline-block; background: #f0fdf4; color: #128C7E; font-weight: 800; font-size: 13px; padding: 6px 14px; border-radius: 20px; margin-bottom: 14px; }
+
+        /* ===== Features ===== */
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .feature-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 30px 26px; transition: .3s; position: relative; overflow: hidden; }
+        .feature-card::after { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, #25D366, #128C7E); opacity: 0; transition: .3s; }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 24px 40px -16px rgba(18,140,126,.25); border-color: #a7f3d0; }
+        .feature-card:hover::after { opacity: 1; }
+        .feature-icon { width: 58px; height: 58px; border-radius: 16px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 18px; }
+        .feature-card h3 { font-size: 19px; font-weight: 800; margin-bottom: 10px; }
+        .feature-card p { color: #64748b; font-size: 14.5px; line-height: 1.8; }
+        .feature-badge { position: absolute; top: 16px; left: 16px; background: #25D366; color: #fff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; }
+
+        /* ===== How it works ===== */
+        .how { background: #f8fafc; }
+        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; counter-reset: step; }
+        .step-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 34px 26px; position: relative; text-align: center; }
+        .step-num { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; font-size: 22px; font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; box-shadow: 0 10px 20px -6px rgba(37,211,102,.5); }
+        .step-card h3 { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+        .step-card p { color: #64748b; font-size: 14.5px; line-height: 1.8; }
+        .step-arrow { position: absolute; top: 50%; left: -18px; color: #25D366; font-size: 22px; z-index: 2; }
+
+        /* ===== Use cases ===== */
+        .usecases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .usecase-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 30px 26px; transition: .3s; }
+        .usecase-card:hover { transform: translateY(-6px); box-shadow: 0 20px 34px -14px rgba(18,140,126,.3); }
+        .usecase-icon { font-size: 34px; margin-bottom: 14px; }
+        .usecase-card h3 { font-size: 18px; font-weight: 800; margin-bottom: 10px; color: #0f172a; }
+        .usecase-card p { color: #475569; font-size: 14.5px; line-height: 1.8; }
+
+        /* ===== API ===== */
+        .api { background: #f8fafc; }
+        .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+        .api-box { background: #0b1220; border-radius: 20px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(0,0,0,.4); }
+        .api-tabs { display: flex; background: #131c2e; border-bottom: 1px solid #1e293b; }
+        .api-tab { flex: 1; text-align: center; padding: 13px 8px; color: #94a3b8; font-weight: 800; font-size: 13.5px; cursor: pointer; border-bottom: 3px solid transparent; transition: .2s; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+        .api-tab.active { color: #25D366; border-bottom-color: #25D366; }
+        .api-code { padding: 20px; min-height: 250px; position: relative; direction: ltr; text-align: left; }
+        .api-code pre { color: #dcfce7; font-size: 12.5px; line-height: 1.8; font-family: 'Courier New', monospace; white-space: pre-wrap; word-break: break-word; }
+        .api-code .cmt { color: #64748b; }
+        .api-code .k { color: #7dd3fc; }
+        .api-code .s { color: #86efac; }
+        .copy-btn { position: absolute; top: 12px; left: 12px; background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: .2s; }
+        .copy-btn:hover { background: #25D366; color: #fff; border-color: #25D366; }
+        .integrations { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        .int-chip { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 18px; font-weight: 800; font-size: 14px; color: #334155; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+
+        /* ===== Pricing ===== */
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: stretch; }
+        .price-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 22px; padding: 34px 28px; display: flex; flex-direction: column; position: relative; transition: .3s; }
+        .price-card:hover { transform: translateY(-6px); box-shadow: 0 24px 40px -16px rgba(18,140,126,.25); }
+        .price-card.featured { border: 2px solid #25D366; box-shadow: 0 24px 50px -18px rgba(37,211,102,.4); }
+        .popular-badge { position: absolute; top: -14px; right: 50%; transform: translateX(50%); background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; font-size: 12px; font-weight: 800; padding: 6px 18px; border-radius: 20px; box-shadow: 0 8px 16px -6px rgba(37,211,102,.6); white-space: nowrap; }
+        .plan-name { font-size: 17px; font-weight: 800; color: #475569; margin-bottom: 8px; }
+        .plan-price { font-size: 46px; font-weight: 900; color: #0f172a; line-height: 1.1; }
+        .plan-price small { font-size: 16px; color: #64748b; font-weight: 700; }
+        .plan-desc { color: #94a3b8; font-size: 13.5px; margin: 8px 0 20px; }
+        .plan-list { list-style: none; margin-bottom: 26px; flex: 1; }
+        .plan-list li { padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 14.5px; color: #334155; display: flex; align-items: center; gap: 9px; }
+        .plan-list li:last-child { border: none; }
+        .plan-list .check { color: #25D366; font-weight: 900; font-size: 16px; }
+        .price-card .btn { width: 100%; }
+
+        /* ===== Testimonials ===== */
+        .testi { background: #f8fafc; }
+        .testi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 900px; margin: 0 auto; }
+        .testi-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 28px; }
+        .testi-stars { color: #f5a524; font-size: 16px; letter-spacing: 3px; margin-bottom: 12px; }
+        .testi-card p { color: #475569; font-size: 15px; line-height: 1.9; margin-bottom: 18px; }
+        .testi-person { display: flex; align-items: center; gap: 12px; }
+        .testi-avatar { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; }
+        .testi-person h4 { font-size: 15px; font-weight: 800; }
+        .testi-person p { font-size: 12.5px; color: #94a3b8; margin: 0; }
+
+        /* ===== FAQ ===== */
+        .faq-list { max-width: 760px; margin: 0 auto; }
+        .faq-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; margin-bottom: 14px; overflow: hidden; }
+        .faq-trigger { width: 100%; background: none; border: none; display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; font-family: inherit; font-size: 16px; font-weight: 800; color: #0f172a; cursor: pointer; text-align: right; }
+        .faq-trigger .plus { color: #25D366; font-size: 20px; transition: .3s; font-weight: 900; }
+        .faq-item.open .plus { transform: rotate(45deg); }
+        .faq-answer { display: none; padding: 0 22px 20px; color: #64748b; font-size: 14.5px; line-height: 1.9; }
+
+        /* ===== CTA banner ===== */
+        .cta-banner { background: linear-gradient(135deg, #075E54, #128C7E); border-radius: 28px; padding: 60px 40px; text-align: center; position: relative; overflow: hidden; }
+        .cta-banner h2 { color: #fff; font-size: clamp(24px, 3vw, 34px); font-weight: 900; margin-bottom: 12px; }
+        .cta-banner p { color: #d1fae5; font-size: 16px; margin-bottom: 28px; }
+
+        /* ===== Footer ===== */
+        footer { background: #0b1220; color: #94a3b8; padding: 60px 0 0; margin-top: 80px; }
+        .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; padding-bottom: 40px; }
+        .footer-brand .logo { color: #fff; margin-bottom: 14px; }
+        .footer-brand p { font-size: 14px; line-height: 1.9; max-width: 320px; }
+        .footer-col h4 { color: #fff; font-size: 16px; font-weight: 800; margin-bottom: 16px; }
+        .footer-col a { display: block; color: #94a3b8; font-size: 14px; margin-bottom: 10px; transition: .2s; }
+        .footer-col a:hover { color: #25D366; }
+        .footer-bottom { border-top: 1px solid #1e293b; padding: 20px 0; text-align: center; font-size: 13.5px; }
+        .footer-bottom a { color: #25D366; font-weight: 700; }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 992px) {
+            .hero-inner, .api-grid { grid-template-columns: 1fr; }
+            .chat-card { max-width: 360px; }
+            .features-grid, .steps-grid, .usecases-grid, .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+            .trust-grid { grid-template-columns: repeat(2, 1fr); gap: 26px; }
         }
-        .pricing-badge {
-            position: absolute; top: 20px; left: 20px; background: #25d366;
-            color: white; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800;
-        }
-        .pricing-card .plan-name { font-size: 18px; font-weight: 800; color: #64748b; margin-bottom: 10px; }
-        .pricing-card .price {
-            font-size: 56px; font-weight: 900; color: #1e293b; line-height: 1;
-            margin-bottom: 5px;
-        }
-        .pricing-card .price span { font-size: 20px; font-weight: 700; color: #64748b; }
-        .pricing-card .period { color: #94a3b8; font-size: 15px; margin-bottom: 30px; }
-        .pricing-card .features-list { list-style: none; text-align: right; margin-bottom: 30px; }
-        .pricing-card .features-list li {
-            padding: 10px 0; border-bottom: 1px solid #f1f5f9;
-            font-size: 15px; color: #475569; display: flex; align-items: center; gap: 10px;
-        }
-        .pricing-card .features-list li:last-child { border: none; }
-        .pricing-card .features-list .check { color: #25d366; font-size: 18px; font-weight: 900; }
-        .pricing-card .cta { margin-top: 10px; }
-        @media (max-width: 768px) {
-            nav { padding: 15px 20px; }
-            .nav-links a:not(.nav-btn) { display: none; }
+        @media (max-width: 640px) {
+            .nav-links a:not(.btn), .nav-cta .btn-ghost { display: none; }
+            .hamburger { display: block; }
+            .features-grid, .steps-grid, .usecases-grid, .pricing-grid, .testi-grid, .footer-grid { grid-template-columns: 1fr; }
+            .step-arrow { display: none; }
+            .section { padding: 56px 0; }
+            .api-code pre { font-size: 11px; }
+            .float-badge { right: 0; }
         }
     </style>
 </head>
 <body>
+    <!-- ===== Navbar ===== -->
     <nav>
-        <div class="logo">💬 واتساب تكوين</div>
-        <div class="nav-links">
+        <div class="nav-inner">
+            <a href="/" class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span> واتساب <span class="whatsapp">تكوين</span></a>
+            <div class="nav-links">
+                <a href="#features">المميزات</a>
+                <a href="#how">كيف يعمل</a>
+                <a href="#prices">الأسعار</a>
+                <a href="#faq">الأسئلة الشائعة</a>
+                <div class="nav-cta">
+                    <% if (loggedIn) { %>
+                        <a href="/dashboard" class="btn btn-green">لوحة التحكم ←</a>
+                    <% } else { %>
+                        <a href="/login" class="btn btn-ghost">تسجيل الدخول</a>
+                        <a href="/register" class="btn btn-green">ابدأ مجاناً</a>
+                    <% } %>
+                </div>
+            </div>
+            <button class="hamburger" onclick="document.getElementById('mobileMenu').classList.toggle('open'); document.getElementById('mobileMenu').style.display = document.getElementById('mobileMenu').style.display === 'flex' ? 'none' : 'flex';">☰</button>
+        </div>
+        <div class="mobile-menu" id="mobileMenu">
+            <a href="#features" onclick="this.parentElement.style.display='none'">المميزات</a>
+            <a href="#how" onclick="this.parentElement.style.display='none'">كيف يعمل</a>
+            <a href="#prices" onclick="this.parentElement.style.display='none'">الأسعار</a>
+            <a href="#faq" onclick="this.parentElement.style.display='none'">الأسئلة الشائعة</a>
             <% if (loggedIn) { %>
-                <a href="/dashboard" class="nav-btn">الذهاب للوحة التحكم ←</a>
+                <a href="/dashboard" class="btn btn-green" style="justify-content:center;">لوحة التحكم ←</a>
             <% } else { %>
-                <a href="/login">تسجيل الدخول</a>
-                <a href="/register" class="nav-btn">ابدأ مجاناً</a>
+                <a href="/login" class="btn btn-ghost" style="justify-content:center;">تسجيل الدخول</a>
+                <a href="/register" class="btn btn-green" style="justify-content:center;">ابدأ مجاناً</a>
             <% } %>
         </div>
     </nav>
 
+    <!-- ===== Hero ===== -->
     <div class="hero">
-        <h1>أرسل حملاتك عبر <span>الواتساب</span> بضغطة زر واحدة!</h1>
-        <p>منصة سحابية متكاملة لربط رقمك وإرسال الرسائل والمرفقات الجماعية لعملائك بسهولة، مع نظام حماية وإحصائيات متقدمة.</p>
-        <div class="cta-buttons">
-            <% if (loggedIn) { %>
-                <a href="/dashboard" class="btn-primary">لوحة التحكم الخاصة بك</a>
-            <% } else { %>
-                <a href="/register" class="btn-primary">سجّل مجاناً</a>
-                <a href="/login" class="btn-outline">تسجيل الدخول</a>
-            <% } %>
-        </div>
-    </div>
-
-    <div class="stats-section">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <h3>⚡</h3>
-                <p>إرسال لحظي بالخلفية</p>
+        <div class="container hero-inner">
+            <div>
+                <span class="tag">🚀 منصة سعودية متكاملة لحلول واتساب للأعمال</span>
+                <h1>حلول واتساب للأعمال لتعزيز تواصلك مع <span>عملائك</span></h1>
+                <p>نظام متكامل لإدارة الحملات التسويقية، المجموعات، والردود التلقائية عبر واتساب للأعمال — أرسل آلاف الرسائل بضغطة واحدة، جدولها لأي وقت، وتابع النتائج لحظياً.</p>
+                <div class="hero-btns">
+                    <% if (loggedIn) { %>
+                        <a href="/dashboard" class="btn btn-green">لوحة التحكم الخاصة بك ←</a>
+                        <a href="#prices" class="btn btn-ghost">الأسعار</a>
+                    <% } else { %>
+                        <a href="/register" class="btn btn-green">ابدأ مجاناً الآن</a>
+                        <a href="/login" class="btn btn-ghost">تسجيل الدخول</a>
+                    <% } %>
+                </div>
+                <div class="hero-trust">
+                    <span>✅ ربط خلال ثوانٍ</span>
+                    <span>✅ بدون حفظ الأرقام</span>
+                    <span>✅ حماية ذكية من الحظر</span>
+                </div>
             </div>
-            <div class="stat-item">
-                <h3>🔐</h3>
-                <p>حماية متقدمة وتشفير</p>
-            </div>
-            <div class="stat-item">
-                <h3>📊</h3>
-                <p>إحصائيات وتقارير دقيقة</p>
-            </div>
-            <div class="stat-item">
-                <h3>🔌</h3>
-                <p>ربط API برمجي سهل</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="features">
-        <h2>لماذا نحن الخيار الأفضل لعملك؟ 🌟</h2>
-        <div class="grid">
-            <div class="card">
-                <div class="card-icon">🚀</div>
-                <h3>إرسال بالخلفية</h3>
-                <p>لا حاجة لإبقاء المتصفح مفتوحاً! أرسل آلاف الرسائل، وسيتكفل خادمنا السحابي بإنهاء المهمة في الخلفية.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">📊</div>
-                <h3>إحصائيات دقيقة</h3>
-                <p>تابع نجاح حملاتك وتعرف على الرسائل الناجحة والفاشلة من خلال لوحة تحكم رسومية دقيقة.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">🔌</div>
-                <h3>ربط API برمجي</h3>
-                <p>اربط متجرك أو موقعك بنظامنا عبر الـ API وأرسل رسائل الفواتير والتنبيهات برمجياً بكل سهولة.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">🛡️</div>
-                <h3>حماية من الحظر</h3>
-                <p>نظام ذكي لتأخير الرسائل وتوزيع الإرسال لحماية رقمك من الحظر والتقييد.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">📎</div>
-                <h3>مرفقات متعددة</h3>
-                <p>أرسل صور وفيديوهات ومستندات وملفات صوتية مع رسائلك بكل سهولة.</p>
-            </div>
-            <div class="card">
-                <div class="card-icon">🔄</div>
-                <h3>اتصال مستمر</h3>
-                <p>رقمك يبقى متصلاً بالخادم 24/7 بدون الحاجة لإبقاء جهازك مفتوحاً.</p>
+            <div class="chat-mockup">
+                <div class="chat-card">
+                    <div class="chat-header">
+                        <div class="chat-avatar">ت</div>
+                        <div>
+                            <h4>واتساب تكوين</h4>
+                            <p>متصل الآن</p>
+                        </div>
+                        <span class="chat-online">● متصل</span>
+                    </div>
+                    <div class="chat-body">
+                        <div class="bubble bubble-in">مرحباً، أريد معرفة المزيد عن باقاتكم 😊<span class="bubble-time">10:02</span></div>
+                        <div class="bubble bubble-out">أهلاً بك! يسعدنا مساعدتك 🚀 يمكنك تجربة المنصة مجاناً اليوم.<span class="bubble-time">10:02</span></div>
+                        <div class="bubble bubble-in">كم سعر الباقة الأساسية؟</div>
+                        <div class="bubble bubble-out">فقط 100 ر.س شهرياً 💚 مع إمكانية إرسال 10,000 رسالة يومياً!<span class="bubble-time">10:03</span></div>
+                        <div class="bubble bubble-in">رائع! سأجربها الآن 🎉</div>
+                    </div>
+                    <div class="chat-input">
+                        <div class="fake">اكتب رسالة...</div>
+                        <div class="mic">🎤</div>
+                    </div>
+                </div>
+                <div class="float-badge"><span class="pulse-dot"></span> جاهز للإرسال الآن</div>
             </div>
         </div>
     </div>
 
-    <div class="pricing">
-        <h2>ابدأ الآن بسعر مناسب 💰</h2>
-        <p class="subtitle">لا توجد رسوم خفية، لا عقود، اشترك وادفع شهرياً</p>
-        <div class="pricing-card">
-            <div class="pricing-badge">الأكثر طلباً</div>
-            <div class="plan-name">الباقة الشهرية</div>
-            <div class="price">100 <span>ر.س</span></div>
-            <div class="period">شهرياً</div>
-            <ul class="features-list">
-                <li><span class="check">✓</span> إرسال رسائل جماعية غير محدودة</li>
-                <li><span class="check">✓</span> ربط رقم واتساب واحد</li>
-                <li><span class="check">✓</span> إدارة جهات الاتصال والمجموعات</li>
-                <li><span class="check">✓</span> إرفاق صور وفيديوهات وملفات</li>
-                <li><span class="check">✓</span> حماية ذكية من الحظر</li>
-                <li><span class="check">✓</span> إحصائيات وتقارير مفصلة</li>
-                <li><span class="check">✓</span> إرسال بالخلفية 24/7</li>
-                <li><span class="check">✓</span> دعم فني سريع</li>
-            </ul>
-            <div class="cta">
-                <a href="/register" class="btn-primary" style="width:100%; text-align:center;">اشترك الآن</a>
+    <!-- ===== Trust strip ===== -->
+    <div class="trust">
+        <div class="container trust-grid">
+            <div class="trust-item"><h3>+2M</h3><p>رسالة تم إرسالها</p></div>
+            <div class="trust-item"><h3>24/7</h3><p>تشغيل مستمر بدون توقف</p></div>
+            <div class="trust-item"><h3>99.9%</h3><p>استقرار النظام</p></div>
+            <div class="trust-item"><h3>+500</h3><p>عميل نشط</p></div>
+        </div>
+    </div>
+
+    <!-- ===== Features ===== -->
+    <div class="section" id="features">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">✨ مميزات نظامنا</span>
+                <h2>كل ما تحتاجه لإدارة واتساب أعمالك</h2>
+                <p>أدوات احترافية مصممة لتوفير وقتك وزيادة تفاعل عملائك مع رسائلك</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>حملات جماعية ذكية</h3>
+                    <p>أرسل آلاف الرسائل دفعة واحدة مع تخصيص المحتوى لكل عميل تلقائياً عبر المتغيرات مثل {الاسم} و {الرقم}.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-badge">جديد</span>
+                    <div class="feature-icon">⏰</div>
+                    <h3>إرسال مجدول</h3>
+                    <p>جدولة حملاتك لأي تاريخ ووقت محدد — النظام يطلقها تلقائياً في الخلفية دون تدخل منك.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>حماية من الحظر</h3>
+                    <p>نظام ذكي لتأخير الرسائل وتوزيع الإرسال على فترات زمنية لحماية رقمك من الحظر والتقييد.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📎</div>
+                    <h3>مرفقات متعددة</h3>
+                    <p>أرسل صوراً وفيديوهات ومستندات PDF وملفات صوتية مع رسائلك، أو استورد الأرقام من ملفات Excel.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3>تكامل مع API</h3>
+                    <p>واجهة برمجة تطبيقات قوية لربط واتساب مع أنظمتك الأخرى مثل المتاجر الإلكترونية و CRM و ERP.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>إحصائيات وتقارير</h3>
+                    <p>تتبع دقيق لحملاتك: رسائل ناجحة، فاشلة، بانتظار الإعادة — مع تقارير مفصلة لحظة بلحظة.</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- ===== How it works ===== -->
+    <div class="section how" id="how">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">⚙️ كيف يعمل نظامنا</span>
+                <h2>ثلاث خطوات فقط وتبدأ الإرسال</h2>
+                <p>من التسجيل إلى إطلاق أول حملة في أقل من دقيقتين</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-num">1</div>
+                    <h3>التسجيل وربط الرقم</h3>
+                    <p>أنشئ حسابك واربط رقم واتساب الخاص بك بمسح رمز QR من لوحة التحكم — بدون حفظ الأرقام على النظام.</p>
+                    <span class="step-arrow">←</span>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">2</div>
+                    <h3>تجهيز جهات الاتصال</h3>
+                    <p>أدخل الأرقام يدوياً أو استوردها من ملف Excel أو اختر من مجموعاتك المحفوظة — كلها مرتبة وجاهزة.</p>
+                    <span class="step-arrow">←</span>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">3</div>
+                    <h3>أطلق حملتك وتابع النتائج</h3>
+                    <p>أرسل فوراً أو جدول الحملة للوقت المناسب، ثم تابع الإحصائيات والتقارير في لوحة تحكم سهلة.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Use cases ===== -->
+    <div class="section" id="usecases">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">💼 حالات الاستخدام</span>
+                <h2>مناسب لكل الأنشطة التجارية</h2>
+                <p>مهما كان مجالك، واتساب تكوين يوفر لك قناة تواصل مباشرة مع عملائك</p>
+            </div>
+            <div class="usecases-grid">
+                <div class="usecase-card">
+                    <div class="usecase-icon">🛒</div>
+                    <h3>المتاجر الإلكترونية</h3>
+                    <p>متابعة طلبات العملاء، إرسال تنبيهات الشحن، والرد على استفسارات المنتجات عبر واتساب مباشرة.</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">📣</div>
+                    <h3>الحملات التسويقية</h3>
+                    <p>إرسال عروض ترويجية، كوبونات خصم، وإعلانات المنتجات الجديدة لعملائك في وقتها المناسب.</p>
+                </div>
+                <div class="usecase-card">
+                    <div class="usecase-icon">🤝</div>
+                    <h3>خدمة العملاء</h3>
+                    <p>تقديم الدعم الفني، الرد على الاستفسارات، وإدارة شكاوى العملاء بشكل فعال وسريع.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== API ===== -->
+    <div class="section api" id="api">
+        <div class="container">
+            <div class="api-grid">
+                <div>
+                    <span class="tag">🔌 تكامل مع API</span>
+                    <h2 style="font-size: clamp(24px,3vw,34px); font-weight:900; margin-bottom:14px;">اربط نظامك مع واتساب برمجياً</h2>
+                    <p style="color:#64748b; line-height:1.9; margin-bottom:10px;">واجهة برمجة تطبيقات قوية لربط واتساب للأعمال مع أنظمتك الأخرى — أرسل رسائل الفواتير والتنبيهات والإشعارات تلقائياً.</p>
+                    <div class="integrations">
+                        <span class="int-chip">⚡ Zapier</span>
+                        <span class="int-chip">🛍️ Shopify</span>
+                        <span class="int-chip">🛒 WooCommerce</span>
+                        <span class="int-chip">📇 CRM</span>
+                        <span class="int-chip">🏢 ERP</span>
+                    </div>
+                </div>
+                <div class="api-box">
+                    <div class="api-tabs">
+                        <button class="api-tab active" onclick="switchApiTab('curl', this)">cURL</button>
+                        <button class="api-tab" onclick="switchApiTab('php', this)">PHP</button>
+                        <button class="api-tab" onclick="switchApiTab('node', this)">Node.js</button>
+                    </div>
+                    <div class="api-code">
+                        <button class="copy-btn" onclick="copyApiCode()">📋 نسخ</button>
+                        <pre id="code-curl"><span class="cmt"># إرسال رسالة واتساب عبر API</span>
+curl -X POST https://<span style="color:#f0abfc;">{your-domain}</span>/api/v1/send \
+  -H <span class="s">'Authorization: Bearer YOUR_API_KEY'</span> \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{
+    "to": "966501234567",
+    "message": "مرحباً! هذا اختبار الإرسال"
+  }'</span></pre>
+                        <pre id="code-php" style="display:none;"><span class="cmt">// إرسال رسالة عبر PHP</span>
+<span class="k">&lt;?php</span>
+$curl = curl_init();
+curl_setopt_array($curl, [
+  CURLOPT_URL =&gt; <span class="s">"https://{your-domain}/api/v1/send"</span>,
+  CURLOPT_RETURNTRANSFER =&gt; true,
+  CURLOPT_POSTFIELDS =&gt; json_encode([
+    <span class="s">'to'</span> =&gt; <span class="s">'966501234567'</span>,
+    <span class="s">'message'</span> =&gt; <span class="s">'مرحباً من PHP!'</span>
+  ]),
+  CURLOPT_HTTPHEADER =&gt; [
+    <span class="s">'Authorization: Bearer YOUR_API_KEY'</span>,
+    <span class="s">'Content-Type: application/json'</span>
+  ],
+]);
+$response = curl_exec($curl);
+curl_close($curl);
+<span class="k">echo</span> $response;</pre>
+                        <pre id="code-node" style="display:none;"><span class="cmt">// إرسال رسالة عبر Node.js</span>
+<span class="k">const</span> axios = <span class="k">require</span>(<span class="s">'axios'</span>);
+
+axios({
+  method: <span class="s">'post'</span>,
+  url: <span class="s">'https://{your-domain}/api/v1/send'</span>,
+  headers: {
+    <span class="s">'Authorization'</span>: <span class="s">'Bearer YOUR_API_KEY'</span>
+  },
+  data: {
+    to: <span class="s">'966501234567'</span>,
+    message: <span class="s">'مرحباً من Node.js!'</span>
+  }
+})
+.then(<span class="k">res</span> =&gt; console.log(res.data))
+.catch(<span class="k">err</span> =&gt; console.error(err.message));</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Pricing ===== -->
+    <div class="section" id="prices">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">💰 باقات الأسعار</span>
+                <h2>خطط مرنة تناسب حجم نشاطك</h2>
+                <p>لا توجد رسوم خفية ولا عقود طويلة — اشترك وادفع شهرياً</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="price-card">
+                    <div class="plan-name">الباقة الأساسية</div>
+                    <div class="plan-price">100 <small>ر.س / شهرياً</small></div>
+                    <div class="plan-desc">مثالية للشركات الصغيرة والمشاريع الناشئة</div>
+                    <ul class="plan-list">
+                        <li><span class="check">✓</span> 10,000 رسالة يومياً</li>
+                        <li><span class="check">✓</span> إرسال مجدول</li>
+                        <li><span class="check">✓</span> إدارة المجموعات وجهات الاتصال</li>
+                        <li><span class="check">✓</span> حماية ذكية من الحظر</li>
+                        <li><span class="check">✓</span> واجهة برمجة التطبيقات (API)</li>
+                        <li><span class="check">✓</span> دعم عبر البريد الإلكتروني</li>
+                    </ul>
+                    <% if (loggedIn) { %>
+                        <a href="/dashboard" class="btn btn-ghost">الذهاب للوحة التحكم</a>
+                    <% } else { %>
+                        <a href="/register" class="btn btn-ghost">البدء الآن</a>
+                    <% } %>
+                </div>
+
+                <div class="price-card featured">
+                    <span class="popular-badge">⭐ الأكثر شعبية</span>
+                    <div class="plan-name">الباقة الاحترافية</div>
+                    <div class="plan-price">250 <small>ر.س / شهرياً</small></div>
+                    <div class="plan-desc">الحل الأمثل للشركات المتوسطة مع احتياجات متقدمة</div>
+                    <ul class="plan-list">
+                        <li><span class="check">✓</span> 20,000 رسالة يومياً</li>
+                        <li><span class="check">✓</span> إرسال مجدول غير محدود</li>
+                        <li><span class="check">✓</span> مرفقات: صور وفيديوهات ومستندات</li>
+                        <li><span class="check">✓</span> تقارير وإحصائيات متقدمة</li>
+                        <li><span class="check">✓</span> واجهة برمجة التطبيقات (API)</li>
+                        <li><span class="check">✓</span> دعم فني سريع</li>
+                    </ul>
+                    <% if (loggedIn) { %>
+                        <a href="/dashboard" class="btn btn-green">الذهاب للوحة التحكم</a>
+                    <% } else { %>
+                        <a href="/register" class="btn btn-green">اشترك الآن</a>
+                    <% } %>
+                </div>
+
+                <div class="price-card">
+                    <div class="plan-name">باقة المؤسسات</div>
+                    <div class="plan-price">400 <small>ر.س / شهرياً</small></div>
+                    <div class="plan-desc">حل مخصص للشركات الكبيرة مع متطلبات خاصة</div>
+                    <ul class="plan-list">
+                        <li><span class="check">✓</span> رسائل غير محدودة</li>
+                        <li><span class="check">✓</span> إرسال مجدول + أولوية تنفيذ</li>
+                        <li><span class="check">✓</span> تكامل API مخصص (CRM / ERP)</li>
+                        <li><span class="check">✓</span> مدير حساب مخصص</li>
+                        <li><span class="check">✓</span> دعم مخصص على مدار الساعة 24/7</li>
+                    </ul>
+                    <% if (loggedIn) { %>
+                        <a href="/dashboard" class="btn btn-ghost">الذهاب للوحة التحكم</a>
+                    <% } else { %>
+                        <a href="/register" class="btn btn-ghost">تواصل معنا</a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Testimonials ===== -->
+    <div class="section testi" id="testimonials">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">💬 آراء عملائنا</span>
+                <h2>ماذا يقول عملاؤنا عنا؟</h2>
+            </div>
+            <div class="testi-grid">
+                <div class="testi-card">
+                    <div class="testi-stars">★★★★★</div>
+                    <p>"منصة واتساب تكوين غيرت طريقة تواصلنا مع عملائنا، زادت نسبة التفاعل بنسبة 40% في الشهر الأول فقط. سهلة الاستخدام وميزة الجدولة رائعة!"</p>
+                    <div class="testi-person">
+                        <div class="testi-avatar">ع</div>
+                        <div><h4>عمر أحمد</h4><p>صاحب متجر إلكتروني</p></div>
+                    </div>
+                </div>
+                <div class="testi-card">
+                    <div class="testi-stars">★★★★★</div>
+                    <p>"الحل الأمثل لمتجرنا، سهّلنا عملية متابعة الطلبات والشكاوى عبر واتساب بشكل كبير. الحماية من الحظر وفرت علينا خسارة الرقم."</p>
+                    <div class="testi-person">
+                        <div class="testi-avatar">س</div>
+                        <div><h4>سري محمد</h4><p>مدير تسويق رقمي</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FAQ ===== -->
+    <div class="section" id="faq">
+        <div class="container">
+            <div class="section-head">
+                <span class="tag">❓ الأسئلة الشائعة</span>
+                <h2>كل ما تحتاج معرفته</h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <button class="faq-trigger" onclick="toggleFaq(this)">كيف يمكنني ربط واتساب الخاص بي مع النظام؟<span class="plus">+</span></button>
+                    <div class="faq-answer">يمكنك ربط رقم واتساب الخاص بك من خلال مسح رمز QR الموجود في لوحة التحكم بعد تسجيل الدخول. افتح واتساب على هاتفك، انتقل إلى الإعدادات ثم "الأجهزة المرتبطة"، وامسح رمز QR المعروض. لا نحفظ أرقامك نهائياً.</div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-trigger" onclick="toggleFaq(this)">هل هناك حد لعدد الرسائل التي يمكن إرسالها؟<span class="plus">+</span></button>
+                    <div class="faq-answer">نعم، تختلف حدود الرسائل حسب الباقة التي تشترك بها. الباقة الأساسية تسمح بـ 10,000 رسالة يومياً، بينما الباقة الاحترافية تسمح بـ 20,000 رسالة. وللاستخدامات الكبيرة نوفر باقة المؤسسات برسائل غير محدودة.</div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-trigger" onclick="toggleFaq(this)">ما هي مدة التجربة المجانية؟<span class="plus">+</span></button>
+                    <div class="faq-answer">نقدم تجربة مجانية لمدة يوم واحد يمكنك خلالها تجربة جميع المميزات مع حد أقصى 100 رسالة. لا تحتاج إلى إدخال أي تفاصيل دفع خلال فترة التجربة.</div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-trigger" onclick="toggleFaq(this)">هل يمكنني جدولة حملاتي لوقت لاحق؟<span class="plus">+</span></button>
+                    <div class="faq-answer">نعم! توفر المنصة ميزة الإرسال المجدول — اختر التاريخ والوقت المناسبين وسيتم إطلاق حملتك تلقائياً في الخلفية في الوقت المحدد بالضبط، حتى لو كان جهازك مغلقاً.</div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-trigger" onclick="toggleFaq(this)">هل يوفر النظام واجهة برمجة تطبيقات (API)؟<span class="plus">+</span></button>
+                    <div class="faq-answer">نعم، نوفر واجهة برمجة تطبيقات قوية (API) لربط واتساب مع أنظمتك الأخرى مثل المتاجر الإلكترونية وأنظمة CRM و ERP. ستجد دليلاً كاملاً مع أمثلة جاهزة في صفحة دليل الـ API داخل لوحة التحكم.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CTA banner ===== -->
+    <div class="section" style="padding-top:0;">
+        <div class="container">
+            <div class="cta-banner">
+                <h2>جاهز لتطوير تواصلك مع عملائك؟ 🚀</h2>
+                <p>ابدأ تجربتك المجانية اليوم — بدون بطاقة ائتمان، وبدون التزامات</p>
+                <% if (loggedIn) { %>
+                    <a href="/dashboard" class="btn btn-white" style="padding:14px 44px; font-size:17px;">افتح لوحة التحكم ←</a>
+                <% } else { %>
+                    <a href="/register" class="btn btn-white" style="padding:14px 44px; font-size:17px;">أنشئ حسابك المجاني الآن</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Footer ===== -->
     <footer>
-        <p>جميع الحقوق محفوظة © 2026 | منصة <a href="/">واتساب تكوين</a></p>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="/" class="logo"><span class="logo-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span> واتساب <span class="whatsapp">تكوين</span></a>
+                    <p>منصة سعودية متكاملة لإدارة واتساب الأعمال: حملات جماعية، إرسال مجدول، مجموعات ذكية، وتكامل API — كل ذلك في مكان واحد.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>روابط سريعة</h4>
+                    <a href="#features">المميزات</a>
+                    <a href="#how">كيف يعمل</a>
+                    <a href="#prices">الأسعار</a>
+                    <a href="#faq">الأسئلة الشائعة</a>
+                </div>
+                <div class="footer-col">
+                    <h4>حسابك</h4>
+                    <a href="/login">تسجيل الدخول</a>
+                    <a href="/register">إنشاء حساب جديد</a>
+                    <a href="/dashboard">لوحة التحكم</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                جميع الحقوق محفوظة © <%= new Date().getFullYear() %> | منصة <a href="/">واتساب تكوين</a>
+            </div>
+        </div>
     </footer>
+
+    <script>
+        // ===== FAQ accordion =====
+        function toggleFaq(btn) {
+            const item = btn.parentElement;
+            const answer = item.querySelector('.faq-answer');
+            const isOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(i => { i.classList.remove('open'); i.querySelector('.faq-answer').style.display = 'none'; });
+            if (!isOpen) { item.classList.add('open'); answer.style.display = 'block'; }
+        }
+
+        // ===== API tabs =====
+        function switchApiTab(lang, btn) {
+            document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            ['curl', 'php', 'node'].forEach(l => { document.getElementById('code-' + l).style.display = (l === lang) ? 'block' : 'none'; });
+        }
+
+        // ===== Copy API code =====
+        function copyApiCode() {
+            const active = document.querySelector('.api-tab.active');
+            const lang = active.textContent.trim().toLowerCase() === 'php' ? 'php' : (active.textContent.trim().toLowerCase() === 'node.js' ? 'node' : 'curl');
+            const code = document.getElementById('code-' + lang).innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ تم النسخ';
+                setTimeout(() => btn.textContent = '📋 نسخ', 1800);
+            });
+        }
+    </script>
 </body>
 </html>

@@ -7,7 +7,20 @@ const settingsSchema = new mongoose.Schema({
     isQuietHours: { type: Boolean, default: false },
     campaignRandomDelayEnabled: { type: Boolean, default: true },
     campaignDelayMinMinutes: { type: Number, default: 3 },
-    campaignDelayMaxMinutes: { type: Number, default: 13 }
+    campaignDelayMaxMinutes: { type: Number, default: 13 },
+    // 💳 إعدادات الدفع الإلكتروني (ماي فاتورة)
+    paymentsEnabled: { type: Boolean, default: false },
+    myfatoorahMode: { type: String, enum: ['test', 'live'], default: 'test' },
+    myfatoorahToken: { type: String, default: '' },
+    planPrice: { type: Number, default: 100 },
+    planDays: { type: Number, default: 30 },
+    planName: { type: String, default: 'الباقة الشهرية' },
+    // 🔔 رقم استقبال إشعارات الإدارة (تسجيل عميل، دفع، أحداث) — يُرسل إليه من جوال الإدارة المسجل
+    notificationPhone: { type: String, default: '' },
+    // 📊 التقرير اليومي
+    dailyReportHour: { type: Number, default: 23 },
+    dailyReportMinute: { type: Number, default: 30 },
+    dailyReportLastSentAt: { type: Date, default: null }
 });
 
 module.exports = mongoose.model('Settings', settingsSchema);

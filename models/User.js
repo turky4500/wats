@@ -20,8 +20,11 @@ const userSchema = new mongoose.Schema({
     phoneOtpCode: { type: String },
     phoneOtpExpires: { type: Date },
 
-    // الإرسال الحذر
+// الإرسال الحذر
     cautiousMode: { type: Boolean, default: false },
+
+    // 📨 تذكير انتهاء الاشتراك
+    expiryReminderSentAt: { type: Date, default: null },
 
     createdAt: { type: Date, default: Date.now }
 });

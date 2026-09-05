@@ -125,9 +125,11 @@
             </div>
             <div class="sidebar-nav">
                 <a href="/dashboard"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/dashboard#campaigns"><span class="ic"><i class="fas fa-bullhorn"></i></span> الحملات والإرسال</a>
                 <a href="/groups" class="active"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
                 <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
-                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
+                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> الملف الشخصي</a>
+                <a href="/subscribe"><span class="ic"><i class="fas fa-credit-card"></i></span> الاشتراك والدفع</a>
                 <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
             </div>
             <div class="sidebar-footer"><a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></div>
@@ -218,7 +220,7 @@
                     <div class="drop-zone" onclick="document.getElementById('excelImportFile').click()">
                         <div style="font-size:30px;margin-bottom:8px;">📁</div>
                         <h4>اختر ملف Excel أو CSV</h4>
-                        <p>الملف يجب أن يحتوي على عمود "phone" أو "جوال" أو "رقم"</p>
+                        <p>نكتشف عمود الأرقام والأسماء تلقائياً — ويمكنك اختيارهما يدوياً</p>
                     </div>
                     <input type="file" id="excelImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
                     <div id="importPreview" style="display:none;margin-top:12px;"></div>
@@ -228,8 +230,8 @@
                 <!-- Add Manual -->
                 <div id="viewTabAdd" style="display:none;">
                     <div class="form-group">
-                        <label>الرقم (يدعم: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx)</label>
-                        <input type="text" id="addPhoneInput" placeholder="05xxxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
+                        <label>الرقم (بالصيغة الدولية مثل 9665xxxxxxxx)</label>
+                        <input type="text" id="addPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
                     </div>
                     <div class="form-group">
                         <label>الاسم (اختياري)</label>
@@ -244,7 +246,7 @@
 
     <!-- Edit Contact Modal -->
     <div id="editContactModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
-        <div class="modal-box" style="max-width:400px;">
+        <div class="modal-box" style="max-width:520px;">
             <div class="modal-header">
                 <h3>تعديل جهة الاتصال</h3>
                 <button onclick="document.getElementById('editContactModal').classList.remove('show')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-400);"><i class="fas fa-times"></i></button>
@@ -253,17 +255,17 @@
                 <input type="hidden" id="editContactId">
                 <div class="form-group">
                     <label>الاسم</label>
-                    <input type="text" id="editContactName" placeholder="اسم جهة الاتصال">
+                    <input type="text" id="editNameInput" placeholder="اسم جهة الاتصال">
                 </div>
                 <div class="form-group">
                     <label>الرقم</label>
-                    <input type="text" id="editContactPhone" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
+                    <input type="text" id="editPhoneInput" placeholder="9665xxxxxxxx" dir="ltr" style="font-family:var(--font-num);">
                 </div>
-                <div id="editContactMsg" class="msg-box"></div>
+                <div id="editMsg" class="msg-box"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-dark" onclick="document.getElementById('editContactModal').classList.remove('show')">إلغاء</button>
-                <button class="btn btn-primary" onclick="saveEditContact()" id="editContactBtn"><i class="fas fa-save"></i> حفظ</button>
+                <button class="btn btn-primary" onclick="saveContactEdit()"><i class="fas fa-save"></i> حفظ التعديلات</button>
             </div>
         </div>
     </div>
@@ -272,28 +274,8 @@
     <script>
         let currentGroupId = null;
         let importedContacts = [];
-
-        function normalizePhone(raw) {
-            const clean = raw.replace(/\D/g, '');
-            if (/^966\d{9,11}$/.test(clean)) return clean;
-            if (/^971\d{8,10}$/.test(clean)) return clean;
-            if (/^965\d{7,9}$/.test(clean)) return clean;
-            if (/^973\d{7,9}$/.test(clean)) return clean;
-            if (/^974\d{7,9}$/.test(clean)) return clean;
-            if (/^968\d{7,9}$/.test(clean)) return clean;
-            if (/^967\d{7,9}$/.test(clean)) return clean;
-            if (/^20\d{9,10}$/.test(clean)) return clean;
-            if (/^962\d{7,9}$/.test(clean)) return clean;
-            if (/^963\d{7,9}$/.test(clean)) return clean;
-            if (/^964\d{7,9}$/.test(clean)) return clean;
-            if (/^961\d{6,8}$/.test(clean)) return clean;
-            if (/^212\d{8,9}$/.test(clean)) return clean;
-            if (/^216\d{7,9}$/.test(clean)) return clean;
-            if (/^213\d{8,10}$/.test(clean)) return clean;
-            if (/^5\d{8}$/.test(clean)) return '966' + clean;
-            if (/^05\d{8}$/.test(clean)) return '966' + clean.substring(1);
-            return null;
-        }
+        let currentExcelFile = null;
+        let currentSheetName = null;
 
         function showToast(message, type) {
             const c = document.getElementById('toast-container');
@@ -368,15 +350,33 @@
             } catch (e) { showToast('خطأ', 'error'); }
         }
 
+        function escapeHtml(value) {
+            return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function renderContacts(contacts) {
             const container = document.getElementById('contactsList');
             if (!contacts || contacts.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ink-300);">لا توجد جهات اتصال</div>';
                 return;
             }
-            let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th></th></tr></thead><tbody>';
+
+            let html = '<table class="contacts-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم</th><th>الإجراءات</th></tr></thead><tbody>';
             contacts.forEach((c, i) => {
-                html += '<tr><td>' + (i+1) + '</td><td>' + (c.name || '—') + '</td><td dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</td><td style="display:flex;gap:4px;"><button class="btn btn-primary" style="padding:4px 8px;font-size:10px;" onclick="editContact(\'' + c._id + '\', \'' + (c.name || '').replace(/'/g, "\\'") + '\', \'' + c.phone + '\')"><i class="fas fa-pen"></i></button><button class="btn btn-red" style="padding:4px 8px;font-size:10px;" onclick="removeContact(\'' + c._id + '\')"><i class="fas fa-times"></i></button></td></tr>';
+                const contactId = JSON.stringify(String(c._id || ''));
+                const contactName = JSON.stringify(String(c.name || ''));
+                const contactPhone = JSON.stringify(String(c.phone || ''));
+                html += `<tr>
+                    <td>${i + 1}</td>
+                    <td>${escapeHtml(c.name || '—')}</td>
+                    <td dir="ltr" style="font-family:var(--font-num);">${escapeHtml(c.phone || '')}</td>
+                    <td>
+                        <div class="contact-row-actions">
+                            <button class="btn-icon-soft" type="button" onclick='openEditContact(${contactId}, ${contactName}, ${contactPhone})'><i class="fas fa-pen"></i></button>
+                            <button class="btn-icon-soft danger" type="button" onclick='removeContact(${contactId})'><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
             });
             html += '</tbody></table>';
             container.innerHTML = html;
@@ -391,51 +391,9 @@
                 const data = await res.json();
                 if (data.success) {
                     showToast('تم الحذف');
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
+                    await refreshCurrentGroup();
                 }
             } catch (e) { showToast('خطأ', 'error'); }
-        }
-
-        function editContact(contactId, name, phone) {
-            document.getElementById('editContactId').value = contactId;
-            document.getElementById('editContactName').value = name;
-            document.getElementById('editContactPhone').value = phone;
-            hideMsg('editContactMsg');
-            document.getElementById('editContactModal').classList.add('show');
-        }
-
-        async function saveEditContact() {
-            const contactId = document.getElementById('editContactId').value;
-            const name = document.getElementById('editContactName').value.trim();
-            const phone = document.getElementById('editContactPhone').value.trim();
-            if (!phone) { showMsg('editContactMsg', 'أدخل رقم الجوال', 'error'); return; }
-            const normalized = normalizePhone(phone);
-            if (!normalized) { showMsg('editContactMsg', 'الرقم غير صحيح. الصيغة: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx', 'error'); return; }
-            const btn = document.getElementById('editContactBtn');
-            btn.disabled = true;
-            try {
-                const res = await fetch('/api/groups/' + currentGroupId + '/contacts/' + contactId, {
-                    method: 'PUT', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ name, phone: normalized })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast('تم التحديث');
-                    document.getElementById('editContactModal').classList.remove('show');
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
-                } else { showMsg('editContactMsg', data.error || 'خطأ', 'error'); }
-            } catch (e) { showMsg('editContactMsg', 'خطأ', 'error'); }
-            btn.disabled = false;
         }
 
         function switchViewTab(tab) {
@@ -454,33 +412,157 @@
         async function handleExcelImport(event) {
             const file = event.target.files[0];
             if (!file) return;
+            importedContacts = [];
+            showMsg('importMsg', 'جاري قراءة أوراق العمل...', 'success');
+            try {
+                // الخطوة 1: قراءة أسماء أوراق العمل في الملف
+                const formData = new FormData();
+                formData.append('file', file);
+                const sheetsRes = await fetch('/api/groups/import-excel/sheets', { method: 'POST', body: formData });
+                const sheetsData = await sheetsRes.json();
+                if (!sheetsData.success) {
+                    showMsg('importMsg', sheetsData.error || 'خطأ في قراءة الملف', 'error');
+                    return;
+                }
+                currentExcelFile = file;
+
+                // الخطوة 2: عرض قائمة الأوراق لاختيار الورقة المطلوبة (الافتراضي: الأولى)
+                let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
+                html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:6px;">📄 تم العثور على ' + sheetsData.sheets.length + ' ورقة عمل</div>';
+                html += '<div style="font-size:12px;color:var(--ink-400);margin-bottom:10px;">اختر الورقة التي تحتوي على الأرقام (الافتراضي: الورقة الأولى)</div>';
+                html += '<select id="sheetSelect" style="width:100%;padding:10px 12px;border:2px solid #bbf7d0;border-radius:10px;font-family:inherit;font-size:14px;background:white;color:var(--ink-800);outline:none;">';
+                sheetsData.sheets.forEach((s, i) => {
+                    html += '<option value="' + escapeHtml(s.name) + '"' + (i === 0 ? ' selected' : '') + '>' + escapeHtml(s.name) + ' (' + s.rows + ' صف)</option>';
+                });
+                html += '</select>';
+                html += '<button class="btn btn-green btn-full" style="margin-top:10px;" onclick="readExcelSheet()"><i class="fas fa-file-excel"></i> قراءة الأرقام من هذه الورقة</button>';
+                html += '</div>';
+                document.getElementById('importPreview').innerHTML = html;
+                document.getElementById('importPreview').style.display = 'block';
+                hideMsg('importMsg');
+            } catch (e) { showMsg('importMsg', 'خطأ في رفع الملف', 'error'); }
+            event.target.value = '';
+        }
+
+        // قراءة الأرقام من الورقة المختارة مع كشف تلقائي للأعمدة
+        async function readExcelSheet() {
+            const select = document.getElementById('sheetSelect');
+            const sheetName = select ? select.value : '';
+            if (!currentExcelFile) { showMsg('importMsg', 'أعد اختيار الملف أولاً', 'error'); return; }
+            currentSheetName = sheetName;
+            showMsg('importMsg', 'جاري تحليل الأعمدة في ورقة "' + sheetName + '"...', 'success');
             const formData = new FormData();
-            formData.append('file', file);
-            showMsg('importMsg', 'جاري قراءة الملف...', 'success');
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', sheetName);
+            try {
+                const res = await fetch('/api/groups/import-excel/detect', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!data.success) {
+                    showMsg('importMsg', data.error || 'خطأ', 'error');
+                    return;
+                }
+                renderColumnPicker(data);
+                hideMsg('importMsg');
+            } catch (e) { showMsg('importMsg', 'خطأ في تحليل الملف', 'error'); }
+        }
+
+        // عرض منتقي الأعمدة (مع الكشف التلقائي) + معاينة
+        function renderColumnPicker(data) {
+            importedContacts = data.contacts;
+            let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
+
+            // شريط حالة الكشف
+            if (data.phoneCol) {
+                html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:10px;">🔍 تم الكشف تلقائياً: الأرقام في العمود ' + data.phoneCol + (data.nameCol ? ' والأسماء في ' + data.nameCol : ' (بدون أسماء)') + '</div>';
+            } else {
+                html += '<div style="font-weight:800;color:#d97706;margin-bottom:10px;">⚠️ لم نجد عمود أرقام تلقائياً — اختره يدوياً:</div>';
+            }
+
+            // قائمة الأعمدة
+            html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">';
+            html += '<div style="flex:1;min-width:170px;">';
+            html += '<label style="font-size:11.5px;font-weight:800;color:var(--ink-500);display:block;margin-bottom:4px;">📱 عمود الأرقام</label>';
+            html += '<select id="phoneColSelect" style="width:100%;padding:9px 11px;border:2px solid #bbf7d0;border-radius:10px;font-family:inherit;font-size:13px;background:white;">';
+            html += '<option value="">— اختر العمود —</option>';
+            data.columns.forEach(c => {
+                const label = 'العمود ' + c.key + (c.header ? ' (' + escapeHtml(c.header) + ')' : '') + (c.samplePhone ? ' — مثل: ' + escapeHtml(c.samplePhone) : '');
+                html += '<option value="' + c.key + '"' + (c.key === data.phoneCol ? ' selected' : '') + '>' + label + '</option>';
+            });
+            html += '</select></div>';
+
+            html += '<div style="flex:1;min-width:170px;">';
+            html += '<label style="font-size:11.5px;font-weight:800;color:var(--ink-500);display:block;margin-bottom:4px;">👤 عمود الاسم (اختياري)</label>';
+            html += '<select id="nameColSelect" style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:13px;background:white;">';
+            html += '<option value="">— بدون أسماء —</option>';
+            data.columns.forEach(c => {
+                if (c.key === data.phoneCol) return;
+                const label = 'العمود ' + c.key + (c.header ? ' (' + escapeHtml(c.header) + ')' : '') + (c.sampleText ? ' — مثل: ' + escapeHtml(c.sampleText) : '');
+                html += '<option value="' + c.key + '"' + (c.key === data.nameCol ? ' selected' : '') + '>' + label + '</option>';
+            });
+            html += '</select></div>';
+            html += '</div>';
+
+            // زر إعادة الاستخراج
+            html += '<button class="btn btn-blue btn-full" style="margin-bottom:10px;" onclick="reExtractWithColumns()"><i class="fas fa-sync"></i> إعادة الاستخراج بهذه الأعمدة</button>';
+
+            // معاينة النتائج
+            html += '<div id="importPreviewBox">';
+            html += renderImportPreview();
+            html += '</div>';
+            html += '</div>';
+
+            document.getElementById('importPreview').innerHTML = html;
+            document.getElementById('importPreview').style.display = 'block';
+
+            // تغيير القائمة يعيد الاستخراج تلقائياً
+            document.getElementById('phoneColSelect').onchange = reExtractWithColumns;
+            document.getElementById('nameColSelect').onchange = reExtractWithColumns;
+        }
+
+        function renderImportPreview() {
+            if (!importedContacts.length) {
+                return '<div style="color:#d97706;font-size:13px;font-weight:700;padding:8px 0;">لا توجد أرقام صحيحة في هذه الأعمدة</div>';
+            }
+            let html = '<div style="font-weight:800;color:var(--primary-dark);margin:6px 0;">✅ تم العثور على ' + importedContacts.length + ' جهة اتصال</div>';
+            html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
+            importedContacts.slice(0, 20).forEach((c, i) => {
+                html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
+            });
+            if (importedContacts.length > 20) html += '<div style="padding:4px 0;color:var(--ink-400);">...و ' + (importedContacts.length - 20) + ' جهة اتصال أخرى</div>';
+            html += '</div>';
+            html += '<button class="btn btn-green btn-full" style="margin-top:12px;" onclick="saveImportedContacts()"><i class="fas fa-save"></i> حفظ في المجموعة (' + importedContacts.length + ' جهة اتصال)</button>';
+            return html;
+        }
+
+        // إعادة الاستخراج بالأعمدة المختارة يدوياً
+        async function reExtractWithColumns() {
+            const phoneCol = document.getElementById('phoneColSelect').value;
+            const nameCol = document.getElementById('nameColSelect').value;
+            if (!phoneCol) {
+                showMsg('importMsg', 'اختر عمود الأرقام أولاً', 'error');
+                return;
+            }
+            showMsg('importMsg', 'جاري إعادة الاستخراج...', 'success');
+            const formData = new FormData();
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', currentSheetName);
+            formData.append('phoneCol', phoneCol);
+            formData.append('nameCol', nameCol);
             try {
                 const res = await fetch('/api/groups/import-excel', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (data.success) {
                     importedContacts = data.contacts;
-                    let html = '<div style="background:var(--primary-soft);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:14px;">';
-                    html += '<div style="font-weight:800;color:var(--primary-dark);margin-bottom:8px;">✅ تم استخراج ' + data.total + ' جهة اتصال من الملف</div>';
-                    if (data.skipped > 0) html += '<div style="font-weight:700;color:var(--danger);margin-bottom:8px;font-size:13px;">⚠️ تم تخطي ' + data.skipped + ' رقم غير صحيح</div>';
-                    html += '<div style="max-height:150px;overflow-y:auto;font-size:12px;">';
-                    data.contacts.slice(0, 20).forEach((c, i) => {
-                        html += '<div style="padding:4px 0;border-bottom:1px solid #bbf7d0;">' + (i+1) + '. ' + (c.name || 'بدون اسم') + ' — <span dir="ltr" style="font-family:var(--font-num);">' + c.phone + '</span></div>';
-                    });
-                    if (data.total > 20) html += '<div style="padding:4px 0;color:var(--ink-400);">...و ' + (data.total - 20) + ' جهة اتصال أخرى</div>';
-                    html += '</div>';
-                    html += '<button class="btn btn-green btn-full" style="margin-top:12px;" onclick="saveImportedContacts()"><i class="fas fa-save"></i> حفظ في المجموعة (' + data.total + ' جهة اتصال)</button>';
-                    html += '</div>';
-                    document.getElementById('importPreview').innerHTML = html;
-                    document.getElementById('importPreview').style.display = 'block';
+                    const box = document.getElementById('importPreviewBox');
+                    if (box) box.innerHTML = renderImportPreview();
                     hideMsg('importMsg');
                 } else {
-                    showMsg('importMsg', data.error || 'خطأ', 'error');
+                    importedContacts = [];
+                    const box = document.getElementById('importPreviewBox');
+                    if (box) box.innerHTML = '<div style="color:#d97706;font-size:13px;font-weight:700;padding:8px 0;">' + escapeHtml(data.error || 'خطأ') + '</div>';
+                    hideMsg('importMsg');
                 }
-            } catch (e) { showMsg('importMsg', 'خطأ في رفع الملف', 'error'); }
-            event.target.value = '';
+            } catch (e) { showMsg('importMsg', 'خطأ في القراءة', 'error'); }
         }
 
         async function saveImportedContacts() {
@@ -510,28 +592,78 @@
             const phone = document.getElementById('addPhoneInput').value.trim();
             const name = document.getElementById('addNameInput').value.trim();
             if (!phone) { showMsg('addMsg', 'أدخل رقم الجوال', 'error'); return; }
-            const normalized = normalizePhone(phone);
-            if (!normalized) {
-                showMsg('addMsg', 'الرقم غير صحيح. الصيغة: 9665xxxxxxxx أو 05xxxxxxxxx أو 5xxxxxxxx', 'error'); return;
+            const cleanPhone = phone.replace(/\D/g, '');
+            const validPrefixes = ['966','971','965','973','974','968','967','20','962','963','964','961','212','216','213'];
+            if (!validPrefixes.some(p => cleanPhone.startsWith(p))) {
+                showMsg('addMsg', 'الرقم يجب أن يكون بالصيغة الدولية مثل 9665xxxxxxxx', 'error'); return;
+            }
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+                showMsg('addMsg', 'رقم غير صحيح', 'error'); return;
             }
             try {
                 const res = await fetch('/api/groups/' + currentGroupId + '/contacts', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ contacts: [{ name, phone: normalized }] })
+                    body: JSON.stringify({ contacts: [{ name, phone: cleanPhone }] })
                 });
                 const data = await res.json();
                 if (data.success) {
                     showMsg('addMsg', 'تمت الإضافة بنجاح', 'success');
                     document.getElementById('addPhoneInput').value = '';
                     document.getElementById('addNameInput').value = '';
-                    const gRes = await fetch('/api/groups/' + currentGroupId);
-                    const gData = await gRes.json();
-                    if (gData.success) {
-                        document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
-                        renderContacts(gData.group.contacts);
-                    }
+                    await refreshCurrentGroup();
                 } else { showMsg('addMsg', data.error, 'error'); }
             } catch (e) { showMsg('addMsg', 'خطأ', 'error'); }
+        }
+
+        function openEditContact(contactId, name, phone) {
+            name = name || '';
+            phone = phone || '';
+            document.getElementById('editContactId').value = contactId;
+            document.getElementById('editNameInput').value = name;
+            document.getElementById('editPhoneInput').value = phone;
+            hideMsg('editMsg');
+            document.getElementById('editContactModal').classList.add('show');
+            document.getElementById('editPhoneInput').focus();
+        }
+
+        async function refreshCurrentGroup() {
+            const gRes = await fetch('/api/groups/' + currentGroupId);
+            const gData = await gRes.json();
+            if (gData.success) {
+                document.getElementById('viewGroupName').textContent = gData.group.name + ' (' + gData.group.contacts.length + ' جهة اتصال)';
+                renderContacts(gData.group.contacts);
+            }
+        }
+
+        async function saveContactEdit() {
+            const contactId = document.getElementById('editContactId').value;
+            const phone = document.getElementById('editPhoneInput').value.trim();
+            const name = document.getElementById('editNameInput').value.trim();
+            if (!phone) { showMsg('editMsg', 'أدخل رقم الجوال', 'error'); return; }
+
+            const cleanPhone = phone.replace(/\D/g, '');
+            if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+                showMsg('editMsg', 'رقم الجوال غير صحيح', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/groups/' + currentGroupId + '/contacts/' + contactId, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name, phone: cleanPhone })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('تم تحديث جهة الاتصال بنجاح');
+                    document.getElementById('editContactModal').classList.remove('show');
+                    await refreshCurrentGroup();
+                } else {
+                    showMsg('editMsg', data.error || 'تعذر حفظ التعديلات', 'error');
+                }
+            } catch (e) {
+                showMsg('editMsg', 'خطأ في الاتصال', 'error');
+            }
         }
 
         function toggleMobileSidebar() {

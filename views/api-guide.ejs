@@ -2,67 +2,335 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>دليل ربط الـ API</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دليل ربط الـ API | واتساب تكوين</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-        body { font-family: 'Tajawal', sans-serif; background: #f8fafc; margin: 0; padding: 20px; color: #1e293b; line-height: 1.6; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1, h2 { color: #3b82f6; }
-        .token-box { background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe; word-break: break-all; font-family: monospace; font-size: 16px; font-weight: bold; margin: 10px 0; text-align: left; direction: ltr;}
-        .code-block { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; font-family: monospace; text-align: left; direction: ltr; overflow-x: auto; margin: 15px 0; }
-        .btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; }
-        .btn-green { background: #10b981; color: white; }
-        .btn-dark { background: #475569; color: white; }
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+        :root {
+            --primary: #0d9488; --primary-dark: #0f766e; --primary-soft: #ccfbf1;
+            --dark: #0f172a; --dark2: #1e293b; --ink-400: #94a3b8; --ink-900: #0f172a;
+            --card: #ffffff; --bg: #f1f5f9; --radius: 16px;
+            --danger: #ef4444; --danger-soft: #fee2e2;
+            --blue: #3b82f6; --blue-soft: #dbeafe;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Tajawal', sans-serif; background: var(--bg); margin: 0; color: var(--ink-900); line-height: 1.7; }
+        .topbar { background: linear-gradient(135deg, #0b1220, #131c2e 70%, #0b6e52 140%); color: white; padding: 0 30px; display: flex; justify-content: space-between; align-items: center; height: 64px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
+        .topbar-brand { display: flex; align-items: center; gap: 11px; font-weight: 900; font-size: 17px; }
+        .topbar-actions a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .topbar-actions a:hover { background: rgba(255,255,255,0.12); color: white; }
+        .container { max-width: 1080px; margin: 0 auto; padding: 30px 20px 60px; }
+
+        /* ===== بطاقة المقدمة ===== */
+        .hero-card { background: linear-gradient(150deg, #0f172a 0%, #134e4a 100%); border-radius: 20px; padding: 30px 32px; color: white; margin-bottom: 24px; box-shadow: 0 16px 40px -12px rgba(15,23,42,0.4); position: relative; overflow: hidden; }
+        .hero-card::after { content: ''; position: absolute; top: -70px; left: -70px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(13,148,136,0.35), transparent 70%); }
+        .hero-card h1 { margin: 0 0 8px; font-size: 24px; font-weight: 900; display: flex; align-items: center; gap: 10px; }
+        .hero-card p { margin: 0; color: rgba(255,255,255,0.7); font-size: 14px; max-width: 640px; }
+
+        /* ===== بطاقة التوكن ===== */
+        .token-card { background: var(--card); border-radius: var(--radius); padding: 22px 26px; box-shadow: 0 4px 16px rgba(15,23,42,0.06); border: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .token-card .label { font-size: 13px; font-weight: 800; color: var(--ink-400); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .token-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .token-box { flex: 1; background: #0f172a; color: #5eead4; padding: 14px 18px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 14px; word-break: break-all; direction: ltr; text-align: left; min-width: 240px; border: 1px solid #1e293b; }
+        .btn { padding: 11px 18px; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+        .btn-green { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 12px -4px rgba(13,148,136,0.5); }
+        .btn-green:hover { transform: translateY(-1px); }
+        .btn-red { background: var(--danger); color: white; }
+        .btn-red:hover { opacity: 0.9; }
+        .btn-outline { background: white; border: 1.5px solid #e2e8f0; color: var(--ink-900); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary-dark); }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-blue:hover { opacity: 0.9; }
+
+        /* ===== الأقسام ===== */
+        .section { background: var(--card); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(15,23,42,0.06); border: 1px solid #e2e8f0; margin-bottom: 20px; overflow: hidden; }
+        .section-head { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .section-head h2 { margin: 0; font-size: 17px; font-weight: 900; display: flex; align-items: center; gap: 10px; }
+        .section-head .tag { font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; background: var(--primary-soft); color: var(--primary-dark); font-family: 'JetBrains Mono', monospace; direction: ltr; }
+        .section-body { padding: 22px 24px; }
+        .section-body .desc { font-size: 13.5px; color: #475569; margin: 0 0 16px; }
+
+        .code-block { background: #0f172a; border-radius: 12px; padding: 16px 18px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #e2e8f0; direction: ltr; text-align: left; overflow-x: auto; margin: 10px 0 16px; position: relative; border: 1px solid #1e293b; line-height: 1.8; }
+        .code-block .lang-label { position: absolute; top: 8px; left: 12px; font-size: 10px; color: #64748b; background: #1e293b; padding: 2px 10px; border-radius: 10px; font-weight: 700; }
+        .code-block .copy-btn { position: absolute; top: 8px; right: 12px; background: #1e293b; color: #94a3b8; border: none; border-radius: 8px; padding: 4px 12px; font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+        .code-block .copy-btn:hover { background: #334155; color: white; }
+        .code-block code { white-space: pre; }
+
+        .param-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 8px; }
+        .param-table th { background: #f8fafc; text-align: right; padding: 10px 14px; font-size: 12px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+        .param-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .param-table .p-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--primary-dark); direction: ltr; text-align: left; }
+        .param-table .p-req { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; }
+        .req-yes { background: #fee2e2; color: #dc2626; }
+        .req-no { background: #e2e8f0; color: #475569; }
+        .param-table .p-desc { color: #475569; }
+
+        .note-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #92400e; margin: 14px 0; }
+        .note-box.info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+        .note-box.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .note-box strong { font-weight: 900; }
+        .note-box ul { margin: 8px 0 0; padding-right: 18px; }
+        .note-box li { margin-bottom: 4px; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .container { padding: 20px 12px 40px; } .hero-card { padding: 22px 20px; } }
+
+        .endpoint-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px dashed #e2e8f0; font-size: 13.5px; }
+        .endpoint-row:last-child { border-bottom: none; }
+        .method { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 8px; }
+        .method.post { background: #dcfce7; color: #16a34a; }
+        .method.get { background: #dbeafe; color: #2563eb; }
+        .endpoint-row .path { font-family: 'JetBrains Mono', monospace; direction: ltr; font-weight: 700; color: #0f172a; }
+        .endpoint-row .ep-desc { color: #64748b; margin-right: auto; font-size: 12.5px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h1 style="margin:0;">دليل المطورين (API) 🚀</h1>
-            <a href="/dashboard" class="btn btn-dark">العودة للوحة القيادة</a>
+    <!-- الشريط العلوي -->
+    <div class="topbar">
+        <div class="topbar-brand">
+            <span>⚡</span>
+            <span>دليل ربط الـ API</span>
         </div>
-        
-        <p>استخدم هذا الرمز السري (Token) لربط متجرك، أنظمتك، أو منصات مثل (سلة، زد) بمنصة الإرسال.</p>
-        
-        <div class="token-box" id="token"><%= user.apiToken %></div>
-        
-        <div style="display: flex; gap: 10px; margin-bottom: 30px;">
-            <button class="btn btn-green" onclick="navigator.clipboard.writeText('<%= user.apiToken %>'); alert('تم النسخ!');">نسخ الرمز</button>
-            <form action="/refresh-token" method="POST" onsubmit="return confirm('توليد رمز جديد سيوقف عمل الأكواد القديمة المربوطة. متأكد؟');">
-                <button type="submit" class="btn btn-dark" style="background:#ef4444;">توليد رمز جديد</button>
-            </form>
+        <div class="topbar-actions">
+            <a href="/dashboard">← العودة للوحة</a>
+            <a href="/logout" style="background:rgba(229,72,77,.2); color:#fca5a5;">تسجيل الخروج</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- المقدمة -->
+        <div class="hero-card">
+            <h1>🚀 دليل المطورين — واتساب تكوين</h1>
+            <p>اربط متجرك أو نظامك بمنصة الإرسال عبر الـ API الرسمي. أرسل رسائل نصية ووسائط بسهولة باستخدام رمزك السري (Token). يدعم المنصات مثل: سلة، زد، أو أي نظام مخصص.</p>
         </div>
 
-        <h2>1️⃣ إرسال رسالة نصية (JSON)</h2>
-        <p>الطريقة القياسية لإرسال نصوص عادية:</p>
-        <div class="code-block">
-curl -X POST \
-  <%= host %>/api/v1/send \
+        <!-- التوكن -->
+        <div class="token-card">
+            <div class="label">🔑 الرمز السري الخاص بك (Token) — لا تشاركه مع أحد</div>
+            <div class="token-row">
+                <div class="token-box" id="token"><%= user.apiToken %></div>
+                <button class="btn btn-green" onclick="copyToken()">📋 نسخ الرمز</button>
+                <form action="/refresh-token" method="POST" onsubmit="return confirm('⚠️ توليد رمز جديد سيوقف عمل الأكواد القديمة المربوطة. متأكد؟');" style="margin:0;">
+                    <button type="submit" class="btn btn-red">🔄 توليد رمز جديد</button>
+                </form>
+            </div>
+            <div class="note-box info" style="margin-top:14px;">
+                <strong>💡 طريقة الاستخدام:</strong> أرسل الرمز في ترويسة (Header) الطلب باسم <code style="direction:ltr; display:inline-block;">Authorization: Bearer YOUR_TOKEN</code>
+            </div>
+        </div>
+
+        <!-- 1. إرسال رسالة نصية -->
+        <div class="section">
+            <div class="section-head">
+                <h2>📨 1️⃣ إرسال رسالة نصية</h2>
+                <span class="tag">POST /api/v1/send</span>
+            </div>
+            <div class="section-body">
+                <p class="desc">الطريقة القياسية لإرسال رسالة نصية واحدة أو أكثر. الجوال يجب أن يتضمن مفتاح الدولة (مثال: <code>9665XXXXXXXX</code>).</p>
+                <div class="code-block" id="code1">
+                    <span class="lang-label">cURL</span>
+                    <button class="copy-btn" onclick="copyCode('code1')">📋 نسخ</button>
+                    <code>curl -X POST \
+  '<%= host %>/api/v1/send' \
   -H 'Authorization: Bearer <%= user.apiToken %>' \
   -H 'Content-Type: application/json' \
   -d '{
-  "to": "966501234567",
-  "message": "مرحباً! هذه رسالة تجريبية من الـ API."
-}'
+    "to": "966501234567",
+    "message": "مرحباً! هذه رسالة تجريبية من الـ API."
+  }'</code>
+                </div>
+                <div class="note-box success">
+                    <strong>✅ الرد الناجح:</strong><br>
+                    <code style="direction:ltr; display:block; margin-top:6px;">{ "success": true, "message": "تم استلام طلب الإرسال وسيتم المعالجة فوراً." }</code>
+                </div>
+            </div>
         </div>
 
-        <h2>2️⃣ إرسال وسائط وملفات (Form-Data)</h2>
-        <p>الآن يدعم الـ API الرفع القياسي للملفات كما هو متبع عالمياً في جميع المنصات المتقدمة:</p>
-        <div class="code-block">
-curl -X POST \
-  <%= host %>/api/v1/send \
+        <!-- 2. إرسال وسائط -->
+        <div class="section">
+            <div class="section-head">
+                <h2>🖼️ 2️⃣ إرسال وسائط وملفات (صور / فيديو / مستندات)</h2>
+                <span class="tag">POST /api/v1/send</span>
+            </div>
+            <div class="section-body">
+                <p class="desc">أرسل ملفات مع النص عبر Form-Data — يدعم حتى <strong>10 ملفات</strong> في الطلب الواحد.</p>
+                <div class="code-block" id="code2">
+                    <span class="lang-label">cURL</span>
+                    <button class="copy-btn" onclick="copyCode('code2')">📋 نسخ</button>
+                    <code>curl -X POST \
+  '<%= host %>/api/v1/send' \
   -H 'Authorization: Bearer <%= user.apiToken %>' \
   -F 'to=966501234567' \
   -F 'message=مرحباً، إليك هذا المرفق التلقائي.' \
-  -F 'media=@/path/to/your/file.jpg'
+  -F 'media=@/path/to/your/file.jpg'</code>
+                </div>
+                <p class="desc" style="margin-top:12px;">💬 الإرسال لعدة أرقام في طلب واحد:</p>
+                <div class="code-block" id="code3">
+                    <span class="lang-label">JSON (متعدد)</span>
+                    <button class="copy-btn" onclick="copyCode('code3')">📋 نسخ</button>
+                    <code>curl -X POST \
+  '<%= host %>/api/v1/send' \
+  -H 'Authorization: Bearer <%= user.apiToken %>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "to": ["966501234567", "966501234568", "966501234569"],
+    "message": "رسالة جماعية للعملاء 🎉"
+  }'</code>
+                </div>
+            </div>
         </div>
 
-        <p style="margin-top: 30px; font-weight: bold; color: #ef4444;">ملاحظات هامة:</p>
-        <ul>
-            <li>مسار الـ API الرسمي والموثق الآن هو: <code>/api/v1/send</code></li>
-            <li>رقم الجوال <code>to</code> يجب أن يحتوي على مفتاح الدولة (مثال: 966 أو 20).</li>
-            <li>الحد الأقصى لحجم المرفقات (media) هو 15 ميجابايت للملف الواحد.</li>
-        </ul>
+        <!-- 3. أمثلة بلغات البرمجة -->
+        <div class="section">
+            <div class="section-head">
+                <h2>💻 3️⃣ أمثلة جاهزة بلغات البرمجة</h2>
+            </div>
+            <div class="section-body">
+                <div class="grid-2">
+                    <div>
+                        <p class="desc" style="font-weight:800; margin-bottom:8px;">Node.js (JavaScript)</p>
+                        <div class="code-block" id="codeNode">
+                            <span class="lang-label">Node.js</span>
+                            <button class="copy-btn" onclick="copyCode('codeNode')">📋 نسخ</button>
+                            <code>const res = await fetch('<%= host %>/api/v1/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer <%= user.apiToken %>',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    to: '966501234567',
+    message: 'مرحباً من Node.js!'
+  })
+});
+const data = await res.json();
+console.log(data);</code>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="desc" style="font-weight:800; margin-bottom:8px;">Python</p>
+                        <div class="code-block" id="codePy">
+                            <span class="lang-label">Python</span>
+                            <button class="copy-btn" onclick="copyCode('codePy')">📋 نسخ</button>
+                            <code>import requests
+
+res = requests.post(
+    '<%= host %>/api/v1/send',
+    headers={
+        'Authorization': 'Bearer <%= user.apiToken %>',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'to': '966501234567',
+        'message': 'مرحباً من Python!'
+    }
+)
+print(res.json())</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. جدول المعاملات -->
+        <div class="section">
+            <div class="section-head">
+                <h2>📋 4️⃣ شرح معاملات الطلب (Parameters)</h2>
+            </div>
+            <div class="section-body">
+                <table class="param-table">
+                    <thead>
+                        <tr><th>المعامل</th><th>مطلوب</th><th>الوصف</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="p-name">to</span></td>
+                            <td><span class="p-req req-yes">مطلوب</span></td>
+                            <td class="p-desc">رقم الجوال بصيغة دولية <code>9665XXXXXXXX</code> — أو مصفوفة أرقام للإرسال الجماعي.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="p-name">message</span></td>
+                            <td><span class="p-req req-yes">مطلوب*</span></td>
+                            <td class="p-desc">نص الرسالة. *مطلوب إلا إذا أرسلت وسائط فقط.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="p-name">media</span></td>
+                            <td><span class="p-req req-no">اختياري</span></td>
+                            <td class="p-desc">الملفات (صور/فيديو/مستندات) — حتى 10 ملفات، والحد الأقصى 15 ميجابايت للملف.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. رموز الأخطاء -->
+        <div class="section">
+            <div class="section-head">
+                <h2>⚠️ 5️⃣ رموز الأخطاء الشائعة</h2>
+            </div>
+            <div class="section-body">
+                <table class="param-table">
+                    <thead>
+                        <tr><th>رمز الحالة</th><th>المعنى</th><th>الحل</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="p-name">401</span></td>
+                            <td>رمز غير صحيح أو مفقود</td>
+                            <td class="p-desc">تأكد من إرسال <code>Authorization: Bearer TOKEN</code> بشكل صحيح.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="p-name">403</span></td>
+                            <td>الاشتراك غير نشط أو منتهي</td>
+                            <td class="p-desc">جدد اشتراكك من صفحة الاشتراك والدفع.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="p-name">400</span></td>
+                            <td>بيانات غير صحيحة</td>
+                            <td class="p-desc">تحقق من صيغة الأرقام (يجب أن تبدأ بـ 9665) ووجود النص أو الملف.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="p-name">503</span></td>
+                            <td>الواتساب غير متصل</td>
+                            <td class="p-desc">افتح لوحة التحكم وتأكد من ربط رقم الواتساب، ثم أعد المحاولة.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6. ملاحظات -->
+        <div class="section">
+            <div class="section-head">
+                <h2>📌 6️⃣ ملاحظات هامة</h2>
+            </div>
+            <div class="section-body">
+                <div class="note-box">
+                    <ul>
+                        <li>مسار الـ API الرسمي هو: <code>/api/v1/send</code> (ويمكن استخدام <code>/api/send-message</code> كبديل متوافق).</li>
+                        <li>رقم الجوال يجب أن يحتوي على مفتاح الدولة (مثال: 966 أو 20).</li>
+                        <li>الحد الأقصى لحجم المرفقات (media) هو 15 ميجابايت للملف الواحد، و10 ملفات كحد أقصى.</li>
+                        <li>عند توليد رمز جديد، تتعطل جميع الأكواد القديمة المربوطة بالرمز السابق.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function copyToken() {
+            navigator.clipboard.writeText('<%= user.apiToken %>').then(() => alert('✅ تم نسخ الرمز!'));
+        }
+        function copyCode(id) {
+            const el = document.getElementById(id);
+            const code = el.querySelector('code').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = el.querySelector('.copy-btn');
+                const old = btn.innerText;
+                btn.innerText = '✅ تم النسخ';
+                setTimeout(() => btn.innerText = old, 1500);
+            });
+        }
+    </script>
 </body>
 </html>

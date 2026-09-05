@@ -9,166 +9,218 @@
     <link rel="stylesheet" href="/css/theme.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #eef2ff;
-            --green: #10b981; --green-light: #ecfdf5;
-            --blue: #3b82f6; --blue-light: #eff6ff;
-            --red: #ef4444; --red-light: #fef2f2;
-            --orange: #f59e0b; --orange-light: #fffbeb;
-            --purple: #8b5cf6; --purple-light: #f5f3ff;
-            --dark: #0f172a; --dark2: #1e293b; --gray: #64748b; --gray-light: #94a3b8;
-            --bg: #f8fafc; --card: #ffffff;
-            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.08);
-            --radius: 16px;
-        }
-        body { font-family: 'Tajawal', sans-serif; background: var(--bg); color: var(--dark2); line-height: 1.7; }
+        body { font-family: var(--font); background: var(--bg); background-image: var(--bg-grad); color: var(--ink-800); line-height: 1.7; }
 
-        /* ===== Top Bar ===== */
+        /* ===== الشريط العلوي ===== */
         .topbar {
-            background: linear-gradient(135deg, var(--dark) 0%, #1a1a2e 50%, var(--primary-dark) 100%);
-            color: white; padding: 0 40px; display: flex; justify-content: space-between; align-items: center;
-            position: sticky; top: 0; z-index: 100; height: 65px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #0b1220 0%, #131c2e 60%, #0b6e52 130%);
+            color: white; padding: 0 30px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100; height: 64px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18);
         }
-        .topbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 19px; }
-        .topbar-brand .crown { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; }
-        .topbar-actions { display: flex; gap: 10px; }
-        .topbar-actions a { color: rgba(255,255,255,0.7); text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .topbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 18px; }
+        .topbar-brand .crown { font-size: 22px; }
+        .topbar-actions { display: flex; gap: 8px; }
+        .topbar-actions a {
+            color: rgba(255,255,255,0.75); text-decoration: none; padding: 8px 16px; border-radius: 10px;
+            font-size: 13px; font-weight: 700; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+        }
         .topbar-actions a:hover { background: rgba(255,255,255,0.1); color: white; }
-        .topbar-actions .btn-logout { background: rgba(239,68,68,0.15); color: #fca5a5; }
-        .topbar-actions .btn-logout:hover { background: rgba(239,68,68,0.3); }
+        .topbar-actions .btn-logout { background: rgba(239,68,68,0.18); color: #fca5a5; }
+        .topbar-actions .btn-logout:hover { background: rgba(239,68,68,0.32); }
 
-        /* ===== Container ===== */
-        .container { max-width: 1400px; margin: 0 auto; padding: 30px 40px; }
+        /* ===== الحاوية ===== */
+        .container { max-width: 1400px; margin: 0 auto; padding: 26px 30px 60px; }
 
-        /* ===== Stats Row ===== */
-        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: var(--card); border-radius: var(--radius); padding: 25px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: all 0.3s; border: 1px solid transparent; }
+        /* ===== شريط التبويبات ===== */
+        .tabs-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px;
+            background: var(--card); border: 1px solid var(--ink-100); border-radius: var(--r-lg);
+            padding: 8px; box-shadow: var(--shadow-sm); position: sticky; top: 76px; z-index: 90;
+        }
+        .tab-btn {
+            display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border: none; border-radius: var(--r-sm);
+            background: transparent; color: var(--ink-500); font-family: inherit; font-size: 14px; font-weight: 800;
+            cursor: pointer; transition: all 0.2s; flex: 1; justify-content: center; min-width: 130px;
+        }
+        .tab-btn:hover { background: var(--ink-50); color: var(--primary-dark); }
+        .tab-btn.active { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; box-shadow: var(--shadow-glow); }
+        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===== بطاقات الإحصائيات ===== */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; margin-bottom: 24px; }
+        .stat-card {
+            background: var(--card); border-radius: var(--r-lg); padding: 22px 24px; box-shadow: var(--shadow);
+            position: relative; overflow: hidden; border: 1px solid var(--ink-100); transition: all 0.3s;
+        }
         .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-        .stat-card.purple { border-bottom: 3px solid var(--purple); }
-        .stat-card.green { border-bottom: 3px solid var(--green); }
-        .stat-card.blue { border-bottom: 3px solid var(--blue); }
-        .stat-card .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 15px; }
-        .stat-card .stat-label { font-size: 13px; color: var(--gray); font-weight: 600; }
-        .stat-card .stat-value { font-size: 38px; font-weight: 900; color: var(--dark); line-height: 1.1; }
-        .stat-card .stat-bg { position: absolute; bottom: -15px; left: -10px; font-size: 90px; opacity: 0.04; }
+        .stat-card .stat-icon {
+            width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 22px; margin-bottom: 12px;
+        }
+        .stat-card .stat-label { font-size: 12.5px; color: var(--ink-400); font-weight: 700; }
+        .stat-card .stat-value { font-size: 34px; font-weight: 900; color: var(--ink-900); line-height: 1.15; font-family: var(--font-num); }
+        .stat-card .stat-bg { position: absolute; bottom: -14px; left: -8px; font-size: 84px; opacity: 0.045; }
 
-        /* ===== Grid ===== */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
-        .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-bottom: 25px; }
+        /* ===== البطاقات العامة ===== */
+        .card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); border: 1px solid var(--ink-100); overflow: hidden; }
+        .card-header { padding: 18px 24px; border-bottom: 1px solid var(--ink-50); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .card-header h3 { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 9px; color: var(--ink-900); }
+        .card-body { padding: 22px 24px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+        .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; margin-bottom: 22px; }
+        .mb { margin-bottom: 22px; }
 
-        /* ===== Card ===== */
-        .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; overflow: hidden; }
-        .card-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
-        .card-header h3 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-        .card-body { padding: 25px; }
+        /* ===== نموذج ===== */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 700; font-size: 13px; color: var(--ink-500); margin-bottom: 6px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 11px 14px; border: 2px solid var(--ink-100); border-radius: var(--r-sm);
+            font-family: inherit; font-size: 14px; outline: none; transition: border 0.2s; background: white; color: var(--ink-800);
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+        .form-hint { font-size: 11.5px; color: var(--ink-300); margin-top: 5px; display: block; }
+        .form-divider { border-top: 1px dashed var(--ink-100); margin: 22px 0; }
 
-        /* ===== System WA Card ===== */
-        .system-card { background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); border: 1px solid #bbf7d0; }
-        .system-card .card-header { border-color: #bbf7d0; }
-        #sys-status { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-        #sys-qr { width: 200px; border-radius: 14px; border: 3px solid #d1fae5; padding: 8px; background: white; }
-        .sys-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-        .sys-dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,0.2); animation: gpulse 2s infinite; }
-        .sys-dot.off { background: var(--red); }
-        @keyframes gpulse { 0%,100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.2); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0.05); } }
+        /* ===== أزرار ===== */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 22px;
+            border: none; border-radius: var(--r-sm); font-family: inherit; font-weight: 800; font-size: 13.5px;
+            cursor: pointer; text-decoration: none; transition: all 0.2s; color: white;
+        }
+        .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-glow); }
+        .btn-green { background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
+        .btn-blue { background: var(--info); }
+        .btn-red { background: var(--danger); }
+        .btn-dark { background: var(--ink-700); }
+        .btn-outline { background: white; color: var(--ink-600); border: 2px solid var(--ink-100); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary-dark); box-shadow: none; }
+        .btn-full { width: 100%; }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
 
-
-        /* ===== Settings Card ===== */
-        .settings-card { border: 1px solid #e2e8f0; }
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; font-weight: 700; font-size: 13px; color: var(--gray); margin-bottom: 6px; }
-        .form-group input { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 14px; outline: none; transition: border 0.2s; }
-        .form-group input:focus { border-color: var(--primary); }
-        .form-divider { border-top: 1px solid #f1f5f9; margin: 20px 0; }
-
-        /* ===== Chart ===== */
-        .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 10px; border-bottom: 2px solid #f1f5f9; }
-        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
-        .bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); min-height: 4px; }
-        .bar.gradient { background: linear-gradient(180deg, var(--primary) 0%, #818cf8 100%); }
-        .bar-label { font-size: 11px; color: var(--gray-light); margin-top: 6px; }
-        .bar-value { font-size: 11px; font-weight: 800; color: var(--dark2); }
-
-        /* ===== Top Users ===== */
-        .rank-list { list-style: none; }
-        .rank-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
-        .rank-item:last-child { border: none; }
-        .rank-info { display: flex; align-items: center; gap: 12px; }
-        .rank-medal { font-size: 22px; width: 30px; text-align: center; }
-        .rank-name { font-weight: 700; font-size: 14px; }
-        .rank-count { background: #f1f5f9; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; color: var(--gray); }
-
-        /* ===== Add User ===== */
-        .add-user-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-        .add-user-form .form-group { flex: 1; min-width: 150px; margin: 0; }
-        .add-user-form .form-group input { margin: 0; }
-
-        /* ===== Table ===== */
-        .table-card { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        thead th { background: #f8fafc; color: var(--gray); font-weight: 700; padding: 14px 18px; text-align: right; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
-        tbody td { padding: 16px 18px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        /* ===== جدول العملاء ===== */
+        .table-card { overflow: hidden; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th {
+            background: var(--ink-50); color: var(--ink-400); font-weight: 800; padding: 13px 16px; text-align: right;
+            font-size: 12px; letter-spacing: 0.3px; border-bottom: 2px solid var(--ink-100); white-space: nowrap;
+        }
+        tbody td { padding: 14px 16px; border-bottom: 1px solid var(--ink-50); vertical-align: middle; }
         tbody tr { transition: background 0.15s; }
-        tbody tr:hover { background: #fafbff; }
-        .user-name { font-weight: 800; color: var(--dark); font-size: 15px; }
-        .user-phone { color: var(--gray); font-size: 13px; direction: ltr; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; }
-        .badge-green { background: var(--green-light); color: #059669; }
-        .badge-red { background: var(--red-light); color: #dc2626; }
-        .badge-gray { background: #f1f5f9; color: var(--gray); }
+        tbody tr:hover { background: #fafdff; }
+        .user-cell { display: flex; align-items: center; gap: 11px; }
+        .user-avatar {
+            width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; flex-shrink: 0;
+        }
+        .user-name { font-weight: 800; color: var(--ink-900); font-size: 14px; }
+        .user-phone { color: var(--ink-400); font-size: 12px; direction: ltr; text-align: right; font-family: var(--font-num); }
+
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+        .badge-green { background: var(--primary-soft); color: var(--primary-dark); }
+        .badge-red { background: var(--danger-soft); color: var(--danger); }
+        .badge-gray { background: var(--ink-50); color: var(--ink-400); }
+        .badge-blue { background: var(--info-soft); color: var(--info); }
+        .sub-date { font-size: 11px; color: var(--ink-400); margin-top: 4px; font-weight: 600; }
 
         .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-        .action-btn { padding: 7px 14px; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 700; color: white; font-size: 12px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
-        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-        .action-btn.blue { background: var(--blue); }
-        .action-btn.dark { background: var(--dark2); }
-        .action-btn.purple { background: var(--purple); }
-        .action-btn.red { background: var(--red); }
-        .action-btn.green { background: var(--green); }
+        .action-btn {
+            padding: 7px 13px; border: none; border-radius: 9px; cursor: pointer; font-family: inherit; font-weight: 800;
+            color: white; font-size: 11.5px; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+        .action-btn.blue { background: var(--info); }
+        .action-btn.dark { background: var(--ink-700); }
+        .action-btn.purple { background: var(--violet); }
+        .action-btn.red { background: var(--danger); }
+        .action-btn.green { background: var(--primary); }
 
-        /* ===== Buttons ===== */
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 22px; border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; transition: all 0.2s; color: white; }
-        .btn:hover { transform: translateY(-1px); }
-        .btn-primary { background: var(--primary); }
-        .btn-blue { background: var(--blue); }
-        .btn-green { background: var(--green); }
-        .btn-red { background: var(--red); }
-        .btn-dark { background: var(--dark2); }
-        .btn-full { width: 100%; }
+        /* ===== رقم الإدارة ===== */
+        .sys-wrap { background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%); border: 1px solid #bbf7d0; border-radius: var(--r-lg); padding: 22px; }
+        #sys-status { font-weight: 800; font-size: 14.5px; display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+        #sys-qr { width: 190px; border-radius: 14px; border: 3px solid #d1fae5; padding: 8px; background: white; }
+        .sys-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .sys-dot.on { background: var(--whatsapp); box-shadow: 0 0 0 3px rgba(37,211,102,0.2); animation: gpulse 2s infinite; }
+        .sys-dot.off { background: var(--danger); }
+        @keyframes gpulse { 0%,100% { box-shadow: 0 0 0 3px rgba(37,211,102,0.2); } 50% { box-shadow: 0 0 0 8px rgba(37,211,102,0.05); } }
+        .sys-tabs { display: flex; border-radius: 10px; overflow: hidden; border: 2px solid #bbf7d0; margin-bottom: 12px; }
+        .sys-tabs button {
+            flex: 1; padding: 9px; font-weight: 800; font-size: 12px; cursor: pointer; background: white; color: var(--ink-400);
+            border: none; font-family: inherit; transition: all 0.2s;
+        }
+        .sys-tabs button.active { background: var(--primary); color: white; }
+        .pairing-row { display: flex; gap: 6px; }
+        .pairing-row input {
+            flex: 1; border: 2px solid #d1fae5; border-radius: 10px; padding: 10px 12px; font-size: 13px; outline: none; direction: ltr; font-family: var(--font-num);
+        }
+        .pairing-code-box {
+            background: white; border: 2px solid #86efac; border-radius: 12px; padding: 14px; text-align: center; margin-top: 10px;
+        }
+        .pairing-code-box .code {
+            font-size: 26px; font-weight: 900; letter-spacing: 6px; color: var(--primary-deep); font-family: monospace; direction: ltr;
+        }
 
-        /* ===== Modal ===== */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; }
+        /* ===== الرسم البياني ===== */
+        .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 10px; border-bottom: 2px solid var(--ink-50); }
+        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+        .bar { width: 100%; border-radius: 6px 6px 0 0; transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); min-height: 4px; background: linear-gradient(180deg, var(--primary), var(--primary-2)); }
+        .bar-label { font-size: 10.5px; color: var(--ink-300); margin-top: 6px; }
+        .bar-value { font-size: 11px; font-weight: 800; color: var(--ink-600); }
+
+        /* ===== الأكثر إرسالاً ===== */
+        .rank-list { list-style: none; }
+        .rank-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--ink-50); }
+        .rank-item:last-child { border: none; }
+        .rank-info { display: flex; align-items: center; gap: 11px; }
+        .rank-medal { font-size: 20px; width: 28px; text-align: center; }
+        .rank-name { font-weight: 700; font-size: 13.5px; color: var(--ink-800); }
+        .rank-count { background: var(--primary-soft); padding: 4px 13px; border-radius: 20px; font-size: 11.5px; font-weight: 800; color: var(--primary-dark); }
+
+        /* ===== البحث ===== */
+        .search-input {
+            width: 240px; padding: 10px 14px 10px 36px; border: 2px solid var(--ink-100); border-radius: 10px;
+            font-family: inherit; font-size: 13px; outline: none; transition: all 0.2s; background: white; position: relative;
+        }
+        .search-wrap { position: relative; }
+        .search-wrap .s-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-300); font-size: 13px; pointer-events: none; }
+
+        /* ===== مودال ===== */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(11,18,32,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; padding: 18px; }
         .modal-overlay.show { display: flex; }
-        .modal-box { background: white; border-radius: 20px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s ease; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .modal-header { padding: 22px 25px; border-bottom: 1px solid #f1f5f9; }
-        .modal-header h3 { font-size: 18px; font-weight: 900; }
-        .modal-body { padding: 25px; }
-        .modal-footer { padding: 15px 25px; border-top: 1px solid #f1f5f9; display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-box { background: white; border-radius: 20px; width: 100%; max-width: 460px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); animation: modalIn 0.25s ease; max-height: 92vh; overflow-y: auto; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--ink-50); background: linear-gradient(135deg, var(--primary-soft), #f8fafc); }
+        .modal-header h3 { font-size: 17px; font-weight: 900; color: var(--ink-900); }
+        .modal-body { padding: 22px 24px; }
+        .modal-footer { padding: 15px 24px; border-top: 1px solid var(--ink-50); display: flex; gap: 10px; justify-content: flex-end; }
 
-        /* ===== Responsive ===== */
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-300); font-size: 14px; }
+
+        /* ===== استجابة ===== */
         @media (max-width: 900px) {
-            .topbar { padding: 0 20px; }
-            .container { padding: 20px; }
+            .container { padding: 18px 14px; }
+            .topbar { padding: 0 14px; }
             .grid-2, .grid-2-1 { grid-template-columns: 1fr; }
             .stats-row { grid-template-columns: repeat(2, 1fr); }
-            .action-btns { flex-direction: column; }
+            .tabs-bar { position: static; }
+            .search-input { width: 100%; }
         }
         @media (max-width: 600px) {
             .stats-row { grid-template-columns: 1fr; }
-            .add-user-form { flex-direction: column; }
-            .topbar-brand span:not(.crown) { display: none; }
+            .action-btns { flex-direction: column; }
+            .topbar-brand .brand-text { display: none; }
         }
     </style>
 </head>
 <body>
-    <!-- Top Bar -->
+    <!-- ===== الشريط العلوي ===== -->
     <div class="topbar">
         <div class="topbar-brand">
             <span class="crown">👑</span>
-            <span>الإدارة المركزية</span>
+            <span class="brand-text">الإدارة المركزية</span>
         </div>
         <div class="topbar-actions">
             <a href="/dashboard">📊 لوحتي</a>
@@ -177,238 +229,349 @@
     </div>
 
     <div class="container">
-        <!-- Stats -->
-        <div class="stats-row">
-            <div class="stat-card purple">
-                <div class="stat-bg">👥</div>
-                <div class="stat-icon" style="background: var(--purple-light); color: var(--purple);">👥</div>
-                <div class="stat-label">إجمالي العملاء</div>
-                <div class="stat-value"><%= users.length %></div>
+        <!-- ===== شريط التبويبات ===== -->
+        <div class="tabs-bar">
+            <button class="tab-btn active" onclick="switchAdminTab('overview', this)">📊 نظرة عامة</button>
+            <button class="tab-btn" onclick="switchAdminTab('clients', this)">👥 العملاء (<%= users.length %>)</button>
+            <button class="tab-btn" onclick="switchAdminTab('system', this)">🤖 رقم الإدارة</button>
+            <button class="tab-btn" onclick="switchAdminTab('settings', this)">⚙️ الإعدادات</button>
+            <button class="tab-btn" onclick="switchAdminTab('payments', this)">💳 الدفعات (<%= (typeof payments !== 'undefined' && payments ? payments : []).filter(p=>p.status==='pending').length %>)</button>
+            <button class="tab-btn" onclick="switchAdminTab('notifications', this)">📨 رسائل الإشعارات</button>
+            <a class="tab-btn" href="/admin/logs" style="text-decoration:none;">📜 سجل الرسائل</a>
+        </div>
+
+        <!-- ============ تبويب: نظرة عامة ============ -->
+        <div class="tab-panel active" id="tab-overview">
+            <%
+                const activeClients = users.filter(u => { let d = u.subscriptionEndsAt ? Math.ceil((new Date(u.subscriptionEndsAt) - new Date()) / 86400000) : 0; return d > 0; }).length;
+                let maxCount = 0; dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; }); if(maxCount===0) maxCount=1;
+            %>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-bg">👥</div>
+                    <div class="stat-icon" style="background:var(--violet-soft); color:var(--violet);">👥</div>
+                    <div class="stat-label">إجمالي العملاء</div>
+                    <div class="stat-value"><%= users.length %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">📨</div>
+                    <div class="stat-icon" style="background:var(--primary-soft); color:var(--primary);">📨</div>
+                    <div class="stat-label">إجمالي الرسائل</div>
+                    <div class="stat-value"><%= totalSystemMessages %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">✅</div>
+                    <div class="stat-icon" style="background:var(--info-soft); color:var(--info);">✅</div>
+                    <div class="stat-label">عملاء باشتراك فعّال</div>
+                    <div class="stat-value"><%= activeClients %></div>
+                </div>
+                <div class="stat-card" style="cursor:pointer;" onclick="switchAdminTab('clients', document.querySelectorAll('.tab-btn')[1])" title="إدارة العملاء">
+                    <div class="stat-bg">⚡</div>
+                    <div class="stat-icon" style="background:#fef3c7; color:#d97706;">⚡</div>
+                    <div class="stat-label">إجراءات سريعة</div>
+                    <div class="stat-value" style="font-size:16px; font-weight:800; padding-top:8px;">إضافة / تعديل / سجل ←</div>
+                </div>
             </div>
-            <div class="stat-card green">
-                <div class="stat-bg">📨</div>
-                <div class="stat-icon" style="background: var(--green-light); color: var(--green);">📨</div>
-                <div class="stat-label">إجمالي الرسائل</div>
-                <div class="stat-value"><%= totalSystemMessages %></div>
-            </div>
-            <div class="stat-card blue">
-                <div class="stat-bg">✅</div>
-                <div class="stat-icon" style="background: var(--blue-light); color: var(--blue);">✅</div>
-                <div class="stat-label">عملاء نشطون</div>
-                <div class="stat-value"><%= users.filter(u => { let d = u.subscriptionEndsAt ? Math.ceil((new Date(u.subscriptionEndsAt) - new Date()) / 86400000) : 0; return d > 0; }).length %></div>
+
+            <div class="grid-2-1">
+                <div class="card">
+                    <div class="card-header"><h3>📈 إحصائية الرسائل — آخر 7 أيام</h3></div>
+                    <div class="card-body">
+                        <% if(dailyStats.length===0) { %>
+                            <div class="empty-state">لا توجد بيانات إرسال خلال آخر 7 أيام</div>
+                        <% } else { %>
+                            <div class="bar-chart">
+                                <% dailyStats.forEach(s => { let hp = (s.count/maxCount)*100; %>
+                                <div class="bar-col">
+                                    <div class="bar-value"><%= s.count %></div>
+                                    <div class="bar" style="height: <%= hp %>%;"></div>
+                                    <div class="bar-label"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
+                                </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>🏆 الأكثر إرسالاً</h3></div>
+                    <div class="card-body" style="padding-top: 10px;">
+                        <ul class="rank-list">
+                            <% topUsers.forEach((t, i) => { %>
+                            <li class="rank-item">
+                                <div class="rank-info">
+                                    <span class="rank-medal"><%= i===0?'🥇':(i===1?'🥈':(i===2?'🥉':'👤')) %></span>
+                                    <span class="rank-name"><%= t.username %></span>
+                                </div>
+                                <span class="rank-count"><%= t.count %> رسالة</span>
+                            </li>
+                            <% }) %>
+                            <% if(topUsers.length===0) { %><li class="rank-item" style="justify-content:center;color:var(--ink-300);">لا توجد إحصائيات بعد</li><% } %>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- System WA + Settings -->
-        <div class="grid-2">
-            <div class="card system-card">
+        <!-- ============ تبويب: العملاء ============ -->
+        <div class="tab-panel" id="tab-clients">
+            <!-- إضافة عميل -->
+            <div class="card mb">
                 <div class="card-header">
-                    <h3>🤖 رقم الإدارة</h3>
+                    <h3>➕ إضافة عميل جديد <span class="badge badge-green">+<%= settings.freeTrialDays %> أيام مجاناً</span></h3>
                 </div>
                 <div class="card-body">
-                    <div id="sys-status" style="color:#b91c1c; margin-bottom: 15px;">
-                        <span class="sys-dot off"></span> بانتظار التحميل...
-                    </div>
-
-                    <!-- حالة متصل -->
-                    <div id="sys-connected" style="display:none; background:var(--green-light); border-radius:12px; padding:18px; margin-bottom:15px;">
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="width:44px;height:44px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0;">✓</div>
-                            <div><strong style="color:#166534;">رقم الإدارة متصل وجاهز</strong><br><span style="font-size:12px;color:#4ade80;">يعمل لإرسال أكواد التفعيل</span></div>
+                    <form method="POST" action="/admin/add-user" class="add-user-form" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="form-group" style="flex:1; min-width:160px; margin:0;">
+                            <label>اسم المستخدم</label>
+                            <input type="text" name="username" placeholder="مثال: ahmed_store" required>
                         </div>
-                    </div>
-
-                    <!-- قسم الربط -->
-                    <div id="sys-link-section" style="display:none;">
-                        <div style="display:flex; border-radius:8px; overflow:hidden; border:2px solid #bbf7d0; margin-bottom:12px;">
-                            <button id="sysTabQR" onclick="switchSysTab('qr')" style="flex:1;padding:8px;font-weight:700;font-size:12px;cursor:pointer;background:var(--green);color:white;border:none;font-family:inherit;">📷 باركود</button>
-                            <button id="sysTabCode" onclick="switchSysTab('code')" style="flex:1;padding:8px;font-weight:700;font-size:12px;cursor:pointer;background:white;color:var(--gray);border:none;font-family:inherit;">📱 ربط بالرقم</button>
+                        <div class="form-group" style="flex:1; min-width:160px; margin:0;">
+                            <label>رقم الجوال</label>
+                            <input type="text" name="phone" placeholder="9665xxxxxxxx" dir="ltr">
                         </div>
-                        <div id="sysQRTab">
-                            <div id="sys-qr-container" style="text-align:center;">
-                                <img id="sys-qr" src="">
-                                <p style="color:var(--gray);font-size:11px;margin-top:6px;">امسح الباركود من واتساب</p>
-                            </div>
+                        <div class="form-group" style="flex:1; min-width:160px; margin:0;">
+                            <label>كلمة المرور</label>
+                            <input type="password" name="password" placeholder="••••••" required>
                         </div>
-                        <div id="sysCodeTab" style="display:none;">
-                            <p style="font-size:11px;color:var(--gray);margin-bottom:8px;">أدخل رقم الإدارة مع رمز الدولة:</p>
-                            <div style="display:flex;gap:6px;">
-                                <input type="text" id="adminPairingPhone" placeholder="966500000000" dir="ltr" style="flex:1;border:2px solid #d1fae5;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;direction:ltr;font-family:inherit;">
-                                <button id="adminPairingBtn" onclick="getAdminPairingCode()" style="background:var(--green);color:white;border:none;border-radius:8px;padding:9px 14px;font-weight:800;font-family:inherit;cursor:pointer;font-size:12px;">🔑 توليد</button>
-                            </div>
-                            <div id="adminPairingResult"></div>
-                        </div>
-                    </div>
-
-                    <form action="/admin/disconnect-system-whatsapp" method="POST" style="margin-top:15px;" onsubmit="return confirm('هل تريد فصل الرقم الإداري وربط رقم جديد؟');">
-                        <button type="submit" class="btn btn-red btn-full">🔌 فصل وإعادة ربط</button>
+                        <button type="submit" class="btn btn-green" style="height:44px;">✅ إنشاء وتفعيل</button>
                     </form>
                 </div>
             </div>
 
-            <div class="card settings-card">
+            <!-- جدول العملاء -->
+            <div class="card table-card">
                 <div class="card-header">
-                    <h3>⚙️ الإعدادات</h3>
+                    <h3>👥 قائمة العملاء (<%= users.length %>)</h3>
+                    <div class="search-wrap">
+                        <span class="s-icon">🔎</span>
+                        <input type="text" class="search-input" id="usersSearch" placeholder="ابحث بالاسم أو الرقم..." oninput="filterUsers()">
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>المستخدم</th>
+                                <th>الجوال</th>
+                                <th>الاشتراك</th>
+                                <th>الحالة</th>
+                                <th>إرسال حذر</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.forEach((u, idx) => {
+                                let daysLeft = 0;
+                                if(u.subscriptionEndsAt) { daysLeft = Math.ceil((new Date(u.subscriptionEndsAt) - new Date()) / 86400000); if(daysLeft<0) daysLeft=0; }
+                                const initial = (u.username || '؟').charAt(0).toUpperCase();
+                            %>
+                            <tr data-search="<%= (u.username || '').toLowerCase() %> <%= (u.phone || '').toLowerCase() %>">
+                                <td style="color:var(--ink-300); font-weight:800;"><%= idx+1 %></td>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar"><%= initial %></div>
+                                        <div>
+                                            <div class="user-name"><%= u.username %></div>
+                                            <div style="font-size:11px;color:var(--ink-300);"><%= u.isActive ? 'مفعل' : 'معطل' %></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="user-phone"><%= u.phone || '—' %></span></td>
+                                <td>
+                                    <span class="badge <%= daysLeft>0 ? 'badge-green' : 'badge-red' %>">
+                                        <%= daysLeft>0 ? `${daysLeft} يوم متبقي` : 'منتهي' %>
+                                    </span>
+                                    <div class="sub-date">📅 <%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : 'غير محدد' %></div>
+                                </td>
+                                <td>
+                                    <span class="badge <%= u.isActive ? 'badge-green' : 'badge-gray' %>">
+                                        <%= u.isActive ? '✅ مفعّل' : '⛔ معطّل' %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <form action="/admin/cautious-toggle/<%= u._id %>" method="POST" style="display:inline;">
+                                        <button type="submit" class="action-btn <%= u.cautiousMode ? 'red' : '' %>" style="<%= u.cautiousMode ? 'background:#f97316;border-color:#f97316;' : '' %>" onclick="return confirm('<%= u.cautiousMode ? 'تعطيل' : 'تفعيل' %> الإرسال الحذر لـ <%= u.username %>؟')">
+                                            <%= u.cautiousMode ? '🛡️ مفعّل' : '🛡️ تعطيل' %>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.phone || '' %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
+                                        <a href="/admin/logs/<%= u._id %>" class="action-btn dark">📜 سجل</a>
+                                        <a href="/admin/login-as/<%= u._id %>" class="action-btn purple" onclick="return confirm('الدخول لحساب <%= u.username %>؟')">👁️ دخول</a>
+                                        <form action="/admin/toggle-user/<%= u._id %>" method="POST" style="display:inline;">
+                                            <button type="submit" class="action-btn <%= u.isActive ? 'red' : 'green' %>" onclick="return confirm('<%= u.isActive ? 'تعطيل' : 'تفعيل' %> حساب <%= u.username %>؟')">
+                                                <%= u.isActive ? '⛔ تعطيل' : '✅ تفعيل' %>
+                                            </button>
+                                        </form>
+                                        <form action="/admin/delete-user/<%= u._id %>" method="POST" style="display:inline;">
+                                            <button type="submit" class="action-btn red" onclick="return confirm('⚠️ حذف نهائي لحساب <%= u.username %> وجميع سجلاته؟ لا يمكن التراجع!')">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% }) %>
+                            <% if(users.length===0) { %>
+                            <tr><td colspan="7" class="empty-state">لا يوجد عملاء مسجلين بعد</td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ تبويب: رقم الإدارة ============ -->
+        <div class="tab-panel" id="tab-system">
+            <div class="card" style="max-width: 640px;">
+                <div class="card-header">
+                    <h3>🤖 رقم الإدارة (نظام التفعيل)</h3>
+                    <span class="badge badge-blue">يرسل أكواد التفعيل OTP</span>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="/admin/settings">
-                        <div class="form-group">
-                            <label>📞 رقم الدعم الفني</label>
-                            <input type="text" name="supportPhone" value="<%= settings.supportPhone %>" placeholder="966598686902" required>
+                    <div class="sys-wrap">
+                        <div id="sys-status" style="color:var(--danger);">
+                            <span class="sys-dot off"></span> بانتظار التحميل...
                         </div>
-                        <div class="form-group">
-                            <label>🎁 الأيام المجانية للتجربة</label>
-                            <input type="number" name="freeTrialDays" value="<%= settings.freeTrialDays %>" min="0" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full">💾 حفظ الإعدادات</button>
-                    </form>
 
-                    <div class="form-divider"></div>
-
-                    <form method="POST" action="/admin/change-password" onsubmit="return confirm('تأكيد تغيير كلمة مرور الإدارة؟');">
-                        <div class="form-group">
-                            <label>🔑 كلمة مرور جديدة للإدارة</label>
-                            <input type="password" name="newPassword" placeholder="أدخل كلمة المرور الجديدة" required minlength="6">
+                        <!-- حالة متصل -->
+                        <div id="sys-connected" style="display:none; background:var(--primary-soft); border-radius:14px; padding:16px; margin-bottom:14px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:44px;height:44px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0;">✓</div>
+                                <div>
+                                    <strong style="color:var(--primary-deep);">رقم الإدارة متصل وجاهز</strong><br>
+                                    <span style="font-size:12px;color:var(--ink-400);">يعمل لإرسال أكواد التفعيل</span>
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-red btn-full">🔑 تغيير كلمة المرور</button>
-                    </form>
+
+                        <!-- قسم الربط -->
+                        <div id="sys-link-section" style="display:none;">
+                            <div class="sys-tabs">
+                                <button id="sysTabQR" class="active" onclick="switchSysTab('qr')">📷 مسح باركود</button>
+                                <button id="sysTabCode" onclick="switchSysTab('code')">📱 ربط بالرقم</button>
+                            </div>
+                            <div id="sysQRTab">
+                                <div id="sys-qr-container" style="text-align:center;">
+                                    <img id="sys-qr" src="" alt="QR">
+                                    <p style="color:var(--ink-400);font-size:11.5px;margin-top:6px;">امسح الباركود من واتساب ← الأجهزة المرتبطة</p>
+                                </div>
+                            </div>
+                            <div id="sysCodeTab" style="display:none;">
+                                <p style="font-size:12px;color:var(--ink-400);margin-bottom:8px;">أدخل رقم الإدارة مع رمز الدولة:</p>
+                                <div class="pairing-row">
+                                    <input type="text" id="adminPairingPhone" placeholder="966500000000" dir="ltr">
+                                    <button id="adminPairingBtn" class="btn btn-green" onclick="getAdminPairingCode()" style="white-space:nowrap;">🔑 توليد</button>
+                                </div>
+                                <div id="adminPairingResult"></div>
+                            </div>
+                        </div>
+
+                        <form action="/admin/disconnect-system-whatsapp" method="POST" style="margin-top:14px;" onsubmit="return confirm('هل تريد فصل الرقم الإداري وربط رقم جديد؟');">
+                            <button type="submit" class="btn btn-red btn-full">🔌 فصل وإعادة ربط</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Chart + Top Users -->
-        <div class="grid-2-1">
-            <div class="card">
-                <div class="card-header"><h3>📈 إحصائية آخر 7 أيام</h3></div>
-                <div class="card-body">
-                    <% let maxCount = 0; dailyStats.forEach(s => { if(s.count > maxCount) maxCount = s.count; }); if(maxCount===0) maxCount=1; %>
-                    <div class="bar-chart">
-                        <% dailyStats.forEach(s => { let hp = (s.count/maxCount)*100; %>
-                        <div class="bar-col">
-                            <div class="bar-value"><%= s.count %></div>
-                            <div class="bar gradient" style="height: <%= hp %>%;"></div>
-                            <div class="bar-label"><%= s._id.split('-')[2] %>/<%= s._id.split('-')[1] %></div>
+        <!-- ============ تبويب: الإعدادات ============ -->
+        <div class="tab-panel" id="tab-settings">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><h3>⚙️ إعدادات المنصة</h3></div>
+                    <div class="card-body">
+                        <form method="POST" action="/admin/settings">
+                            <div class="form-group">
+                                <label>📞 رقم الدعم الفني</label>
+                                <input type="text" name="supportPhone" value="<%= settings.supportPhone %>" placeholder="966598686902" required>
+                                <span class="form-hint">يظهر للعملاء عند انتهاء اشتراكهم</span>
+                            </div>
+                            <div class="form-group">
+                                <label>🔔 رقم استقبال إشعارات الإدارة (واتساب)</label>
+                                <input type="text" name="notificationPhone" value="<%= settings.notificationPhone || '' %>" placeholder="966598686902 — اتركه فارغاً لإيقاف الإشعارات" dir="ltr">
+                                <span class="form-hint">يُرسل إليه إشعار من جوال الإدارة المسجل عند: تسجيل عميل جديد، دفع ناجح/فاشل، وأي حدث مهم</span>
+                            </div>
+                            <div class="form-group">
+                                <label>🎁 الأيام المجانية للتجربة</label>
+                                <input type="number" name="freeTrialDays" value="<%= settings.freeTrialDays %>" min="0" required>
+                                <span class="form-hint">عدد الأيام المجانية عند إنشاء حساب جديد</span>
+                            </div>
+                            <button type="submit" class="btn btn-green btn-full">💾 حفظ الإعدادات</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>🔐 أمان الإدارة</h3></div>
+                    <div class="card-body">
+                        <form method="POST" action="/admin/change-password" onsubmit="return confirm('تأكيد تغيير كلمة مرور الإدارة؟');">
+                            <div class="form-group">
+                                <label>🔑 كلمة مرور جديدة للإدارة</label>
+                                <input type="password" name="newPassword" placeholder="أدخل كلمة المرور الجديدة" required minlength="6">
+                                <span class="form-hint">6 أحرف على الأقل — تُستخدم لدخول لوحة الإدارة</span>
+                            </div>
+                            <button type="submit" class="btn btn-red btn-full">🔑 تغيير كلمة المرور</button>
+                        </form>
+                        <div class="form-divider"></div>
+                        <div style="background:var(--info-soft); border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px; font-size:12.5px; color:var(--ink-600);">
+                            💡 <strong>نصائح سريعة:</strong> يمكنك دخول حساب أي عميل بزر "👁️ دخول" ثم العودة للوحة الإدارة من القائمة الجانبية. سجلات كل عميل متاحة من زر "📜 سجل".
                         </div>
-                        <% }) %>
-                        <% if(dailyStats.length===0) { %><p style="width:100%;text-align:center;color:var(--gray-light);padding:40px 0;">لا توجد بيانات بعد</p><% } %>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>💳 إعدادات الدفع الإلكتروني (ماي فاتورة)</h3></div>
+                    <div class="card-body">
+                        <form method="POST" action="/admin/payments-settings">
+                            <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                                <input type="checkbox" name="paymentsEnabled" id="paymentsEnabled" style="width:18px;height:18px;accent-color:var(--primary);" <%= settings.paymentsEnabled ? 'checked' : '' %>>
+                                <label for="paymentsEnabled" style="margin:0; font-weight:800;">تفعيل الدفع الإلكتروني للعملاء</label>
+                            </div>
+                            <div class="form-group">
+                                <label>🔑 مفتاح API الخاص بماي فاتورة (API Token)</label>
+                                <input type="password" name="myfatoorahToken" value="<%= settings.myfatoorahToken %>" placeholder="rL__... (من لوحة تحكم ماي فاتورة)" dir="ltr">
+                                <span class="form-hint">من حسابك في myfatoorah.com ← Account Settings ← API</span>
+                            </div>
+                            <div class="form-group">
+                                <label>🌐 وضع البوابة</label>
+                                <select name="myfatoorahMode">
+                                    <option value="test" <%= settings.myfatoorahMode === 'test' ? 'selected' : '' %>>🧪 وضع تجريبي (Test) — لا يُخصم مبالغ حقيقية</option>
+                                    <option value="live" <%= settings.myfatoorahMode === 'live' ? 'selected' : '' %>>🔴 وضع حقيقي (Live) — يُخصم فعلياً</option>
+                                </select>
+                            </div>
+                            <div class="form-divider"></div>
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <div class="form-group" style="flex:1; min-width:140px;">
+                                    <label>💰 سعر الباقة (ر.س)</label>
+                                    <input type="number" name="planPrice" value="<%= settings.planPrice %>" min="1">
+                                </div>
+                                <div class="form-group" style="flex:1; min-width:140px;">
+                                    <label>📅 مدة الاشتراك (يوم)</label>
+                                    <input type="number" name="planDays" value="<%= settings.planDays %>" min="1">
+                                </div>
+                                <div class="form-group" style="flex:1; min-width:180px;">
+                                    <label>🏷️ اسم الباقة</label>
+                                    <input type="text" name="planName" value="<%= settings.planName %>">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-green btn-full">💾 حفظ إعدادات الدفع</button>
+                        </form>
+                        <div class="form-divider"></div>
+                        <button type="button" class="btn btn-outline btn-full" onclick="testPaymentGateway(this)">🧪 اختبار البوابة الآن (إنشاء فاتورة حقيقية لدى ماي فاتورة)</button>
+                        <div id="testResult" style="display:none; margin-top:12px; font-size:13px;"></div>
+                        <div class="form-divider"></div>
+                        <div style="background:#fff7e6; border:1px solid #fde68a; border-radius:12px; padding:13px 15px; font-size:12.5px; color:#92400e;">
+                            🧪 <strong>بطاقة تجريبية للوضع Test:</strong> استخدم البطاقة <code dir="ltr" style="font-weight:900;">4111 1111 1111 1111</code> (أي تاريخ مستقبلي / أي CVV) — سينجح الدفع تجريبياً دون خصم. <strong>البطاقات الحقيقية (خاصة مدى) لا تعمل في الوضع التجريبي.</strong><br>
+                            🆓 <strong>التوكن التجريبي العام مدمج تلقائياً:</strong> في الوضع التجريبي يُستخدم توكن التجربة العام تلقائياً (لا حاجة لأي توكن). <strong>التوكن الذي تُدخله في الحقل أعلاه يُستخدم فقط في الوضع الحقيقي</strong> — لا تجرب التوكن الحقيقي في الوضع التجريبي لأنه لا يعمل.<br>
+                            🇸🇦 <strong>مهم للوضع الحقيقي:</strong> بطاقات مدى المحلية لا تعمل عبر فيزا (خطأ MADA_VISA المعروف) — النظام يعرض الآن كل وسائل الدفع (مدى/فيزا/أبل باي) في صفحة الدفع ليختار العميل.
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-header"><h3>🏆 الأكثر إرسالاً</h3></div>
-                <div class="card-body" style="padding-top: 15px;">
-                    <ul class="rank-list">
-                        <% topUsers.forEach((t, i) => { %>
-                        <li class="rank-item">
-                            <div class="rank-info">
-                                <span class="rank-medal"><%= i===0?'🥇':(i===1?'🥈':(i===2?'🥉':'👤')) %></span>
-                                <span class="rank-name"><%= t.username %></span>
-                            </div>
-                            <span class="rank-count"><%= t.count %> رسالة</span>
-                        </li>
-                        <% }) %>
-                        <% if(topUsers.length===0) { %><li class="rank-item" style="justify-content:center;color:var(--gray-light);">لا توجد إحصائيات</li><% } %>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add User -->
-        <div class="card" style="margin-bottom: 25px;">
-            <div class="card-header">
-                <h3>➕ إضافة عميل جديد <span class="badge badge-green" style="font-size:11px;">+<%= settings.freeTrialDays %> أيام مجاناً</span></h3>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="/admin/add-user" class="add-user-form">
-                    <div class="form-group">
-                        <label>اسم المستخدم</label>
-                        <input type="text" name="username" placeholder="مثال: ahmed_store" required>
-                    </div>
-                    <div class="form-group">
-                        <label>رقم الجوال</label>
-                        <input type="text" name="phone" placeholder="9665xxxxxxxx">
-                    </div>
-                    <div class="form-group">
-                        <label>كلمة المرور</label>
-                        <input type="password" name="password" placeholder="••••••" required>
-                    </div>
-                    <button type="submit" class="btn btn-green" style="height: 44px; margin-top: auto;">✅ إنشاء وتفعيل</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Users Table -->
-        <div class="card table-card">
-            <div class="card-header">
-                <h3>👥 قائمة العملاء (<%= users.length %>)</h3>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>المستخدم</th>
-                        <th>الجوال</th>
-                        <th>الاشتراك</th>
-                        <th>الحالة</th>
-                        <th>إرسال حذر</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% users.forEach((u, idx) => {
-                        let daysLeft = 0;
-                        if(u.subscriptionEndsAt) { daysLeft = Math.ceil((new Date(u.subscriptionEndsAt) - new Date()) / 86400000); if(daysLeft<0) daysLeft=0; }
-                    %>
-                    <tr>
-                        <td style="color:var(--gray-light); font-weight:700;"><%= idx+1 %></td>
-                        <td><span class="user-name"><%= u.username %></span></td>
-                        <td><span class="user-phone"><%= u.phone || '—' %></span></td>
-                        <td>
-                            <span class="badge <%= daysLeft>0 ? 'badge-green' : 'badge-red' %>">
-                                <%= daysLeft>0 ? `${daysLeft} يوم متبقي` : 'منتهي' %>
-                            </span>
-                            <div style="font-size:11px; color:var(--gray); margin-top:4px; font-weight:600;">
-                                📅 <%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : 'غير محدد' %>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge <%= u.isActive ? 'badge-green' : 'badge-gray' %>">
-                                <%= u.isActive ? 'مفعّل' : 'معطّل' %>
-                            </span>
-                        </td>
-                        <td>
-                            <form action="/admin/cautious-toggle/<%= u._id %>" method="POST" style="display:inline;">
-                                <button type="submit" class="action-btn <%= u.cautiousMode ? 'orange' : 'badge-gray' %>" onclick="return confirm('<%= u.cautiousMode ? 'تعطيل' : 'تفعيل' %> الإرسال الحذر لـ <%= u.username %>؟')" style="font-size:12px;">
-                                    <%= u.cautiousMode ? '🛡️ مفعّل' : 'حذر: غير مفعل' %>
-                                </button>
-                            </form>
-                        </td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.phone || '' %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
-                                <a href="/admin/logs/<%= u._id %>" class="action-btn dark">📜 سجل</a>
-                                <a href="/admin/login-as/<%= u._id %>" class="action-btn purple" onclick="return confirm('الدخول لحساب <%= u.username %>؟')">👁️ دخول</a>
-                                <form action="/admin/toggle-user/<%= u._id %>" method="POST" style="display:inline;">
-                                    <button type="submit" class="action-btn <%= u.isActive ? 'red' : 'green' %>" onclick="return confirm('<%= u.isActive ? 'تعطيل' : 'تفعيل' %> حساب <%= u.username %>؟')">
-                                        <%= u.isActive ? '⛔' : '✅' %>
-                                    </button>
-                                </form>
-                                <form action="/admin/delete-user/<%= u._id %>" method="POST" style="display:inline;">
-                                    <button type="submit" class="action-btn red" onclick="return confirm('⚠️ حذف نهائي لحساب <%= u.username %> وجميع سجلاته؟ لا يمكن التراجع!')">🗑️</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    <% }) %>
-                    <% if(users.length===0) { %>
-                    <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--gray-light);">لا يوجد عملاء مسجلين بعد</td></tr>
-                    <% } %>
-                </tbody>
-            </table>
         </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- ===== مودال تعديل العميل ===== -->
     <div id="editModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
         <div class="modal-box">
             <div class="modal-header">
@@ -419,7 +582,7 @@
                     <div class="form-group">
                         <label>📱 رقم الجوال (صيغة دولية)</label>
                         <input type="text" name="phone" id="modalPhone" placeholder="9665xxxxxxxx" dir="ltr">
-                        <span style="font-size:11px; color:var(--gray);">الصيغة الدولية مثل 9665xxxxxxxx</span>
+                        <span class="form-hint">الصيغة الدولية مثل 9665xxxxxxxx</span>
                     </div>
                     <div class="form-group">
                         <label>🔑 كلمة مرور جديدة (اتركه فارغاً لعدم التغيير)</label>
@@ -428,11 +591,11 @@
                     <div class="form-group">
                         <label>➕ إضافة أيام إلى الاشتراك الحالي</label>
                         <input type="number" name="addDays" placeholder="مثال: 30" min="0">
-                        <span style="font-size:11px; color:var(--gray);">تضيف أياماً فوق الأيام المتبقية حالياً</span>
+                        <span class="form-hint">تضيف أياماً فوق الأيام المتبقية حالياً</span>
                     </div>
                     <div class="form-group">
                         <label>🎯 أو تحديد إجمالي الأيام المتبقية من اليوم</label>
-                        <input type="number" name="setDays" placeholder="مثال: 30 (تصبح 30 يوم بالضبط من اليوم)" min="0">
+                        <input type="number" name="setDays" placeholder="مثال: 30 (تصبح 30 يوماً بالضبط من اليوم)" min="0">
                     </div>
                     <div class="form-group">
                         <label>📅 أو تحديد تاريخ الانتهاء المباشر</label>
@@ -440,34 +603,278 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-dark" onclick="document.getElementById('editModal').classList.remove('show')">إلغاء</button>
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('editModal').classList.remove('show')">إلغاء</button>
                     <button type="submit" class="btn btn-green">💾 حفظ التعديلات</button>
                 </div>
             </form>
         </div>
     </div>
 
+        <!-- ============ تبويب: الدفعات ============ -->
+        <div class="tab-panel" id="tab-payments">
+            <% const ps = (typeof payments !== 'undefined' && payments) || []; const paySum = (typeof paySummary !== 'undefined' && paySummary) || { paid:0, paidTotal:0, pending:0, failed:0, cancelled:0 }; %>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-bg">💰</div>
+                    <div class="stat-icon" style="background:var(--primary-soft); color:var(--primary);">💰</div>
+                    <div class="stat-label">إجمالي المقبوضات</div>
+                    <div class="stat-value"><%= paySum.paidTotal %> <small style="font-size:14px;">ر.س</small></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">✅</div>
+                    <div class="stat-icon" style="background:var(--info-soft); color:var(--info);">✅</div>
+                    <div class="stat-label">عمليات ناجحة</div>
+                    <div class="stat-value"><%= paySum.paid %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">⏳</div>
+                    <div class="stat-icon" style="background:#fff7e6; color:#b45309;">⏳</div>
+                    <div class="stat-label">معلقة (تحتاج تحقق)</div>
+                    <div class="stat-value"><%= paySum.pending %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-bg">❌</div>
+                    <div class="stat-icon" style="background:var(--danger-soft); color:var(--danger);">❌</div>
+                    <div class="stat-label">فاشلة / ملغاة</div>
+                    <div class="stat-value"><%= paySum.failed + paySum.cancelled %></div>
+                </div>
+            </div>
+
+            <div class="card table-card">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <span style="font-weight:900;">💳 سجل عمليات الدفع (آخر 50)</span>
+                    <span class="badge badge-blue">يظهر تلقائياً عند أي عملية دفع من العملاء</span>
+                </div>
+                <div class="table-wrap">
+                    <table id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>التاريخ</th>
+                                <th>العميل</th>
+                                <th>المبلغ</th>
+                                <th>المدة</th>
+                                <th>الحالة</th>
+                                <th>وسيلة الدفع</th>
+                                <th>ملاحظة / خطأ</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (ps.length === 0) { %>
+                                <tr><td colspan="9" style="text-align:center; color:var(--ink-400); padding:24px;">لا توجد عمليات دفع بعد — عندما يدفع أي عميل ستظهر هنا</td></tr>
+                            <% } else { ps.forEach((p, i) => { %>
+                            <tr>
+                                <td style="color:var(--ink-300); font-weight:800;"><%= i + 1 %></td>
+                                <td style="color:var(--ink-500); font-size:13px;"><%= p.createdAt.toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) %></td>
+                                <td style="font-weight:800;"><%= p.username %></td>
+                                <td style="font-weight:900;"><%= p.amount %> ر.س</td>
+                                <td><%= p.planDays %> يوم</td>
+                                <td>
+                                    <% if (p.status === 'paid') { %>
+                                        <span class="badge badge-green">✅ مدفوع</span>
+                                    <% } else if (p.status === 'pending') { %>
+                                        <span class="badge" style="background:#fff7e6; color:#b45309;">⏳ قيد التنفيذ</span>
+                                    <% } else if (p.status === 'failed') { %>
+                                        <span class="badge badge-red">❌ فشل</span>
+                                    <% } else { %>
+                                        <span class="badge badge-gray">✕ ملغي</span>
+                                    <% } %>
+                                </td>
+                                <td style="color:var(--ink-500);"><%= p.paymentMethod || '—' %></td>
+                                <td style="color:var(--ink-500); font-size:12.5px;">
+                                    <%= p.errorMessage || '—' %>
+                                    <% if (p.rawStatus) { %><br><span style="color:var(--ink-300); font-size:11px;" dir="ltr">[<%= p.rawStatus %><% if (p.rawInvoiceStatus) { %> / <%= p.rawInvoiceStatus %><% } %>]</span><% } %>
+                                    <% if (p.rawError) { %><br><span style="color:var(--danger); font-size:11px;" dir="ltr"><%= p.rawError %></span><% } %>
+                                    <% if (!p.errorMessage && !p.rawStatus && p.myfatoorahInvoiceId) { %>فاتورة: <%= p.myfatoorahInvoiceId %><% } %>
+                                </td>
+                                <td>
+                                    <% if (p.status === 'pending') { %>
+                                        <button class="btn btn-green" style="padding:6px 12px; font-size:12.5px;" onclick="verifyPayment('<%= p._id %>', this)">🔍 تحقق الآن</button>
+                                    <% } else { %>
+                                        <span style="color:var(--ink-300); font-size:12px;">—</span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                            <% }); } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ تبويب: رسائل الإشعارات ============ -->
+        <div class="tab-panel" id="tab-notifications">
+            <% const tmpls = (typeof templates !== 'undefined' && templates) || []; %>
+            <div class="card" style="margin-bottom:18px; background:linear-gradient(135deg,#0b1220,#131c2e); border:none;">
+                <div style="padding:20px 24px; color:#fff;">
+                    <div style="font-size:16px; font-weight:900; margin-bottom:6px;">📨 مركز رسائل الإشعارات</div>
+                    <div style="font-size:12.5px; color:rgba(255,255,255,.65); line-height:1.8;">
+                        فعّل أو عطّل أي رسالة، وعدّل نصها كما تريد، واختر لمن تصل (الأدمن / العميل / للاثنين).<br>
+                        رسائل الأدمن تصل لجوال الإشعارات المضبوط في <strong>⚙️ الإعدادات</strong> — ورسائل العميل تُرسل من جوال الإدارة المسجل مباشرة على واتساب العميل.
+                    </div>
+                </div>
+            </div>
+
+            <% tmpls.forEach(t => { %>
+                <div class="card" style="margin-bottom:14px; <%= !t.enabled ? 'opacity:.72;' : '' %>">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <h3 style="margin:0; font-size:15px;"><%= t.title %></h3>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span class="badge <%= t.target === 'admin' ? 'badge-blue' : (t.target === 'user' ? 'badge-green' : 'badge-gray') %>">
+                                <%= t.target === 'admin' ? '👑 للأدمن' : (t.target === 'user' ? '👤 للعميل' : '🔗 للاثنين') %>
+                            </span>
+                            <span class="badge <%= t.enabled ? 'badge-green' : 'badge-red' %>"><%= t.enabled ? '✅ مفعّلة' : '⛔ معطّلة' %></span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:12px; color:var(--ink-400); margin-bottom:10px;">📌 <%= t.description %></div>
+                        <form method="POST" action="/admin/notification-templates/<%= t.key %>">
+                            <div class="form-group">
+                                <label>✏️ نص الرسالة — المتغيرات تدعم العربية والإنجليزية: <code dir="ltr">{الاسم}</code> = <code dir="ltr">{username}</code> ، <code dir="ltr">{الجوال}</code> = <code dir="ltr">{phone}</code> ، <code dir="ltr">{المبلغ}</code> = <code dir="ltr">{amount}</code> ، <code dir="ltr">{المدة}</code> = <code dir="ltr">{days}</code> ، <code dir="ltr">{الطريقة}</code> = <code dir="ltr">{method}</code> ، <code dir="ltr">{السبب}</code> = <code dir="ltr">{reason}</code> ، <code dir="ltr">{التاريخ}</code> = <code dir="ltr">{date}</code> ، <code dir="ltr">{عملاء_اليوم}</code> ، <code dir="ltr">{رسائل_اليوم}</code> ، <code dir="ltr">{ناجحة_اليوم}</code> ، <code dir="ltr">{فاشلة_اليوم}</code> ، <code dir="ltr">{مدفوعات_اليوم}</code> ، <code dir="ltr">{مبلغ_اليوم}</code> ، <code dir="ltr">{اجمالي_العملاء}</code></label>
+                                <textarea name="text" rows="3" style="width:100%; padding:10px 12px; border:1px solid var(--ink-100); border-radius:10px; font-family:inherit; font-size:13px; direction:rtl;"><%= t.text %></textarea>
+                            </div>
+                            <% if (t.key === 'daily_report') { %>
+                                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label>🕐 وقت الإرسال اليومي (الساعة)</label>
+                                        <input type="number" name="dailyReportHour" value="<%= settings.dailyReportHour === undefined ? 23 : settings.dailyReportHour %>" min="0" max="23" style="width:80px;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label>🕐 الدقيقة</label>
+                                        <input type="number" name="dailyReportMinute" value="<%= settings.dailyReportMinute === undefined ? 30 : settings.dailyReportMinute %>" min="0" max="59" style="width:80px;">
+                                    </div>
+                                    <span style="font-size:12px; color:var(--ink-400);">بتوقيت السعودية</span>
+                                </div>
+                            <% } %>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <label style="display:flex; align-items:center; gap:8px; font-weight:800; font-size:13px; margin:0;">
+                                    <input type="checkbox" name="enabled" <%= t.enabled ? 'checked' : '' %> style="width:17px; height:17px; accent-color:var(--primary);"> مفعّلة
+                                </label>
+                                <button type="submit" class="btn btn-green" style="padding:8px 18px;">💾 حفظ</button>
+                                <% if (t.key === 'daily_report') { %>
+                                    <button type="button" class="btn btn-outline" style="padding:8px 18px;" onclick="sendReportNow(this)">🚀 إرسال التقرير الآن (تجربة)</button>
+                                <% } %>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            <% }); %>
+            <% if (tmpls.length === 0) { %>
+                <div class="card"><div class="card-body" style="color:var(--ink-400); text-align:center; padding:30px;">لا توجد قوالب إشعارات بعد</div></div>
+            <% } %>
+        </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // ===== إرسال التقرير اليومي الآن (تجربة) =====
+        async function sendReportNow(btn) {
+            const old = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+            try {
+                const res = await fetch('/admin/daily-report/send-now', { method: 'POST' });
+                const data = await res.json();
+                alert(data.message || 'تم');
+            } catch (e) {
+                alert('خطأ: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = old;
+            }
+        }
+
+        // ===== التبويبات =====
+        function switchAdminTab(name, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            else {
+                const idx = { overview: 0, clients: 1, system: 2, settings: 3, payments: 4, notifications: 5 }[name] || 0;
+                document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+            }
+            document.getElementById('tab-' + name).classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ===== اختبار بوابة الدفع فوراً (إنشاء فاتورة حقيقية) =====
+        async function testPaymentGateway(btn) {
+            const box = document.getElementById('testResult');
+            const old = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إنشاء فاتورة لدى ماي فاتورة...';
+            box.style.display = 'block';
+            box.innerHTML = '<span style="color:var(--ink-400);">جارٍ الاتصال بالبوابة...</span>';
+            try {
+                const res = await fetch('/admin/payments/test-invoice', { method: 'POST' });
+                const data = await res.json();
+                let html = '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px;">';
+                html += '<strong style="color:var(--primary-dark);">✅ نجح الاتصال بالبوابة — الوضع: ' + (data.mode === 'live' ? 'حقيقي' : 'تجريبي') + '</strong><br>';
+                (data.attempts || []).forEach(a => {
+                    html += '<div style="margin-top:6px;">• ' + (a.success ? '✅' : '❌') + ' ' + a.method;
+                    if (a.url) html += '<br><a href="' + a.url + '" target="_blank" style="color:var(--info); word-break:break-all; font-size:12px;">' + a.url + '</a>';
+                    if (a.error) html += '<br><span style="color:var(--danger); font-size:12px;">' + a.error + '</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                if (!data.success) {
+                    html = '<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px;">';
+                    html += '<strong style="color:var(--danger);">❌ فشل إنشاء الفاتورة:</strong><br>';
+                    (data.attempts || []).forEach(a => {
+                        html += '<div style="margin-top:6px;">• ' + a.method + ' → <span style="color:var(--danger);">' + (a.error || 'فشل') + '</span></div>';
+                    });
+                    html += '</div>';
+                }
+                box.innerHTML = html;
+            } catch (e) {
+                box.innerHTML = '<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px; color:var(--danger);">خطأ: ' + e.message + '</div>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = old;
+            }
+        }
+
+        // ===== إعادة التحقق من عملية دفع معلقة =====
+        async function verifyPayment(id, btn) {
+            if (!confirm('التحقق من هذه العملية لدى بوابة ماي فاتورة؟ إذا كان الدفع ناجحاً سيُجدد اشتراك العميل فوراً.')) return;
+            const old = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+            try {
+                const res = await fetch('/admin/payments/verify/' + id, { method: 'POST' });
+                const data = await res.json();
+                alert(data.message || 'تم');
+                if (data.success) setTimeout(() => location.reload(), 800);
+            } catch (e) {
+                alert('تعذر التحقق: ' + e.message);
+            } finally {
+                btn.disabled = false; btn.innerHTML = old;
+            }
+        }
+
+        // ===== بحث العملاء =====
+        function filterUsers() {
+            const q = document.getElementById('usersSearch').value.trim().toLowerCase();
+            document.querySelectorAll('#usersTable tbody tr').forEach(tr => {
+                const hay = (tr.dataset.search || '').toLowerCase();
+                tr.style.display = (!q || hay.includes(q)) ? '' : 'none';
+            });
+        }
+
+        // ===== تعديل العميل =====
         function openModal(id, username, phone, expDate, daysLeft) {
             document.getElementById('modalTitle').innerText = '⚙️ تعديل العميل: ' + username;
             document.getElementById('editForm').action = '/admin/edit-user/' + id;
             document.getElementById('modalPhone').value = phone || '';
-            if (expDate) {
-                document.getElementById('modalExpiryDate').value = expDate;
-            } else {
-                document.getElementById('modalExpiryDate').value = '';
-            }
+            document.getElementById('modalExpiryDate').value = expDate || '';
             document.getElementById('editModal').classList.add('show');
         }
 
+        // ===== تبويبات رقم الإدارة =====
         function switchSysTab(tab) {
             document.getElementById('sysQRTab').style.display = tab === 'qr' ? 'block' : 'none';
             document.getElementById('sysCodeTab').style.display = tab === 'code' ? 'block' : 'none';
-            document.getElementById('sysTabQR').style.background = tab === 'qr' ? 'var(--green)' : 'white';
-            document.getElementById('sysTabQR').style.color = tab === 'qr' ? 'white' : 'var(--gray)';
-            document.getElementById('sysTabCode').style.background = tab === 'code' ? 'var(--green)' : 'white';
-            document.getElementById('sysTabCode').style.color = tab === 'code' ? 'white' : 'var(--gray)';
+            document.getElementById('sysTabQR').classList.toggle('active', tab === 'qr');
+            document.getElementById('sysTabCode').classList.toggle('active', tab === 'code');
         }
 
         function getAdminPairingCode() {
@@ -485,18 +892,17 @@
                 if (data.success) {
                     var f = data.code.match(/.{1,4}/g).join(' - ');
                     document.getElementById('adminPairingResult').innerHTML =
-                        '<div style="background:white;border:2px solid #86efac;border-radius:10px;padding:15px;text-align:center;margin-top:10px;">' +
-                        '<div style="font-size:28px;font-weight:900;letter-spacing:6px;color:#166534;font-family:monospace;direction:ltr;">' + f + '</div>' +
-                        '<div style="font-size:11px;color:#4ade80;margin-top:6px;">أدخل الرمز في واتساب ← الأجهزة المرتبطة ← ربط بالرقم</div></div>';
+                        '<div class="pairing-code-box"><div class="code">' + f + '</div>' +
+                        '<div style="font-size:11px;color:var(--ink-400);margin-top:6px;">أدخل الرمز في واتساب ← الأجهزة المرتبطة ← ربط بالرقم</div></div>';
                 } else {
-                    document.getElementById('adminPairingResult').innerHTML = '<p style="color:var(--red);font-weight:700;margin-top:8px;font-size:13px;">' + data.error + '</p>';
+                    document.getElementById('adminPairingResult').innerHTML = '<p style="color:var(--danger);font-weight:700;margin-top:8px;font-size:13px;">' + data.error + '</p>';
                 }
                 btn.disabled = false; btn.innerText = '🔑 توليد';
             })
             .catch(function() { alert('خطأ'); btn.disabled = false; btn.innerText = '🔑 توليد'; });
         }
 
-        // ===== حالات الاتصال =====
+        // ===== حالات اتصال رقم الإدارة =====
         var isAdminConnected = false;
         var sysSocket = io({ query: { userId: "111111111111111111111111" } });
 

@@ -10,57 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/theme.css">
     <style>
-        .welcome-banner {
-            background: linear-gradient(135deg, #0da06a 0%, #075e54 100%);
-            border-radius: var(--r-lg); padding: 28px 32px; color: white;
-            margin-bottom: 24px; position: relative; overflow: hidden;
-        }
-        .welcome-banner::before {
-            content: ''; position: absolute; top: -40px; left: -40px;
-            width: 160px; height: 160px; background: rgba(255,255,255,0.06);
-            border-radius: 50%;
-        }
-        .welcome-banner::after {
-            content: ''; position: absolute; bottom: -60px; right: 60px;
-            width: 200px; height: 200px; background: rgba(255,255,255,0.04);
-            border-radius: 50%;
-        }
-        .welcome-banner h1 { font-size: 24px; font-weight: 900; margin-bottom: 6px; position: relative; z-index: 1; }
-        .welcome-banner p { font-size: 14px; opacity: 0.85; position: relative; z-index: 1; }
-        .welcome-banner .clock-chip {
-            background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
-            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 800;
-            display: inline-flex; align-items: center; gap: 6px; position: relative; z-index: 1;
-        }
-        .campaign-builder-card {
-            background: var(--card); border-radius: var(--r-lg); border: 1px solid var(--ink-100);
-            box-shadow: var(--shadow); overflow: hidden;
-        }
-        .campaign-builder-header {
-            background: linear-gradient(135deg, var(--ink-900), var(--ink-700));
-            padding: 22px 28px; color: white;
-        }
-        .campaign-builder-header h3 { font-size: 18px; font-weight: 900; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
-        .campaign-builder-header p { font-size: 13px; opacity: 0.7; }
-        .campaign-builder-body { padding: 24px; }
-        .enhanced-step {
-            display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-            border-radius: var(--r-sm); cursor: pointer; transition: all 0.2s;
-        }
-        .enhanced-step:hover { background: var(--ink-50); }
-        .enhanced-step.active { background: var(--primary-soft); }
-        .enhanced-step .step-num {
-            width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
-            font-weight: 900; font-size: 14px; border: 2px solid var(--ink-200);
-            background: white; color: var(--ink-400); transition: all 0.3s; flex-shrink: 0;
-        }
-        .enhanced-step.active .step-num {
-            background: linear-gradient(135deg, var(--whatsapp), var(--primary-dark));
-            border-color: transparent; color: white; box-shadow: 0 4px 12px rgba(37,211,102,0.3);
-        }
-        .enhanced-step .step-text { font-size: 14px; font-weight: 800; color: var(--ink-500); }
-        .enhanced-step.active .step-text { color: var(--ink-900); }
-        .step-line { flex: 1; height: 2px; background: var(--ink-100); border-radius: 2px; }
+        /* تجاوزات خاصة بصفحة لوحة التحكم */
     </style>
 </head>
 <body>
@@ -93,6 +43,7 @@
         if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
 
         const campaignLabels = {
+            scheduled: 'مجدولة ⏰',
             pending: 'بانتظار البدء',
             processing: 'قيد التنفيذ',
             paused: 'متوقفة مؤقتاً',
@@ -133,9 +84,11 @@
 
             <div class="sidebar-nav">
                 <a href="/dashboard" class="active"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/dashboard#campaigns"><span class="ic"><i class="fas fa-bullhorn"></i></span> الحملات والإرسال</a>
                 <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
                 <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
-                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> تحديث البيانات</a>
+                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> الملف الشخصي</a>
+                <a href="/subscribe"><span class="ic"><i class="fas fa-credit-card"></i></span> الاشتراك والدفع <% if (isExpired) { %><span style="background:#ef4444;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:auto;">منتهي</span><% } %></a>
                 <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
                 <% if (isImpersonating) { %>
                     <a href="/return-to-admin" style="color: #f59e0b;"><span class="ic"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
@@ -149,27 +102,27 @@
 
         <!-- ===== Main Content ===== -->
         <div class="main">
-            <!-- Welcome Banner -->
-            <div class="welcome-banner">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-                    <div>
-                        <h1>أهلاً بك، <%= user.username %> 👋</h1>
-                        <p>أدِر حملاتك ورسائلك الترويجية بكل سهولة واحترافية</p>
-                    </div>
-                    <div class="clock-chip">
-                        <i class="far fa-clock"></i> <span id="liveTimeClock">--:--</span>
-                    </div>
+            <div class="page-header">
+                <div class="page-header-text">
+                    <h1>أهلاً بك، <%= user.username %> 👋</h1>
+                    <p>أدِر حملاتك ورسائلك الترويجية بكل سهولة واحترافية</p>
+                </div>
+                <div class="date-chip">
+                    <i class="far fa-clock text-success"></i> <span id="liveTimeClock">--:--</span>
                 </div>
             </div>
 
             <% if (isExpired) { %>
                 <div class="alert-expired">
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3" style="flex-wrap:wrap;">
                         <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
-                        <div>
+                        <div style="flex:1; min-width:220px;">
                             <div class="fw-bold fs-6">تنويه: اشتراكك منتهي الصلاحية</div>
-                            <div class="small opacity-75">يرجى التواصل مع الدعم للتجديد وإعادة تفعيل الإرسال الحمالات: <%= settings ? settings.supportPhone : '' %></div>
+                            <div class="small opacity-75">جدد اشتراكك الآن لاستعادة الإرسال فوراً — أو تواصل مع الدعم: <%= settings ? settings.supportPhone : '' %></div>
                         </div>
+                        <a href="/subscribe" class="btn btn-success" style="white-space:nowrap; box-shadow:0 6px 14px -4px rgba(37,211,102,.5);">
+                            <i class="fas fa-credit-card"></i> ادفع وجدد الآن
+                        </a>
                     </div>
                 </div>
             <% } %>
@@ -247,22 +200,24 @@
             <!-- ===== Master Main Builder Grid ===== -->
             <div class="master-grid">
                 <!-- Left Column: Step Builder -->
-                <div class="campaign-builder-card">
-                    <div class="campaign-builder-header">
-                        <h3><i class="fas fa-rocket"></i> مُنشئ الحملات الذكي</h3>
-                        <p>أنشئ حملتك في خطوتين بسيطة</p>
+                <div class="campaign-card" id="campaigns">
+                    <div class="campaign-header">
+                        <div>
+                            <h3><i class="fas fa-magic"></i> مُنشئ الحملات والرسائل الذكي</h3>
+                            <p>أدوات احترافية لإرسال رسائلك بدقة وسرعة</p>
+                        </div>
                     </div>
-                    <div class="campaign-builder-body">
+                    <div class="campaign-body">
                         <!-- Stepper Bar -->
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
-                            <div class="enhanced-step active" id="st-1" onclick="goToStep(1)">
-                                <div class="step-num">1</div>
-                                <div class="step-text">المستلمين</div>
+                        <div class="steps-container">
+                            <div class="step-item active" id="st-1" onclick="goToStep(1)">
+                                <div class="step-circle">1</div>
+                                <div class="step-label">تحديد المستلمين</div>
                             </div>
-                            <div class="step-line"></div>
-                            <div class="enhanced-step" id="st-2" onclick="goToStep(2)">
-                                <div class="step-num">2</div>
-                                <div class="step-text">الرسالة</div>
+                            <div class="step-divider"></div>
+                            <div class="step-item" id="st-2" onclick="goToStep(2)">
+                                <div class="step-circle">2</div>
+                                <div class="step-label">صياغة الرسالة والمرفقات</div>
                             </div>
                         </div>
 
@@ -283,9 +238,10 @@
                                 <div class="drop-zone" onclick="document.getElementById('excelFile').click()">
                                     <div class="dz-icon"><i class="fas fa-file-upload text-primary"></i></div>
                                     <h4>اختر أو اسحب ملف الأرقام هنا</h4>
-                                    <p>يدعم ملفات XLSX, XLS, CSV, TXT (يتم استخراج الأرقام آلياً)</p>
+                                    <p>يدعم XLSX, XLS, CSV, TXT — مع اختيار الورقة والعمود تلقائياً</p>
                                 </div>
                                 <input type="file" id="excelFile" accept=".xlsx, .xls, .csv, .txt" class="d-none" style="display:none;" onchange="handleFileSelect(event)">
+                                <div id="excelSheetPanel" style="display:none; margin-top:14px;"></div>
                             </div>
 
                             <div id="rec-group-box" style="display:none;">
@@ -300,7 +256,12 @@
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-4">
-                                <span class="fw-bold text-muted small">المجموع: <strong id="recCount" class="text-success fs-6">0</strong> رقم</span>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <span class="fw-bold text-muted small">المجموع: <strong id="recCount" class="text-success fs-6">0</strong> رقم</span>
+                                    <button class="btn btn-sm btn-outline-danger" id="clearAllBtn" onclick="clearAllRecipients()" style="display:none; padding:6px 14px; border:1.5px solid #ef4444; color:#ef4444; background:white; border-radius:8px; font-weight:800; font-size:12px; cursor:pointer; font-family:inherit;" title="مسح جميع الأرقام المضافة">
+                                        🗑️ مسح الكل
+                                    </button>
+                                </div>
                                 <button class="btn btn-primary" onclick="goToStep(2)">التالي: كتابة الرسالة والمعاينة ←</button>
                             </div>
                         </div>
@@ -352,6 +313,15 @@
                             </div>
                             <textarea class="msg-textarea" id="msgInput" placeholder="اكتب نص رسالتك هنا..." oninput="updateLivePreview()"></textarea>
 
+                            <div style="font-size:12px; color:var(--ink-400); font-weight:600; margin-top:8px; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;">
+                                <span>✨ الزخارف تعمل تلقائياً في واتساب (بدون مسافات داخل الرموز):</span>
+                                <span><b style="color:var(--ink-800);">*عريض*</b></span>
+                                <span style="text-decoration:line-through; color:var(--ink-800);">~وسطي~</span>
+                                <span style="font-style:italic; color:var(--ink-800);">_مائل_</span>
+                                <code style="background:#f1f5f9; padding:1px 7px; border-radius:6px;">`كود`</code>
+                                <span style="color:var(--primary); cursor:pointer;" onclick="applyTemplate('promo');" title="استخدم الأزرار B / S / I أعلاه لإدراجها تلقائياً">— استخدم أزرار B و S و I أعلاه</span>
+                            </div>
+
                             <div class="drop-zone" onclick="document.getElementById('mediaFiles').click()">
                                 <div class="dz-icon"><i class="fas fa-paperclip text-blue"></i></div>
                                 <h4>انقر لإضافة مرفق (صورة / فيديو / مستند)</h4>
@@ -359,6 +329,18 @@
                             </div>
                             <input type="file" id="mediaFiles" multiple class="d-none" style="display:none;" onchange="handleMediaSelect()">
                             <div id="mediaNames" class="mt-2 text-muted fw-bold small"></div>
+
+                            <!-- ⏰ جدولة الإرسال (ميزة جديدة) -->
+                            <div style="margin-top:18px; background:#f8fafc; border:1px dashed #25D366; border-radius:14px; padding:16px 18px;">
+                                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:800; color:#0f172a; font-size:15px;">
+                                    <input type="checkbox" id="scheduleEnable" onchange="toggleSchedule()" style="width:18px;height:18px;accent-color:#25D366;">
+                                    <i class="fas fa-clock text-primary"></i> جدولة الإرسال لوقت لاحق
+                                </label>
+                                <div id="scheduleFields" style="display:none; margin-top:12px;">
+                                    <input type="datetime-local" id="scheduleAt" style="width:100%; padding:11px 14px; border:2px solid #e2e8f0; border-radius:10px; font-family:inherit; font-size:15px; outline:none;">
+                                    <p style="font-size:12.5px; color:#64748b; margin-top:8px;">⏰ سيتم إطلاق الحملة تلقائياً في الوقت المحدد — دون الحاجة لإبقاء جهازك مفتوحاً.</p>
+                                </div>
+                            </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-4">
                                 <button class="btn btn-outline" onclick="goToStep(1)">→ السابق</button>
@@ -375,16 +357,15 @@
                 <!-- Right Column: Realistic 3D WhatsApp Phone Mockup -->
                 <div class="phone-mockup-card">
                     <div class="phone-mockup-title">
-                        <span><i class="fab fa-whatsapp text-success me-1"></i> المعاينة المباشرة</span>
-                        <span style="background:var(--primary-soft);color:var(--primary-dark);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;">LIVE</span>
+                        <span><i class="fab fa-whatsapp text-success me-1"></i> المعاينة المباشرة على الجوال</span>
+                        <span class="badge bg-success text-white px-2 py-1 rounded-pill" style="font-size:10px;">LIVE PREVIEW</span>
                     </div>
 
                     <div class="phone-frame">
-                        <div class="phone-notch"></div>
                         <div class="phone-header">
                             <div class="phone-avatar"><i class="fas fa-user"></i></div>
                             <div class="phone-user-info">
-                                <h5 id="phonePreviewName">العميل المستهدف</h5>
+                                <h5>العميل المستهدف</h5>
                                 <p>متصل الآن</p>
                             </div>
                         </div>
@@ -392,7 +373,7 @@
                         <div class="phone-body">
                             <div class="phone-bubble">
                                 <img id="phoneMediaPreview" class="phone-media-preview" alt="المرفق">
-                                <div id="phoneBubbleText">ستظهر رسالتك هنا أثناء الكتابة...</div>
+                                <div id="phoneBubbleText">ستظهر رسالتك وتنسيقها هنا لحظياً أثناء الكتابة...</div>
                                 <div class="phone-bubble-footer">
                                     <span id="phoneTime">--:--</span>
                                     <span class="checks"><i class="fas fa-check-double"></i></span>
@@ -410,7 +391,6 @@
         const socket = io({ query: { userId: "<%= user._id %>" } });
         let isConnected = false;
         let recipientsList = [];
-        let recipientsNames = {};
         let allGroups = [];
 
         // Live Clock
@@ -477,7 +457,7 @@
         // Steps Switcher
         function goToStep(step) {
             document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.enhanced-step').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`step-${step}`).classList.add('active');
             document.getElementById(`st-${step}`).classList.add('active');
         }
@@ -504,6 +484,16 @@
             } catch (e) { console.error('Failed to load groups:', e); }
         }
 
+        // ===== اختيار أرقام محددة من مجموعة أو أكثر =====
+        let groupContactsCache = {};   // groupId -> جهات الاتصال
+        let groupSelected = {};        // groupId -> Set من الأرقام المحددة في الواجهة
+        let groupAddedCount = {};      // groupId -> عدد المضاف فعلياً لصندوق الإرسال
+        let expandedGroup = null;
+
+        function escAttr(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
         function renderGroupList() {
             const container = document.getElementById('groupSelectList');
             if (allGroups.length === 0) {
@@ -511,39 +501,146 @@
                 return;
             }
             container.innerHTML = allGroups.map(g => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:2px solid var(--ink-100);border-radius:var(--r-sm);margin-bottom:8px;cursor:pointer;transition:all 0.2s;" 
-                     onmouseover="this.style.borderColor='var(--primary)'" 
-                     onmouseout="this.style.borderColor='var(--ink-100)'"
-                     onclick="selectGroup('${g._id}', '${g.name.replace(/'/g, "\\'")}', ${g.contactsCount})">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:36px;height:36px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;"><i class="fas fa-users"></i></div>
-                        <div>
-                            <div style="font-weight:800;font-size:14px;">${g.name}</div>
-                            <div style="font-size:11px;color:var(--ink-400);">${g.contactsCount} جهة اتصال</div>
+                <div style="border:2px solid var(--ink-100);border-radius:var(--r-sm);margin-bottom:8px;overflow:hidden;transition:border 0.2s;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:${expandedGroup === g._id ? 'var(--primary-soft)' : 'white'};"
+                         onclick="toggleGroup('${g._id}')">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;"><i class="fas fa-users"></i></div>
+                            <div>
+                                <div style="font-weight:800;font-size:14px;">${escAttr(g.name)}</div>
+                                <div style="font-size:11px;color:var(--ink-400);">${g.contactsCount} جهة اتصال <span id="gcount-${g._id}" style="display:none;color:var(--primary);font-weight:800;"></span></div>
+                            </div>
                         </div>
+                        <div style="font-size:14px;color:var(--ink-400);">${expandedGroup === g._id ? '▲' : '▼'}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <input type="checkbox" id="grp-${g._id}" style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;" onclick="event.stopPropagation();">
-                        <label for="grp-${g._id}" style="font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;">تحديد</label>
-                    </div>
+                    <div id="gbody-${g._id}" style="display:${expandedGroup === g._id ? 'block' : 'none'};border-top:1px solid var(--ink-100);padding:12px 14px;background:#fafbfc;"></div>
                 </div>
             `).join('');
+            // إن كانت مجموعة مفتوحة مسبقاً، نعبئ جسمها
+            if (expandedGroup) renderGroupBody(expandedGroup);
         }
 
-        async function selectGroup(groupId, groupName, count) {
-            document.querySelectorAll('#groupSelectList input[type=checkbox]').forEach(cb => cb.checked = false);
-            const cb = document.getElementById('grp-' + groupId);
-            if (cb) cb.checked = true;
-            try {
-                const res = await fetch('/api/groups/' + groupId);
-                const data = await res.json();
-                if (!data.success) { showToast(data.error, 'error'); return; }
-                recipientsList = data.group.contacts.map(c => c.phone);
-                recipientsNames = {};
-                data.group.contacts.forEach(c => { if (c.name) recipientsNames[c.phone] = c.name; });
-                renderChips();
-                showToast(`تم تحميل ${recipientsList.length} رقم من مجموعة "${groupName}"`);
-            } catch (e) { showToast('خطأ في تحميل المجموعة', 'error'); }
+        async function toggleGroup(groupId) {
+            expandedGroup = expandedGroup === groupId ? null : groupId;
+            renderGroupList();
+            if (!expandedGroup) return;
+            const body = document.getElementById('gbody-' + groupId);
+            if (!groupContactsCache[groupId]) {
+                body.innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-400);font-size:13px;font-weight:700;">جاري تحميل جهات الاتصال...</div>';
+                try {
+                    const res = await fetch('/api/groups/' + groupId);
+                    const data = await res.json();
+                    if (!data.success) {
+                        body.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;padding:10px;">' + data.error + '</div>';
+                        return;
+                    }
+                    groupContactsCache[groupId] = data.group.contacts || [];
+                } catch (e) {
+                    body.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;padding:10px;">خطأ في تحميل المجموعة</div>';
+                    return;
+                }
+            }
+            renderGroupBody(groupId);
+        }
+
+        function renderGroupBody(groupId) {
+            const body = document.getElementById('gbody-' + groupId);
+            if (!body) return;
+            const contacts = groupContactsCache[groupId] || [];
+            const sel = groupSelected[groupId] || (groupSelected[groupId] = new Set());
+            let html = '';
+
+            // بحث داخل المجموعة
+            html += '<input type="text" id="gsearch-' + groupId + '" placeholder="🔎 ابحث بالاسم أو الرقم..." oninput="searchInGroup(\'' + groupId + '\')" style="width:100%;padding:9px 12px;border:2px solid var(--ink-100);border-radius:8px;font-family:inherit;font-size:13px;outline:none;margin-bottom:10px;">';
+
+            // قائمة جهات الاتصال مع مربعات اختيار
+            html += '<div id="glist-' + groupId + '" style="max-height:220px;overflow-y:auto;border:1px solid var(--ink-100);border-radius:8px;padding:6px;">';
+            if (contacts.length === 0) {
+                html += '<div style="text-align:center;padding:18px;color:var(--ink-300);font-size:13px;">لا توجد جهات اتصال في هذه المجموعة</div>';
+            } else {
+                contacts.forEach(c => {
+                    const checked = sel.has(c.phone) ? 'checked' : '';
+                    html += '<label class="g-contact" data-phone="' + escAttr(c.phone) + '" data-name="' + escAttr(c.name || '') + '" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--primary-soft)\'" onmouseout="this.style.background=\'transparent\'">' +
+                        '<input type="checkbox" class="gc" data-phone="' + escAttr(c.phone) + '" ' + checked + ' onchange="updateGroupSelection(\'' + groupId + '\')" style="width:17px;height:17px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">' +
+                        '<span style="flex:1;font-size:13px;font-weight:700;color:var(--ink-700);">' + escAttr(c.name || 'بدون اسم') + '</span>' +
+                        '<span dir="ltr" style="font-size:12px;color:var(--ink-400);font-family:var(--font-num);">' + escAttr(c.phone) + '</span>' +
+                        '</label>';
+                });
+            }
+            html += '</div>';
+
+            // أزرار التحكم
+            html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">';
+            html += '<button class="btn btn-primary" style="flex:1;min-width:140px;" onclick="addSelectedFromGroup(\'' + groupId + '\')" id="addSel-' + groupId + '">✓ إضافة المحدد (<span id="selCount-' + groupId + '">' + sel.size + '</span>)</button>';
+            html += '<button class="btn btn-outline" style="flex:1;min-width:120px;" onclick="addAllFromGroup(\'' + groupId + '\')">📥 كل الأرقام</button>';
+            html += '</div>';
+            html += '<div style="display:flex;gap:10px;margin-top:8px;">';
+            html += '<label style="font-size:12px;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="gall-' + groupId + '" onchange="toggleAllInGroup(\'' + groupId + '\', this.checked)" style="width:15px;height:15px;accent-color:var(--primary);"> تحديد الكل</label>';
+            html += '<label style="font-size:12px;font-weight:700;color:var(--ink-400);cursor:pointer;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="gnone-' + groupId + '" onchange="toggleNoneInGroup(\'' + groupId + '\', this.checked)" style="width:15px;height:15px;accent-color:var(--primary);"> إلغاء التحديد</label>';
+            html += '</div>';
+
+            body.innerHTML = html;
+        }
+
+        // تحديث عداد المحدد عند تغيير أي مربع
+        function updateGroupSelection(groupId) {
+            const sel = groupSelected[groupId] || (groupSelected[groupId] = new Set());
+            sel.clear();
+            document.querySelectorAll('#glist-' + groupId + ' input.gc:checked').forEach(cb => sel.add(cb.dataset.phone));
+            const counter = document.getElementById('selCount-' + groupId);
+            if (counter) counter.textContent = sel.size;
+        }
+
+        // تحديد / إلغاء الكل
+        function toggleAllInGroup(groupId, checked) {
+            document.querySelectorAll('#glist-' + groupId + ' input.gc').forEach(cb => cb.checked = checked);
+            updateGroupSelection(groupId);
+        }
+        function toggleNoneInGroup(groupId, checked) {
+            if (!checked) return;
+            document.querySelectorAll('#glist-' + groupId + ' input.gc').forEach(cb => cb.checked = false);
+            document.getElementById('gnone-' + groupId).checked = false;
+            updateGroupSelection(groupId);
+        }
+
+        // بحث داخل قائمة المجموعة
+        function searchInGroup(groupId) {
+            const q = (document.getElementById('gsearch-' + groupId).value || '').trim().toLowerCase();
+            document.querySelectorAll('#glist-' + groupId + ' .g-contact').forEach(el => {
+                const hay = ((el.dataset.name || '') + ' ' + (el.dataset.phone || '')).toLowerCase();
+                el.style.display = (!q || hay.includes(q)) ? 'flex' : 'none';
+            });
+        }
+
+        // إضافة الأرقام المحددة فقط إلى صندوق الإرسال (مع منع التكرار)
+        function addSelectedFromGroup(groupId) {
+            const sel = groupSelected[groupId] || new Set();
+            let added = 0;
+            sel.forEach(p => {
+                if (!recipientsList.includes(p)) { recipientsList.push(p); added++; }
+            });
+            if (added === 0) { showToast('لا توجد أرقام جديدة للإضافة (قد تكون مضافة مسبقاً)', 'error'); return; }
+            renderChips();
+            const total = recipientsList.length;
+            groupAddedCount[groupId] = added;
+            const badge = document.getElementById('gcount-' + groupId);
+            if (badge) { badge.style.display = 'inline'; badge.textContent = '(+' + added + ' أُضيف)'; }
+            showToast(`تمت إضافة ${added} رقم — الإجمالي في الصندوق: ${total} 🎯`);
+        }
+
+        // إضافة جميع أرقام المجموعة (السلوك القديم)
+        function addAllFromGroup(groupId) {
+            const contacts = groupContactsCache[groupId] || [];
+            let added = 0;
+            contacts.forEach(c => {
+                if (!recipientsList.includes(c.phone)) { recipientsList.push(c.phone); added++; }
+            });
+            if (added === 0) { showToast('لا توجد أرقام جديدة (كلها مضافة مسبقاً)', 'error'); return; }
+            renderChips();
+            groupAddedCount[groupId] = added;
+            const badge = document.getElementById('gcount-' + groupId);
+            if (badge) { badge.style.display = 'inline'; badge.textContent = '(+' + added + ' أُضيف)'; }
+            showToast(`تمت إضافة ${added} رقم من المجموعة — الإجمالي: ${recipientsList.length} 🎯`);
         }
 
         // Parse Recipients
@@ -565,6 +662,8 @@
         function renderChips() {
             const container = document.getElementById('chipsContainer');
             document.getElementById('recCount').innerText = recipientsList.length;
+            const clearBtn = document.getElementById('clearAllBtn');
+            if (clearBtn) clearBtn.style.display = recipientsList.length > 0 ? 'inline-flex' : 'none';
             if (recipientsList.length === 0) {
                 container.innerHTML = '<div class="chips-empty">📭 لم تتم إضافة أرقام حتى الآن</div>';
                 return;
@@ -580,6 +679,15 @@
         function removeChip(num) {
             recipientsList = recipientsList.filter(n => n !== num);
             renderChips();
+        }
+
+        // 🗑️ مسح جميع الأرقام من صندوق الإرسال دفعة واحدة
+        function clearAllRecipients() {
+            if (!recipientsList.length) return;
+            if (!confirm('🗑️ هل أنت متأكد من مسح جميع الأرقام (' + recipientsList.length + ' رقم) من قائمة الإرسال؟')) return;
+            recipientsList = [];
+            renderChips();
+            showToast('تم مسح جميع الأرقام 🗑️');
         }
 
         // Templates Presets
@@ -643,20 +751,18 @@
             const timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
             const samplePhone = recipientsList.length > 0 ? recipientsList[0] : '0501234567';
-            const sampleName = (recipientsList.length > 0 && recipientsNames[recipientsList[0]]) ? recipientsNames[recipientsList[0]] : 'العميل العزيز';
-
-            const phoneNameEl = document.getElementById('phonePreviewName');
-            if (phoneNameEl) phoneNameEl.textContent = sampleName;
 
             let formatted = txt
                 .replace(/\{التاريخ\}|\{تاريخ\}|\{DATE\}|\{date\}/gi, `<span class="badge bg-light text-success border px-1 font-monospace">${dateStr}</span>`)
                 .replace(/\{الوقت\}|\{وقت\}|\{TIME\}|\{time\}/gi, `<span class="badge bg-light text-primary border px-1 font-monospace">${timeStr}</span>`)
-                .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${sampleName}</span>`)
+                .replace(/\{الاسم\}|\{اسم\}|\{NAME\}|\{name\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">العميل العزيز</span>`)
                 .replace(/\{الرقم\}|\{رقم\}|\{PHONE\}|\{phone\}/gi, `<span class="badge bg-light text-dark border px-1 font-monospace">${samplePhone}</span>`)
-                .replace(/\*(.*?)\*/g, '<b>$1</b>')
-                .replace(/_(.*?)_/g, '<i>$1</i>')
-                .replace(/~(.*?)~/g, '<del>$1</del>')
-                .replace(/```(.*?)```/g, '<code>$1</code>');
+                // زخارف واتساب — بنفس قواعده تماماً (بدون مسافة داخل الرموز، ولا تمتد لسطر جديد)
+                .replace(/\*(?!\s)([^*\n]*?)(?<!\s)\*/g, '<b>$1</b>')
+                .replace(/_(?!\s)([^_\n]*?)(?<!\s)_/g, '<i>$1</i>')
+                .replace(/~(?!\s)([^~\n]*?)(?<!\s)~/g, '<del>$1</del>')
+                .replace(/```(?!\s)([^`\n]*?)(?<!\s)```/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
 
             preview.innerHTML = formatted;
         }
@@ -679,29 +785,161 @@
             }
         }
 
+        let currentExcelFile = null;
+        let currentSheetName = null;
+
+        function normalizeDashboardPhone(raw) {
+            let clean = String(raw).replace(/[^0-9]/g, '');
+            if (clean.length < 8) return null;
+            if (clean.startsWith('00')) clean = clean.slice(2);
+            if (clean.startsWith('05')) clean = '966' + clean.substring(1);
+            else if (clean.startsWith('0')) clean = '966' + clean.substring(1);
+            else if (clean.length === 9 && clean.startsWith('5')) clean = '966' + clean;
+            if (clean.length === 12 && clean.startsWith('9665') && !recipientsList.includes(clean)) return clean;
+            return null;
+        }
+
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
+            const name = (file.name || '').toLowerCase();
+            // ملفات Excel الحقيقية → نستخدم الخادم لاختيار الورقة والعمود
+            if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                setupExcelCampaignFile(file);
+                return;
+            }
+            // CSV / TXT → قراءة نصية مباشرة (كما كانت)
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const text = evt.target.result;
                 const lines = text.split(/[\r\n,;]+/);
                 let addedCount = 0;
                 lines.forEach(l => {
-                    let clean = l.replace(/[^0-9]/g, '');
-                    if (clean.length >= 8) {
-                        if (clean.startsWith('05')) clean = '966' + clean.substring(1);
-                        else if (clean.startsWith('5')) clean = '966' + clean;
-                        if (clean.length === 12 && clean.startsWith('9665') && !recipientsList.includes(clean)) {
-                            recipientsList.push(clean);
-                            addedCount++;
-                        }
-                    }
+                    const norm = normalizeDashboardPhone(l);
+                    if (norm) addedCount++;
                 });
                 renderChips();
                 showToast(`تم استخراج ${addedCount} رقم صالح من ${file.name} بنجاح 🎯`);
             };
             reader.readAsText(file);
+        }
+
+        // تجهيز ملف Excel في لوحة التحكم: اختيار الورقة ثم الأعمدة
+        async function setupExcelCampaignFile(file) {
+            currentExcelFile = file;
+            const panel = document.getElementById('excelSheetPanel');
+            panel.style.display = 'block';
+            panel.innerHTML = '<div style="text-align:center;padding:10px;color:var(--ink-400);font-size:13px;font-weight:700;">جاري قراءة أوراق العمل...</div>';
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch('/api/groups/import-excel/sheets', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!data.success) {
+                    panel.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;">' + data.error + '</div>';
+                    return;
+                }
+                let html = '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">';
+                html += '<div style="font-weight:800;font-size:13px;margin-bottom:8px;">📄 الورقة التي تحتوي الأرقام:</div>';
+                html += '<select id="campSheetSelect" style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:14px;background:white;">';
+                data.sheets.forEach((s, i) => {
+                    html += '<option value="' + s.name + '"' + (i === 0 ? ' selected' : '') + '>' + s.name + ' (' + s.rows + ' صف)</option>';
+                });
+                html += '</select>';
+                html += '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="detectCampaignColumns()">🔍 متابعة — تحليل الأعمدة</button>';
+                html += '</div>';
+                panel.innerHTML = html;
+            } catch (e) {
+                panel.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;">تعذر قراءة الملف</div>';
+            }
+        }
+
+        async function detectCampaignColumns() {
+            const sheetName = document.getElementById('campSheetSelect').value;
+            currentSheetName = sheetName;
+            const panel = document.getElementById('excelSheetPanel');
+            panel.innerHTML = '<div style="text-align:center;padding:10px;color:var(--ink-400);font-size:13px;font-weight:700;">جاري كشف الأعمدة...</div>';
+            const formData = new FormData();
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', sheetName);
+            try {
+                const res = await fetch('/api/groups/import-excel/detect', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!data.success) {
+                    panel.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;">' + (data.error || 'خطأ') + '</div>';
+                    return;
+                }
+                let html = '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">';
+                html += '<div style="font-weight:800;font-size:13px;margin-bottom:8px;">' + (data.phoneCol ? '🔍 تم الكشف: الأرقام في العمود ' + data.phoneCol : '⚠️ اختر عمود الأرقام') + '</div>';
+                html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+                html += '<div style="flex:1;min-width:150px;">';
+                html += '<label style="font-size:11px;font-weight:800;display:block;margin-bottom:4px;">📱 عمود الأرقام</label>';
+                html += '<select id="campPhoneCol" style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:13px;">';
+                data.columns.forEach(c => {
+                    html += '<option value="' + c.key + '"' + (c.key === data.phoneCol ? ' selected' : '') + '>' + c.key + (c.header ? ' — ' + c.header : '') + (c.samplePhone ? ' (مثل: ' + c.samplePhone + ')' : '') + '</option>';
+                });
+                html += '</select></div>';
+                html += '<div style="flex:1;min-width:150px;">';
+                html += '<label style="font-size:11px;font-weight:800;display:block;margin-bottom:4px;">👤 عمود الاسم (اختياري)</label>';
+                html += '<select id="campNameCol" style="width:100%;padding:9px 11px;border:2px solid #e2e8f0;border-radius:10px;font-family:inherit;font-size:13px;">';
+                html += '<option value="">— بدون —</option>';
+                data.columns.forEach(c => {
+                    if (c.key === data.phoneCol) return;
+                    html += '<option value="' + c.key + '"' + (c.key === data.nameCol ? ' selected' : '') + '>' + c.key + (c.header ? ' — ' + c.header : '') + (c.sampleText ? ' (مثل: ' + c.sampleText + ')' : '') + '</option>';
+                });
+                html += '</select></div>';
+                html += '</div>';
+                html += '<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addExcelNumbersToCampaign()"><i class="fas fa-plus"></i> إضافة الأرقام إلى قائمة الإرسال</button>';
+                html += '<div id="campExcelResult" style="margin-top:8px;font-size:13px;font-weight:700;"></div>';
+                html += '</div>';
+                panel.innerHTML = html;
+            } catch (e) {
+                panel.innerHTML = '<div style="color:var(--danger);font-weight:700;font-size:13px;">خطأ في التحليل</div>';
+            }
+        }
+
+        async function addExcelNumbersToCampaign() {
+            const phoneCol = document.getElementById('campPhoneCol').value;
+            const nameCol = document.getElementById('campNameCol').value;
+            const resBox = document.getElementById('campExcelResult');
+            if (!phoneCol) { resBox.innerHTML = '<span style="color:var(--danger);">اختر عمود الأرقام أولاً</span>'; return; }
+            const formData = new FormData();
+            formData.append('file', currentExcelFile);
+            formData.append('sheetName', currentSheetName);
+            formData.append('phoneCol', phoneCol);
+            formData.append('nameCol', nameCol);
+            try {
+                const res = await fetch('/api/groups/import-excel', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    let added = 0;
+                    data.contacts.forEach(c => {
+                        const norm = normalizeDashboardPhone(c.phone);
+                        if (norm) added++;
+                    });
+                    resBox.innerHTML = '<span style="color:var(--primary-dark);">✅ تمت إضافة ' + added + ' رقم صالح</span>';
+                    renderChips();
+                } else {
+                    resBox.innerHTML = '<span style="color:var(--danger);">' + (data.error || 'خطأ') + '</span>';
+                }
+            } catch (e) {
+                resBox.innerHTML = '<span style="color:var(--danger);">خطأ في القراءة</span>';
+            }
+        }
+
+        // ⏰ إظهار/إخفاء حقول الجدولة
+        function toggleSchedule() {
+            const enabled = document.getElementById('scheduleEnable').checked;
+            document.getElementById('scheduleFields').style.display = enabled ? 'block' : 'none';
+            const btn = document.getElementById('send-btn');
+            if (btn) btn.innerHTML = enabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
+            if (enabled) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() + 5);
+                now.setSeconds(0, 0);
+                const pad = n => String(n).padStart(2, '0');
+                document.getElementById('scheduleAt').min = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            }
         }
 
         async function sendCampaign() {
@@ -719,26 +957,47 @@
 
             const msgPreview = msg.length > 100 ? msg.substring(0, 100) + '...' : msg;
             const mediaCount = mediaFiles.length;
+
+            // ⏰ قراءة إعدادات الجدولة
+            const scheduleEnabled = document.getElementById('scheduleEnable').checked;
+            let scheduledAt = null;
+            if (scheduleEnabled) {
+                const raw = document.getElementById('scheduleAt').value;
+                if (!raw) {
+                    showToast('يرجى اختيار تاريخ ووقت الجدولة أولاً', 'error');
+                    return;
+                }
+                scheduledAt = new Date(raw);
+                if (isNaN(scheduledAt.getTime()) || scheduledAt.getTime() <= Date.now()) {
+                    showToast('يرجى اختيار وقت مستقبلي للجدولة', 'error');
+                    return;
+                }
+            }
+
             let detailText = '📋 *ملخص الحملة:*\n\n';
             detailText += '👥 عدد الأرقام: ' + recipientsList.length + ' رقم\n';
             if (mediaCount > 0) detailText += '📎 المرفقات: ' + mediaCount + ' ملف(ات)\n';
+            if (scheduledAt) {
+                const opt = { dateStyle: 'medium', timeStyle: 'short' };
+                detailText += '⏰ موعد الإرسال المجدول: ' + scheduledAt.toLocaleString('ar-SA', opt) + '\n';
+            }
             detailText += '\n📝 *معاينة الرسالة:*\n' + (msgPreview || '(بدون نص - مرفق فقط)') + '\n\n';
-            detailText += '⚠️ هل أنت متأكد من إرسال هذه الحملة لـ ' + recipientsList.length + ' رقم؟';
+            detailText += scheduledAt ? '⚠️ هل أنت متأكد من جدولة هذه الحملة لـ ' + recipientsList.length + ' رقم؟' : '⚠️ هل أنت متأكد من إرسال هذه الحملة لـ ' + recipientsList.length + ' رقم؟';
 
             const firstConfirm = confirm(detailText);
             if (!firstConfirm) return;
 
-            const secondConfirm = confirm('🔒 تأكيد نهائي:\n\nسيتم إرسال رسالتك فوراً إلى ' + recipientsList.length + ' رقم.\nهل تريد المتابعة؟');
+            const secondConfirm = confirm(scheduledAt ? '🔒 تأكيد نهائي:\n\nسيتم جدولة رسالتك وإرسالها تلقائياً إلى ' + recipientsList.length + ' رقم في الوقت المحدد.\nهل تريد المتابعة؟' : '🔒 تأكيد نهائي:\n\nسيتم إرسال رسالتك فوراً إلى ' + recipientsList.length + ' رقم.\nهل تريد المتابعة؟');
             if (!secondConfirm) return;
 
             const btn = document.getElementById('send-btn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
+            btn.innerHTML = scheduledAt ? '<i class="fas fa-spinner fa-spin ms-2"></i> جاري جدولة الحملة...' : '<i class="fas fa-spinner fa-spin ms-2"></i> جاري إطلاق الحملة...';
 
             const formData = new FormData();
-            const numbersPayload = recipientsList.map(phone => ({ phone, name: recipientsNames[phone] || '' }));
-            formData.append('numbers', JSON.stringify(numbersPayload));
+            formData.append('numbers', JSON.stringify(recipientsList));
             formData.append('message', msg);
+            if (scheduledAt) formData.append('scheduledAt', scheduledAt.toISOString());
             
             for (let i = 0; i < mediaFiles.length; i++) {
                 formData.append('media', mediaFiles[i]);
@@ -758,19 +1017,19 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    showToast('تم إطلاق الحملة بنجاح! 🚀');
+                    showToast(scheduledAt ? 'تمت جدولة الحملة بنجاح! ⏰' : 'تم إطلاق الحملة بنجاح! 🚀');
                     setTimeout(() => {
                         window.location.href = data.campaignId ? `/campaigns/${data.campaignId}` : '/dashboard';
                     }, 1500);
                 } else {
                     showToast(data.error || 'حدث خطأ أثناء إرسال الحملة', 'error');
                     btn.disabled = false;
-                    btn.innerHTML = '🚀 إطلاق الحملة الآن';
+                    btn.innerHTML = scheduleEnabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
                 }
             } catch (err) {
                 showToast('تعذر الإرسال: ' + err.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '🚀 إطلاق الحملة الآن';
+                btn.innerHTML = scheduleEnabled ? '⏰ جدولة الحملة' : '🚀 إطلاق الحملة الآن';
             }
         }
 

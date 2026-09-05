@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const campaignMediaSchema = new mongoose.Schema({
     mimetype: { type: String, required: true },
     filename: { type: String, default: 'file' },
-    data: { type: String, required: true }
+    data: { type: String, default: null },
+    path: { type: String, default: null }
 }, { _id: false });
 
 const campaignSchema = new mongoose.Schema({
@@ -17,10 +18,11 @@ const campaignSchema = new mongoose.Schema({
     currentPhone: { type: String, default: null },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'paused', 'waiting_window', 'completed', 'failed', 'cancelled'],
+        enum: ['scheduled', 'pending', 'processing', 'paused', 'waiting_window', 'completed', 'failed', 'cancelled'],
         default: 'pending',
         index: true
     },
+    scheduledAt: { type: Date, default: null, index: true },
     controlStatus: {
         type: String,
         enum: ['active', 'paused', 'cancelled'],
@@ -40,8 +42,5 @@ campaignSchema.pre('save', function(next) {
     this.updatedAt = new Date();
     next();
 });
-
-campaignSchema.index({ userId: 1, status: 1 });
-campaignSchema.index({ userId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Campaign', campaignSchema);
