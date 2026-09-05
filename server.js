@@ -2444,18 +2444,6 @@ app.post('/api/campaigns', requireAuth, upload.array('media', 10), async (req, r
             }
         }
 
-        const existingCampaign = await Campaign.findOne({
-            userId: user._id,
-            status: { $in: ['pending', 'processing', 'paused', 'waiting_window', 'scheduled'] }
-        }).sort({ createdAt: -1 });
-        if (existingCampaign) {
-            return res.status(409).json({
-                success: false,
-                error: 'لديك حملة مفتوحة حالياً. أكملها أو ألغها قبل إنشاء حملة جديدة.',
-                campaignId: existingCampaign._id
-            });
-        }
-
         const sock = getSession(user._id.toString());
         if (!scheduledAt && (!sock || !sock.user)) {
             return res.status(503).json({ success: false, error: 'الواتساب غير متصل. افتح لوحة التحكم لربط الرقم أولاً.' });
