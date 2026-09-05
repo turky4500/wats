@@ -1803,6 +1803,66 @@ app.get('/campaigns/:id', requireAuth, async (req, res) => {
     res.render('campaign-report', { user, campaign });
 });
 
+// 📨 صفحة الرسائل المنتظرة
+app.get('/pending', requireAuth, async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    if (user.role === 'admin') return res.redirect('/admin');
+    const isImpersonating = !!req.session.originalAdminId;
+    const campaigns = await getPendingCampaignsSummary(user._id, !!user.cautiousMode);
+    res.render('pending-messages', { user, isImpersonating, campaigns });
+});
+
+app.get('/api/pending', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        if (!user) return res.status(401).json({ success: false, error: 'غير مصرح' });
+        const campaigns = await getPendingCampaignsSummary(user._id, !!user.cautiousMode);
+        const totalPending = campaigns.reduce((sum, c) => sum + (c.remaining || 0), 0);
+        res.json({ success: true, campaigns, totalPending, cautiousMode: !!user.cautiousMode });
+    } catch (e) {
+        res.status(500).json({ success: false, error: 'حدث خطأ في جلب البيانات' });
+    }
+});
+
+async function getPendingCampaignsSummary(userId, cautiousMode) {
+    const activeStatuses = ['scheduled', 'pending', 'processing', 'paused', 'waiting_window'];
+    const campaigns = await Campaign.find({ userId, status: { $in: activeStatuses } }).sort({ createdAt: -1 }).lean();
+    if (campaigns.length === 0) return [];
+
+    const counts = await CampaignRecipient.aggregate([
+        { $match: { userId: userId, status: { $in: ['pending', 'pending_retry'] } } },
+        { $group: { _id: '$campaignId', count: { $sum: 1 } } }
+    ]);
+    const countMap = {};
+    counts.forEach(c => { countMap[c._id.toString()] = c.count; });
+
+    return campaigns.map(c => {
+        const sent = c.sentCount || 0;
+        const failed = c.failedCount || 0;
+        const total = c.totalNumbers || 0;
+        const remaining = Math.max(total - sent - failed, 0);
+        const pendingQueue = countMap[c._id.toString()] !== undefined ? countMap[c._id.toString()] : remaining;
+        let estimateText = '';
+        let estimateMin = 0, estimateMax = 0;
+        if (remaining > 0 && cautiousMode) {
+            estimateMin = remaining * 3;
+            estimateMax = remaining * 15;
+            estimateText = `من ${formatMinutes(estimateMin)} إلى ${formatMinutes(estimateMax)}`;
+        } else if (remaining > 0) {
+            estimateText = `حوالي ${formatMinutes(Math.max(1, Math.ceil((remaining * 4) / 60)))}`;
+        }
+        return { ...c, sent, failed, total, remaining, pendingQueue, estimateText, estimateMin, estimateMax };
+    });
+}
+
+function formatMinutes(m) {
+    if (m >= 60) {
+        const h = Math.floor(m / 60), r = m % 60;
+        return r > 0 ? `${h} ساعة و ${r} دقيقة` : `${h} ساعة`;
+    }
+    return `${m} دقيقة`;
+}
+
 app.get('/api-guide', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.userId);
     res.render('api-guide', { user, host: req.protocol + '://' + req.get('host') });

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الرسائل المنتظرة | واتساب تكوين</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800;900&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        /* تجاوزات خاصة بصفحة الرسائل المنتظرة */
+        .pending-hero {
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 55%, #7c3aed 130%);
+            color: white; border-radius: 20px; padding: 24px 28px;
+            display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+        .pending-hero h1 { font-size: 24px; font-weight: 900; margin: 0 0 6px; }
+        .pending-hero p { margin: 0; color: rgba(255,255,255,0.8); font-size: 14px; }
+        .pending-total { text-align: center; }
+        .pending-total .num { font-size: 40px; font-weight: 900; line-height: 1; }
+        .pending-total .lbl { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
+        .camp-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+        .camp-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .camp-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 16px 20px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap;
+        }
+        .camp-title { font-weight: 900; font-size: 15px; color: var(--dark); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .camp-body { padding: 18px 20px; }
+        .camp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 14px; padding: 14px; }
+        .stat .v { font-size: 24px; font-weight: 900; color: var(--dark); }
+        .stat .k { font-size: 12px; color: var(--gray); font-weight: 700; margin-top: 2px; }
+        .stat.sent .v { color: #16a34a; } .stat.failed .v { color: #dc2626; }
+        .stat.pending .v { color: #b45309; }
+        .progress-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; margin-bottom: 8px; color: var(--dark2); }
+        .progress-bg { height: 12px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22c55e, #f59e0b); width: 0%; transition: width .5s ease; }
+        .camp-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; background: #f1f5f9; border-radius: 999px; padding: 7px 13px; font-size: 12px; font-weight: 800; color: #334155; }
+        .chip.time { background: #eef2ff; color: #4338ca; }
+        .chip.cautious { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+        .status-badge { padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 900; }
+        .st-processing { background: #dcfce7; color: #166534; }
+        .st-paused { background: #fef3c7; color: #92400e; }
+        .st-waiting_window { background: #dbeafe; color: #1e40af; }
+        .st-pending { background: #e2e8f0; color: #334155; }
+        .st-scheduled { background: #e0e7ff; color: #3730a3; }
+        .camp-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 11px; padding: 9px 16px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; text-decoration: none; transition: .2s; }
+        .btn-report { background: var(--primary); color: white; }
+        .btn-ghost { background: white; color: var(--dark2); border: 1px solid var(--border); }
+        .btn-ghost:hover, .btn-report:hover { transform: translateY(-1px); }
+        .empty-box { text-align: center; padding: 60px 20px; color: var(--gray); }
+        .empty-box i { font-size: 52px; color: #cbd5e1; margin-bottom: 16px; }
+        .empty-box h3 { font-weight: 900; color: var(--dark2); margin-bottom: 6px; }
+        .live-note { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #16a34a; font-weight: 700; }
+        .pulse-dot { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+        @media (max-width: 700px) {
+            .camp-stats { grid-template-columns: repeat(2, 1fr); }
+            .pending-total .num { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <%
+        let daysRemaining = 0;
+        let isExpired = true;
+        let expDateFormatted = 'غير محدد';
+        if (user.subscriptionEndsAt) {
+            const d = new Date(user.subscriptionEndsAt);
+            expDateFormatted = d.toISOString().split('T')[0];
+            const diffTime = d - new Date();
+            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysRemaining > 0) isExpired = false;
+            else daysRemaining = 0;
+        }
+        if (user.role === 'admin') { isExpired = false; daysRemaining = '∞'; expDateFormatted = 'غير محدود (أدمن)'; }
+        const statusLabels = {
+            scheduled: 'مجدولة',
+            pending: 'بانتظار البدء',
+            processing: 'قيد التنفيذ',
+            paused: 'متوقفة مؤقتاً',
+            waiting_window: 'بانتظار النافذة'
+        };
+        const statusClasses = {
+            scheduled: 'st-scheduled',
+            pending: 'st-pending',
+            processing: 'st-processing',
+            paused: 'st-paused',
+            waiting_window: 'st-waiting_window'
+        };
+    %>
+
+    <!-- Mobile Top Navigation Bar -->
+    <div class="mobile-topbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="logo-circle-sm"><i class="fab fa-whatsapp"></i></div>
+            <span style="font-size: 16px; font-weight: 900; color: var(--dark);">واتساب تكوين</span>
+        </div>
+        <button class="menu-toggle-btn" onclick="toggleMobileSidebar()" aria-label="القائمة">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <div class="layout">
+        <!-- ===== Sidebar ===== -->
+        <div class="sidebar">
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar()" aria-label="إغلاق القائمة"><i class="fas fa-times"></i></button>
+            <div class="sidebar-brand">
+                <div class="brand-logo"><i class="fab fa-whatsapp"></i></div>
+                <div class="brand-text">
+                    <span class="title">واتساب تكوين</span>
+                    <span class="subtitle">PRO GATEWAY V2</span>
+                </div>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="u-top">
+                    <div class="u-avatar"><%= (user.username || 'U').charAt(0).toUpperCase() %></div>
+                    <div>
+                        <div class="u-name"><%= user.username %></div>
+                        <div class="u-sub"><%= user.role === 'admin' ? 'مدير النظام' : 'عميل' %></div>
+                    </div>
+                </div>
+                <span class="sub-badge <%= isExpired ? 'sub-expired' : 'sub-active' %>">
+                    <%= isExpired ? '⛔ منتهي' : `✅ ${daysRemaining} يوم` %>
+                </span>
+                <div class="exp-date">
+                    <i class="far fa-calendar-alt"></i> الانتهاء: <%= expDateFormatted %>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/dashboard"><span class="ic"><i class="fas fa-chart-pie"></i></span> لوحة التحكم</a>
+                <a href="/dashboard#campaigns"><span class="ic"><i class="fas fa-bullhorn"></i></span> الحملات والإرسال</a>
+                <a href="/groups"><span class="ic"><i class="fas fa-users"></i></span> مجموعاتي</a>
+                <a href="/pending" class="active"><span class="ic"><i class="fas fa-hourglass-half"></i></span> الرسائل المنتظرة</a>
+                <a href="/logs"><span class="ic"><i class="fas fa-history"></i></span> سجل الرسائل</a>
+                <a href="/profile"><span class="ic"><i class="fas fa-user-edit"></i></span> الملف الشخصي</a>
+                <a href="/subscribe"><span class="ic"><i class="fas fa-credit-card"></i></span> الاشتراك والدفع</a>
+                <a href="/api-guide"><span class="ic"><i class="fas fa-code"></i></span> دليل الـ API</a>
+                <% if (isImpersonating) { %>
+                    <a href="/return-to-admin" style="color: #f59e0b;"><span class="ic"><i class="fas fa-crown"></i></span> العودة للإدارة</a>
+                <% } %>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+            </div>
+        </div>
+
+        <!-- ===== Main Content ===== -->
+        <div class="main">
+            <div class="page-header">
+                <div class="page-header-text">
+                    <h1>الرسائل المنتظرة ⏳</h1>
+                    <p>هنا ترى ما الذي ما زال قيد الإرسال وكم بقي له</p>
+                </div>
+                <span class="live-note"><span class="pulse-dot"></span> تحديث مباشر</span>
+            </div>
+
+            <% if (user.cautiousMode) { %>
+                <div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#fff7e6,#fef3c7);border:1px solid #fcd34d;border-radius:16px;padding:14px 18px;margin-bottom:20px;font-size:13px;font-weight:700;color:#92400e;">
+                    🛡️ حسابك يعمل بنظام الإرسال الحذر — الفاصل بين كل رسالة والأخرى عشوائي 3 - 15 دقيقة، لذا قد تكون الأوقات التقديرية أطول.
+                </div>
+            <% } %>
+
+            <div class="pending-hero">
+                <div>
+                    <h1><i class="fas fa-hourglass-half"></i> إجمالي الرسائل المنتظرة</h1>
+                    <p>عبّر جميع الحملات القائمة حالياً تحت حسابك</p>
+                </div>
+                <div class="pending-total">
+                    <div class="num" id="totalPending"><%= campaigns.reduce((s, c) => s + (c.remaining || 0), 0) %></div>
+                    <div class="lbl">رسالة لم تُرسل بعد</div>
+                </div>
+            </div>
+
+            <div class="camp-grid" id="campGrid">
+                <% if (campaigns.length === 0) { %>
+                <div class="empty-box">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>لا توجد رسائل منتظرة</h3>
+                    <p style="margin:0;">ليس لديك حاليًا أي حملات قيد الإرسال. يمكنك إنشاء حملة جديدة من لوحة التحكم.</p>
+                    <div style="margin-top:18px;"><a href="/dashboard#campaigns" class="btn btn-report">🚀 إنشاء حملة جديدة</a></div>
+                </div>
+                <% } else { %>
+                    <% campaigns.forEach((c, i) => { %>
+                        <% const pct = c.total > 0 ? Math.round(((c.sent + c.failed) / c.total) * 100) : 0; %>
+                        <div class="camp-card" id="camp-<%= c._id %>" data-id="<%= c._id %>">
+                            <div class="camp-head">
+                                <div class="camp-title">
+                                    <span class="status-badge <%= statusClasses[c.status] || 'st-pending' %>"><%= statusLabels[c.status] || c.status %></span>
+                                    <span style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray);font-size:13px;font-weight:700;"><%= c.body ? c.body.slice(0, 80) : '(بدون نص — مرفقات فقط)' %></span>
+                                </div>
+                                <span style="font-size:12px;color:var(--gray);font-weight:700;">أنشئت في <%= new Date(c.createdAt).toLocaleDateString('ar-SA') %></span>
+                            </div>
+                            <div class="camp-body">
+                                <div class="camp-stats">
+                                    <div class="stat sent"><div class="v" id="sent-<%= c._id %>"><%= c.sent %></div><div class="k">أُرسلت</div></div>
+                                    <div class="stat pending"><div class="v" id="pending-<%= c._id %>"><%= c.remaining %></div><div class="k">منتظرة</div></div>
+                                    <div class="stat failed"><div class="v" id="failed-<%= c._id %>"><%= c.failed %></div><div class="k">فشلت</div></div>
+                                    <div class="stat"><div class="v" id="total-<%= c._id %>"><%= c.total %></div><div class="k">إجمالي</div></div>
+                                </div>
+                                <div class="progress-head">
+                                    <span id="pct-<%= c._id %>"><%= pct %>%</span>
+                                    <span id="frac-<%= c._id %>"><%= c.sent + c.failed %> / <%= c.total %></span>
+                                </div>
+                                <div class="progress-bg"><div class="progress-fill" id="fill-<%= c._id %>" style="width:<%= pct %>%;"></div></div>
+                                <div class="camp-meta">
+                                    <% if (c.currentPhone) { %><span class="chip">📱 الرقم الحالي: <b dir="ltr"><%= c.currentPhone %></b></span><% } %>
+                                    <span class="chip time">⏱️ الوقت المتبقي: <b id="est-<%= c._id %>"><%= c.estimateText || '—' %></b></span>
+                                    <% if (user.cautiousMode) { %><span class="chip cautious">🛡️ إرسال حذر 3-15 دقيقة</span><% } %>
+                                </div>
+                                <div class="camp-actions">
+                                    <a href="/campaigns/<%= c._id %>" class="btn btn-report">📊 فتح التقرير</a>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({ query: { userId: "<%= user._id %>" } });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = type === 'success' ? `✅ ${message}` : `❌ ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 5000);
+        }
+
+        function applyCampaign(c) {
+            const card = document.getElementById('camp-' + c._id);
+            if (!card) return;
+            const sent = c.sentCount || 0, failed = c.failedCount || 0, total = c.totalNumbers || 0;
+            const remaining = Math.max(total - sent - failed, 0);
+            const pct = total > 0 ? Math.round(((sent + failed) / total) * 100) : 0;
+            document.getElementById('sent-' + c._id).textContent = sent;
+            document.getElementById('failed-' + c._id).textContent = failed;
+            document.getElementById('total-' + c._id).textContent = total;
+            document.getElementById('pending-' + c._id).textContent = remaining;
+            document.getElementById('pct-' + c._id).textContent = pct + '%';
+            document.getElementById('frac-' + c._id).textContent = (sent + failed) + ' / ' + total;
+            document.getElementById('fill-' + c._id).style.width = pct + '%';
+
+            const estEl = document.getElementById('est-' + c._id);
+            if (estEl) {
+                estEl.textContent = c.estimateText || '—';
+            }
+        }
+
+        async function refresh() {
+            try {
+                const r = await fetch('/api/pending');
+                const data = await r.json();
+                if (!r.ok || !data.success) return;
+                document.getElementById('totalPending').textContent = data.totalPending;
+                (data.campaigns || []).forEach(applyCampaign);
+            } catch (_) {}
+        }
+
+        // التحديث المباشر عبر السوكيت
+        socket.on('campaign-update', payload => {
+            const id = payload._id || payload.campaignId;
+            if (id) applyCampaign({ ...payload, _id: String(id) });
+            refresh();
+        });
+        socket.on('campaign-completed', refresh);
+        socket.on('cautious-delay', data => {
+            if (data && data.delayMin) {
+                showToast(`🛡️ تم إرسال رسالة بنجاح، الرسالة التالية بعد ${data.delayMin} دقيقة`, 'success');
+            }
+            setTimeout(refresh, 500);
+        });
+
+        // تحديث دوري كل 5 ثوانٍ
+        setInterval(refresh, 5000);
+        refresh();
+    </script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
