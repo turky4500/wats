@@ -350,6 +350,7 @@
                         <th>الجوال</th>
                         <th>الاشتراك</th>
                         <th>الحالة</th>
+                        <th>إرسال حذر</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
@@ -376,6 +377,13 @@
                             </span>
                         </td>
                         <td>
+                            <form action="/admin/cautious-toggle/<%= u._id %>" method="POST" style="display:inline;">
+                                <button type="submit" class="action-btn <%= u.cautiousMode ? 'orange' : 'badge-gray' %>" onclick="return confirm('<%= u.cautiousMode ? 'تعطيل' : 'تفعيل' %> الإرسال الحذر لـ <%= u.username %>؟')" style="font-size:12px;">
+                                    <%= u.cautiousMode ? '🛡️ مفعّل' : 'حذر: غير مفعل' %>
+                                </button>
+                            </form>
+                        </td>
+                        <td>
                             <div class="action-btns">
                                 <button class="action-btn blue" onclick="openModal('<%= u._id %>', '<%= u.username %>', '<%= u.phone || '' %>', '<%= u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString().split('T')[0] : '' %>', '<%= daysLeft %>')">⚙️ تعديل</button>
                                 <a href="/admin/logs/<%= u._id %>" class="action-btn dark">📜 سجل</a>
@@ -393,7 +401,7 @@
                     </tr>
                     <% }) %>
                     <% if(users.length===0) { %>
-                    <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--gray-light);">لا يوجد عملاء مسجلين بعد</td></tr>
+                    <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--gray-light);">لا يوجد عملاء مسجلين بعد</td></tr>
                     <% } %>
                 </tbody>
             </table>

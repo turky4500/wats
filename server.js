@@ -561,6 +561,30 @@ async function startCampaignWorker(campaignId) {
             const hasRemaining = await hasRemainingCampaignRecipients(campaignId);
             if (!hasRemaining) break;
 
+            const userDoc = await User.findById(campaign.userId).select('cautiousMode');
+            if (userDoc && userDoc.cautiousMode) {
+                const delayMs = 3 * 60 * 1000 + Math.floor(Math.random() * 12 * 60 * 1000);
+                const delayMin = Math.floor(delayMs / 60000);
+                console.log(`🛡️ إرسال حذر: انتظار ${delayMin} دقيقة قبل الرقم التالي`);
+                io.to(campaign.userId.toString()).emit('cautious-delay', {
+                    campaignId: campaign._id.toString(),
+                    delayMin,
+                    nextPhone: (await getNextCampaignRecipient(campaignId))?.phoneNumber || ''
+                });
+                const keepWaiting = await waitWithCampaignControl(campaignId, delayMs, 'cautious');
+                if (!keepWaiting) {
+                    campaign = await Campaign.findById(campaignId);
+                    if (campaign && campaign.controlStatus === 'cancelled') {
+                        await finalizeCampaign(campaignId);
+                    } else if (campaign && campaign.controlStatus === 'paused') {
+                        campaign.status = 'paused';
+                        await campaign.save();
+                        await emitCampaignUpdate(campaignId, false);
+                    }
+                    return;
+                }
+            }
+
 
         }
 
@@ -1339,6 +1363,18 @@ app.post('/admin/toggle-user/:id', requireAdmin, async (req, res) => {
     }
 });
 
+app.post('/admin/cautious-toggle/:id', requireAdmin, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).send('المستخدم غير موجود');
+        user.cautiousMode = !user.cautiousMode;
+        await user.save();
+        res.redirect('/admin');
+    } catch (e) {
+        res.status(400).send('حدث خطأ');
+    }
+});
+
 app.post('/admin/delete-user/:id', requireAdmin, async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -1851,7 +1887,14 @@ app.post(['/api/v1/send', '/api/send-message'], apiSendLimiter, upload.array('me
                 if (io) io.to(user._id.toString()).emit('error', `خطأ مع ${num}: ${e.message}`);
                 await MessageLog.create({ userId: user._id, to: num, body: body || '(مرفق)', status: 'failed', errorDetails: e.message });
             }
-            await sleep(bodyMedia.length > 0 ? 4000 : 2000);
+            if (user && user.cautiousMode) {
+                const delayMs = 3 * 60 * 1000 + Math.floor(Math.random() * 12 * 60 * 1000);
+                const delayMin = Math.floor(delayMs / 60000);
+                console.log(`🛡️ [API] إرسال حذر: انتظار ${delayMin} دقيقة قبل الرقم التالي`);
+                await sleep(delayMs);
+            } else {
+                await sleep(bodyMedia.length > 0 ? 4000 : 2000);
+            }
         }
     })();
 });
